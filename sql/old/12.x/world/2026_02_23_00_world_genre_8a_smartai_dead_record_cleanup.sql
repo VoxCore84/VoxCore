@@ -127,12 +127,21 @@ LIMIT 50;
 
 /* Apply */
 CREATE TABLE IF NOT EXISTS smart_scripts_backup_genre8a_linkfix LIKE smart_scripts;
+CREATE TEMPORARY TABLE IF NOT EXISTS smart_scripts_tmp_genre8a_linkfix_keys (
+  entryorguid BIGINT NOT NULL,
+  source_type TINYINT UNSIGNED NOT NULL,
+  id INT NOT NULL,
+  link INT NOT NULL,
+  PRIMARY KEY (entryorguid, source_type, id, link)
+);
 
 SET @partB_updated = 0;
 
-SET @partB_backup_sql = CONCAT(
-'INSERT INTO smart_scripts_backup_genre8a_linkfix
- SELECT ss.*
+TRUNCATE TABLE smart_scripts_tmp_genre8a_linkfix_keys;
+
+SET @partB_keys_sql = CONCAT(
+'INSERT INTO smart_scripts_tmp_genre8a_linkfix_keys (entryorguid, source_type, id, link)
+ SELECT ss.entryorguid, ss.source_type, ss.id, ss.link
  FROM smart_scripts ss
  LEFT JOIN smart_scripts ss2
    ON ss2.entryorguid = ss.entryorguid
@@ -149,6 +158,21 @@ SET @partB_backup_sql = CONCAT(
    AND ', @APPLY_FIX, ' = 1
  LIMIT ', @UPDATE_BATCH
 );
+PREPARE stmt_partB_keys FROM @partB_keys_sql;
+EXECUTE stmt_partB_keys;
+DEALLOCATE PREPARE stmt_partB_keys;
+
+SET @partB_backup_sql = CONCAT(
+'INSERT INTO smart_scripts_backup_genre8a_linkfix
+ SELECT ss.*
+ FROM smart_scripts ss
+ INNER JOIN smart_scripts_tmp_genre8a_linkfix_keys k
+   ON k.entryorguid = ss.entryorguid
+  AND k.source_type = ss.source_type
+  AND k.id          = ss.id
+  AND k.link        = ss.link
+ WHERE ', @APPLY_FIX, ' = 1'
+);
 PREPARE stmt_partB_backup FROM @partB_backup_sql;
 EXECUTE stmt_partB_backup;
 DEALLOCATE PREPARE stmt_partB_backup;
@@ -157,19 +181,8 @@ SET @partB_update_sql = CONCAT(
 'UPDATE smart_scripts
  SET link = 0
  WHERE (entryorguid, source_type, id, link) IN (
-   SELECT entryorguid, source_type, id, link
-   FROM (
-     SELECT ss.entryorguid, ss.source_type, ss.id, ss.link
-     FROM smart_scripts ss
-     LEFT JOIN smart_scripts ss2
-       ON ss2.entryorguid = ss.entryorguid
-      AND ss2.source_type = ss.source_type
-      AND ss2.id          = ss.link
-     WHERE ss.link <> 0
-       AND ss2.entryorguid IS NULL
-       AND ', @APPLY_FIX, ' = 1
-     LIMIT ', @UPDATE_BATCH, '
-   ) AS to_fix
+   SELECT k.entryorguid, k.source_type, k.id, k.link
+   FROM smart_scripts_tmp_genre8a_linkfix_keys k
  )'
 );
 PREPARE stmt_partB_update FROM @partB_update_sql;
