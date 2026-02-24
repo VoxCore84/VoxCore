@@ -1218,7 +1218,7 @@ bool WorldSession::CanUseBank(ObjectGuid bankerGUID) const
 
     if (!isUsingBankCommand)
     {
-        Creature* creature = GetPlayer()->GetNPCIfCanInteractWith(bankerGUID, UNIT_NPC_FLAG_BANKER, UNIT_NPC_FLAG_2_NONE);
+        Creature* creature = GetPlayer()->GetNPCIfCanInteractWith(bankerGUID, UNIT_NPC_FLAG_BANKER | UNIT_NPC_FLAG_ACCOUNT_BANKER, UNIT_NPC_FLAG_2_NONE);
         if (!creature)
             return false;
     }

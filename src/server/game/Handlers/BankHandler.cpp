@@ -310,6 +310,79 @@ void WorldSession::HandleAutoDepositCharacterBank(WorldPackets::Bank::AutoDeposi
     }
 }
 
+
+void WorldSession::HandleAccountBankDepositMoney(WorldPackets::Bank::AccountBankDepositMoney const& accountBankDepositMoney)
+{
+    if (!CanUseBank(accountBankDepositMoney.Banker))
+        return;
+
+    if (!accountBankDepositMoney.Money || accountBankDepositMoney.Money > _player->GetMoney())
+        return;
+
+    uint64 accountBankMoney = _player->GetAccountBankMoney();
+    if (accountBankDepositMoney.Money > MAX_MONEY_AMOUNT - accountBankMoney)
+        return;
+
+    _player->ModifyMoney(-int64(accountBankDepositMoney.Money));
+    _player->SetAccountBankMoney(accountBankMoney + accountBankDepositMoney.Money);
+}
+
+void WorldSession::HandleAccountBankWithdrawMoney(WorldPackets::Bank::AccountBankWithdrawMoney const& accountBankWithdrawMoney)
+{
+    if (!CanUseBank(accountBankWithdrawMoney.Banker))
+        return;
+
+    if (!accountBankWithdrawMoney.Money)
+        return;
+
+    uint64 accountBankMoney = _player->GetAccountBankMoney();
+    if (accountBankWithdrawMoney.Money > accountBankMoney)
+        return;
+
+    if (accountBankWithdrawMoney.Money > MAX_MONEY_AMOUNT - _player->GetMoney())
+        return;
+
+    _player->SetAccountBankMoney(accountBankMoney - accountBankWithdrawMoney.Money);
+    _player->ModifyMoney(int64(accountBankWithdrawMoney.Money));
+}
+
+void WorldSession::HandleAutoDepositAccountBank(WorldPackets::Bank::AutoDepositAccountBank const& autoDepositAccountBank)
+{
+    if (!CanUseBank(autoDepositAccountBank.Banker))
+    {
+        TC_LOG_DEBUG("network", "WORLD: HandleAutoDepositAccountBank - {} not found or you can't interact with him.", autoDepositAccountBank.Banker);
+        return;
+    }
+
+    bool anyDeposited = false;
+    for (Item* item : _player->GetCraftingReagentItemsToDeposit())
+    {
+        ItemPosCountVec dest;
+        InventoryResult msg = EQUIP_ERR_ITEM_DOESNT_GO_INTO_BAG;
+
+        for (uint8 bag = ACCOUNT_BANK_SLOT_BAG_START; bag < ACCOUNT_BANK_SLOT_BAG_START + _player->GetAccountBankTabCount(); ++bag)
+        {
+            msg = _player->CanStoreItem(bag, NULL_SLOT, dest, item, false);
+            if (msg == EQUIP_ERR_OK)
+                break;
+        }
+
+        if (msg != EQUIP_ERR_OK)
+        {
+            if (msg != EQUIP_ERR_BANK_FULL || !anyDeposited)
+                _player->SendEquipError(msg, item, nullptr);
+            break;
+        }
+
+        _player->RemoveItem(item->GetBagSlot(), item->GetSlot(), true);
+        if (Item const* storedItem = _player->StoreItem(dest, item, true))
+            _player->ItemAddedQuestCheck(storedItem->GetEntry(), storedItem->GetCount());
+
+        anyDeposited = true;
+    }
+}
+
+
 void WorldSession::SendShowBank(ObjectGuid guid, PlayerInteractionType interactionType)
 {
     _player->PlayerTalkClass->GetInteractionData().StartInteraction(guid, interactionType);
