@@ -138,40 +138,16 @@ void TransmogOutfitNew::Read()
         MiddleFlags = remaining[1];
         IconFileDataID = ReadLE<uint32>(remaining, 2);
 
-        std::size_t asciiStart = remaining.size();
-        while (asciiStart > 0)
+        uint8 nameLength = remaining[6];
+        std::size_t expectedSize = 6 + 2 + nameLength;
+        if (remaining.size() < expectedSize)
         {
-            uint8 b = remaining[asciiStart - 1];
-            if (b < 0x20 || b > 0x7E)
-                break;
-            --asciiStart;
-        }
-
-        std::size_t nameLength = remaining.size() - asciiStart;
-        if (nameLength == 0 || asciiStart < 2)
-        {
-            ParseError = "missing trailing outfit name or name trailer";
+            ParseError = Trinity::StringFormat("payload truncated for CMSG_TRANSMOG_OUTFIT_NEW name (remaining={} expectedAtLeast={})", remaining.size(), expectedSize);
             DiagnosticReadTrace = BuildDiagnosticReadTrace("CMSG_TRANSMOG_OUTFIT_NEW", _worldPacket);
             return;
         }
 
-        uint8 nameLengthByte = remaining[asciiStart - 2];
-        if (nameLengthByte != nameLength)
-        {
-            ParseError = Trinity::StringFormat("name length mismatch (lenByte={} trailingAsciiLen={})", nameLengthByte, nameLength);
-            DiagnosticReadTrace = BuildDiagnosticReadTrace("CMSG_TRANSMOG_OUTFIT_NEW", _worldPacket);
-            return;
-        }
-
-        std::size_t middleLength = asciiStart - 2;
-        if (middleLength != 6)
-        {
-            ParseError = Trinity::StringFormat("unexpected middle size for OUTFIT_NEW (got={} expected=6)", middleLength);
-            DiagnosticReadTrace = BuildDiagnosticReadTrace("CMSG_TRANSMOG_OUTFIT_NEW", _worldPacket);
-            return;
-        }
-
-        Set.SetName.assign(reinterpret_cast<char const*>(remaining.data() + asciiStart), nameLength);
+        Set.SetName.assign(reinterpret_cast<char const*>(remaining.data() + 8), nameLength);
         Set.SetIcon = std::to_string(IconFileDataID);
         ParseSuccess = true;
         ParseError.clear();
@@ -217,40 +193,16 @@ void TransmogOutfitUpdateInfo::Read()
         MiddleFlags = 0;
         IconFileDataID = ReadLE<uint32>(remaining, 1);
 
-        std::size_t asciiStart = remaining.size();
-        while (asciiStart > 0)
+        uint8 nameLength = remaining[5];
+        std::size_t expectedSize = 5 + 2 + nameLength;
+        if (remaining.size() < expectedSize)
         {
-            uint8 b = remaining[asciiStart - 1];
-            if (b < 0x20 || b > 0x7E)
-                break;
-            --asciiStart;
-        }
-
-        std::size_t nameLength = remaining.size() - asciiStart;
-        if (nameLength == 0 || asciiStart < 2)
-        {
-            ParseError = "missing trailing outfit name or name trailer";
+            ParseError = Trinity::StringFormat("payload truncated for CMSG_TRANSMOG_OUTFIT_UPDATE_INFO name (remaining={} expectedAtLeast={})", remaining.size(), expectedSize);
             DiagnosticReadTrace = BuildDiagnosticReadTrace("CMSG_TRANSMOG_OUTFIT_UPDATE_INFO", _worldPacket);
             return;
         }
 
-        uint8 nameLengthByte = remaining[asciiStart - 2];
-        if (nameLengthByte != nameLength)
-        {
-            ParseError = Trinity::StringFormat("name length mismatch (lenByte={} trailingAsciiLen={})", nameLengthByte, nameLength);
-            DiagnosticReadTrace = BuildDiagnosticReadTrace("CMSG_TRANSMOG_OUTFIT_UPDATE_INFO", _worldPacket);
-            return;
-        }
-
-        std::size_t middleLength = asciiStart - 2;
-        if (middleLength != 5)
-        {
-            ParseError = Trinity::StringFormat("unexpected middle size for UPDATE_INFO (got={} expected=5)", middleLength);
-            DiagnosticReadTrace = BuildDiagnosticReadTrace("CMSG_TRANSMOG_OUTFIT_UPDATE_INFO", _worldPacket);
-            return;
-        }
-
-        Set.SetName.assign(reinterpret_cast<char const*>(remaining.data() + asciiStart), nameLength);
+        Set.SetName.assign(reinterpret_cast<char const*>(remaining.data() + 7), nameLength);
         Set.SetIcon = std::to_string(IconFileDataID);
         ParseSuccess = true;
         ParseError.clear();
