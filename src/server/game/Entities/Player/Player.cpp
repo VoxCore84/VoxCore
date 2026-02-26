@@ -17962,8 +17962,8 @@ void Player::_LoadTransmogOutfits(PreparedQueryResult result)
     //SELECT setguid, setindex, name, iconname, ignore_mask, appearance0, appearance1, appearance2, appearance3, appearance4,
     //             10           11           12           13           14            15            16            17            18            19            20            21
     //    appearance5, appearance6, appearance7, appearance8, appearance9, appearance10, appearance11, appearance12, appearance13, appearance14, appearance15, appearance16,
-    //              22            23               24              25
-    //    appearance17, appearance18, mainHandEnchant, offHandEnchant FROM character_transmog_outfits WHERE guid = ? ORDER BY setindex
+    //              22            23               24              25                          26                          27
+    //    appearance17, appearance18, mainHandEnchant, offHandEnchant, secondaryShoulderAppearance, secondaryShoulderSlot
     if (!result)
         return;
 
@@ -17985,6 +17985,9 @@ void Player::_LoadTransmogOutfits(PreparedQueryResult result)
 
         for (std::size_t i = 0; i < eqSet.Data.Enchants.size(); ++i)
             eqSet.Data.Enchants[i] = fields[24 + i].GetInt32();
+
+        eqSet.Data.SecondaryShoulderApparanceID = fields[26].GetInt32();
+        eqSet.Data.SecondaryShoulderSlot = fields[27].GetInt32();
 
         if (eqSet.Data.SetID >= MAX_EQUIPMENT_SET_INDEX)   // client limit
             continue;
@@ -18057,8 +18060,7 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
         }
 
         // Map server EQUIPMENT_SLOT indices to 12.x client TransmogOutfitSlot indices (1-based)
-        // Client uses 1-based indices: 1=Head, 2=Shoulder, 3=SecShoulder, 4=Back, 5=Chest,
-        // 6=new slot (skipped), 7=Tabard, 8=Body, 9=Wrists, etc.
+        // Two profession tool slots (6 and 12) are skipped — no server equip slot for those.
         struct TransmogSlotMapping { int8 transmogSlot; uint8 equipSlot; };
         static constexpr TransmogSlotMapping slotMap[] = {
             {  1,  0 }, // Head            -> EQUIPMENT_SLOT_HEAD
@@ -18071,17 +18073,22 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
             {  9,  8 }, // Wrist           -> EQUIPMENT_SLOT_WRISTS
             { 10,  9 }, // Hand            -> EQUIPMENT_SLOT_HANDS
             { 11,  5 }, // Waist           -> EQUIPMENT_SLOT_WAIST
-            { 12,  6 }, // Legs            -> EQUIPMENT_SLOT_LEGS
-            { 13,  7 }, // Feet            -> EQUIPMENT_SLOT_FEET
-            { 14, 15 }, // WeaponMainHand  -> EQUIPMENT_SLOT_MAINHAND
-            { 15, 16 }, // WeaponOffHand   -> EQUIPMENT_SLOT_OFFHAND
-            { 16, 17 }, // WeaponRanged    -> EQUIPMENT_SLOT_RANGED
+            { 13,  6 }, // Legs            -> EQUIPMENT_SLOT_LEGS
+            { 14,  7 }, // Feet            -> EQUIPMENT_SLOT_FEET
+            { 15, 15 }, // WeaponMainHand  -> EQUIPMENT_SLOT_MAINHAND
+            { 16, 16 }, // WeaponOffHand   -> EQUIPMENT_SLOT_OFFHAND
+            { 17, 17 }, // WeaponRanged    -> EQUIPMENT_SLOT_RANGED
         };
 
         for (auto const& mapping : slotMap)
         {
-            uint32 imaID = (mapping.equipSlot < EQUIPMENT_SLOT_END && equipmentSet->Appearances[mapping.equipSlot] > 0)
-                ? uint32(equipmentSet->Appearances[mapping.equipSlot]) : 0;
+            // Slot 3 (SecondaryShoulder) uses its own dedicated field, not Appearances[]
+            uint32 imaID;
+            if (mapping.transmogSlot == 3)
+                imaID = equipmentSet->SecondaryShoulderApparanceID > 0 ? uint32(equipmentSet->SecondaryShoulderApparanceID) : 0;
+            else
+                imaID = (mapping.equipSlot < EQUIPMENT_SLOT_END && equipmentSet->Appearances[mapping.equipSlot] > 0)
+                    ? uint32(equipmentSet->Appearances[mapping.equipSlot]) : 0;
 
             auto slotSetter = AddDynamicUpdateFieldValue(outfitSetter.ModifyValue(&UF::TransmogOutfitData::Slots));
             slotSetter.ModifyValue(&UF::TransmogOutfitSlotData::Slot).SetValue(mapping.transmogSlot);
@@ -28589,6 +28596,8 @@ void Player::_SaveEquipmentSets(CharacterDatabaseTransaction trans)
                         stmt->setInt32(j++, eqSet.Data.Appearances[i]);
                     for (std::size_t i = 0; i < eqSet.Data.Enchants.size(); ++i)
                         stmt->setInt32(j++, eqSet.Data.Enchants[i]);
+                    stmt->setInt32(j++, eqSet.Data.SecondaryShoulderApparanceID);
+                    stmt->setInt32(j++, eqSet.Data.SecondaryShoulderSlot);
                     stmt->setUInt64(j++, GetGUID().GetCounter());
                     stmt->setUInt64(j++, eqSet.Data.Guid);
                     stmt->setUInt32(j, eqSet.Data.SetID);
@@ -28643,6 +28652,8 @@ void Player::_SaveEquipmentSets(CharacterDatabaseTransaction trans)
                         stmt->setInt32(j++, eqSet.Data.Appearances[i]);
                     for (std::size_t i = 0; i < eqSet.Data.Enchants.size(); ++i)
                         stmt->setInt32(j++, eqSet.Data.Enchants[i]);
+                    stmt->setInt32(j++, eqSet.Data.SecondaryShoulderApparanceID);
+                    stmt->setInt32(j++, eqSet.Data.SecondaryShoulderSlot);
 
                     // Save situations for new outfit
                     for (TransmogSituationData const& sit : eqSet.Data.Situations)
