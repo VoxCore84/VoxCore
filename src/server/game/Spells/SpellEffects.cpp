@@ -6011,10 +6011,18 @@ void Spell::EffectEquipTransmogOutfit()
     Player* player = unitTarget->ToPlayer();
     uint32 outfitEntryID = effectInfo->MiscValue;
 
+    TC_LOG_DEBUG("spells.effect", "EffectEquipTransmogOutfit [{}]: outfitEntryID={}", player->GetGUID().ToString(), outfitEntryID);
+
     // Look up the player's saved transmog outfit by SetID
     EquipmentSetInfo::EquipmentSetData const* outfit = player->GetTransmogOutfitBySetID(outfitEntryID);
     if (!outfit)
+    {
+        TC_LOG_DEBUG("spells.effect", "EffectEquipTransmogOutfit [{}]: outfit not found for setId={}", player->GetGUID().ToString(), outfitEntryID);
         return;
+    }
+
+    TC_LOG_DEBUG("spells.effect", "EffectEquipTransmogOutfit [{}]: found outfit setId={} guid={} ignoreMask=0x{:X}",
+        player->GetGUID().ToString(), outfitEntryID, outfit->Guid, outfit->IgnoreMask);
 
     // Apply each slot's appearance to the equipped item
     for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
@@ -6027,6 +6035,9 @@ void Spell::EffectEquipTransmogOutfit()
         Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
         if (!item)
             continue;
+
+        TC_LOG_DEBUG("spells.effect", "EffectEquipTransmogOutfit [{}]: slot={} item={} appearance={}",
+            player->GetGUID().ToString(), slot, item->GetGUID().ToString(), appearanceId);
 
         if (appearanceId > 0)
         {
@@ -6051,6 +6062,9 @@ void Spell::EffectEquipTransmogOutfit()
         // Handle secondary shoulder appearance
         if (slot == EQUIPMENT_SLOT_SHOULDERS)
         {
+            TC_LOG_DEBUG("spells.effect", "EffectEquipTransmogOutfit [{}]: applying secondary shoulder appearance={} slot={}",
+                player->GetGUID().ToString(), outfit->SecondaryShoulderApparanceID, outfit->SecondaryShoulderSlot);
+
             item->SetModifier(ITEM_MODIFIER_TRANSMOG_SECONDARY_APPEARANCE_ALL_SPECS, outfit->SecondaryShoulderApparanceID);
             item->SetModifier(ITEM_MODIFIER_TRANSMOG_SECONDARY_APPEARANCE_SPEC_1, 0);
             item->SetModifier(ITEM_MODIFIER_TRANSMOG_SECONDARY_APPEARANCE_SPEC_2, 0);
@@ -6062,6 +6076,7 @@ void Spell::EffectEquipTransmogOutfit()
         // Handle enchant illusions (mainhand and offhand)
         if (slot == EQUIPMENT_SLOT_MAINHAND && outfit->Enchants[0])
         {
+            TC_LOG_DEBUG("spells.effect", "EffectEquipTransmogOutfit [{}]: applying mainhand illusion={}", player->GetGUID().ToString(), outfit->Enchants[0]);
             item->SetModifier(ITEM_MODIFIER_ENCHANT_ILLUSION_ALL_SPECS, outfit->Enchants[0]);
             item->SetModifier(ITEM_MODIFIER_ENCHANT_ILLUSION_SPEC_1, 0);
             item->SetModifier(ITEM_MODIFIER_ENCHANT_ILLUSION_SPEC_2, 0);
@@ -6071,6 +6086,7 @@ void Spell::EffectEquipTransmogOutfit()
         }
         if (slot == EQUIPMENT_SLOT_OFFHAND && outfit->Enchants[1])
         {
+            TC_LOG_DEBUG("spells.effect", "EffectEquipTransmogOutfit [{}]: applying offhand illusion={}", player->GetGUID().ToString(), outfit->Enchants[1]);
             item->SetModifier(ITEM_MODIFIER_ENCHANT_ILLUSION_ALL_SPECS, outfit->Enchants[1]);
             item->SetModifier(ITEM_MODIFIER_ENCHANT_ILLUSION_SPEC_1, 0);
             item->SetModifier(ITEM_MODIFIER_ENCHANT_ILLUSION_SPEC_2, 0);

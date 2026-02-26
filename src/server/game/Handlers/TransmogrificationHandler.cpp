@@ -485,6 +485,7 @@ void WorldSession::HandleTransmogOutfitNew(WorldPackets::Transmogrification::Tra
     WorldPackets::Transmogrification::TransmogOutfitNewEntryAdded response;
     response.SetID = set.SetID;
     response.Guid = set.Guid;
+    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_TRANSMOG_OUTFIT_NEW_ENTRY_ADDED [{}]: setId={} guid={}", GetPlayerInfo(), response.SetID, response.Guid);
     SendPacket(response.Write());
 }
 
@@ -523,6 +524,7 @@ void WorldSession::HandleTransmogOutfitUpdateInfo(WorldPackets::Transmogrificati
     WorldPackets::Transmogrification::TransmogOutfitInfoUpdated response;
     response.SetID = updatedSet.SetID;
     response.Guid = updatedSet.Guid;
+    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_TRANSMOG_OUTFIT_INFO_UPDATED [{}]: setId={} guid={}", GetPlayerInfo(), response.SetID, response.Guid);
     SendPacket(response.Write());
 }
 
@@ -551,6 +553,8 @@ void WorldSession::HandleTransmogOutfitUpdateSlots(WorldPackets::Transmogrificat
     updatedSet.SetID = transmogOutfitUpdateSlots.Set.SetID;
     updatedSet.IgnoreMask = transmogOutfitUpdateSlots.Set.IgnoreMask;
     updatedSet.Appearances = transmogOutfitUpdateSlots.Set.Appearances;
+    updatedSet.SecondaryShoulderApparanceID = transmogOutfitUpdateSlots.Set.SecondaryShoulderApparanceID;
+    updatedSet.SecondaryShoulderSlot = transmogOutfitUpdateSlots.Set.SecondaryShoulderSlot;
 
     if (!ValidateTransmogOutfitSet(this, updatedSet))
         return;
@@ -560,6 +564,7 @@ void WorldSession::HandleTransmogOutfitUpdateSlots(WorldPackets::Transmogrificat
     WorldPackets::Transmogrification::TransmogOutfitSlotsUpdated response;
     response.SetID = updatedSet.SetID;
     response.Guid = updatedSet.Guid;
+    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED [{}]: setId={} guid={}", GetPlayerInfo(), response.SetID, response.Guid);
     SendPacket(response.Write());
 }
 
@@ -596,6 +601,7 @@ void WorldSession::HandleTransmogOutfitUpdateSituations(WorldPackets::Transmogri
     WorldPackets::Transmogrification::TransmogOutfitSituationsUpdated response;
     response.SetID = transmogOutfitUpdateSituations.SetID;
     response.Guid = existingSet->Guid;
+    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_TRANSMOG_OUTFIT_SITUATIONS_UPDATED [{}]: setId={} guid={}", GetPlayerInfo(), response.SetID, response.Guid);
     SendPacket(response.Write());
 }
 

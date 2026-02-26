@@ -71,11 +71,13 @@ std::string BuildDiagnosticReadTrace(char const* opcodeName, WorldPacket const& 
 
 uint8 TransmogOutfitSlotToEquipSlot(uint8 transmogSlot)
 {
+    static uint8 constexpr TRANSMOG_SECONDARY_SHOULDER_SLOT = EQUIPMENT_SLOT_END + 1;
+
     switch (transmogSlot)
     {
         case 0:  return EQUIPMENT_SLOT_HEAD;
         case 1:  return EQUIPMENT_SLOT_SHOULDERS;
-        case 2:  return EQUIPMENT_SLOT_SHOULDERS;
+        case 2:  return TRANSMOG_SECONDARY_SHOULDER_SLOT;
         case 3:  return EQUIPMENT_SLOT_BACK;
         case 4:  return EQUIPMENT_SLOT_CHEST;
         case 5:  return EQUIPMENT_SLOT_TABARD;
@@ -164,11 +166,34 @@ void TransmogOutfitNew::Read()
         }
 
         std::size_t middleLength = asciiStart - 2;
-        if (middleLength != 6)
+        if (middleLength < 6)
         {
-            ParseError = Trinity::StringFormat("unexpected middle size for OUTFIT_NEW (got={} expected=6)", middleLength);
+            ParseError = Trinity::StringFormat("unexpected middle size for OUTFIT_NEW (got={} expected>=6)", middleLength);
             DiagnosticReadTrace = BuildDiagnosticReadTrace("CMSG_TRANSMOG_OUTFIT_NEW", _worldPacket);
             return;
+        }
+
+        std::span<uint8 const> potentialSlotData = remaining.subspan(6, middleLength - 6);
+        if (!potentialSlotData.empty())
+            TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_NEW extra-middle-bytes={} hex={}", potentialSlotData.size(), ByteArrayToHexStr(potentialSlotData));
+
+        if (!potentialSlotData.empty() && potentialSlotData.size() % 16 == 0)
+        {
+            for (std::size_t i = 0; i < potentialSlotData.size(); i += 16)
+            {
+                uint32 appearanceID = ReadLE<uint32>(potentialSlotData, i + 0);
+                uint32 rawSlotField = ReadLE<uint32>(potentialSlotData, i + 4);
+                uint8 transmogSlot = uint8(rawSlotField >> 24);
+                uint8 equipSlot = TransmogOutfitSlotToEquipSlot(transmogSlot);
+
+                if (equipSlot == EQUIPMENT_SLOT_END + 1)
+                {
+                    Set.SecondaryShoulderApparanceID = int32(appearanceID);
+                    Set.SecondaryShoulderSlot = 2;
+                }
+                else if (equipSlot < EQUIPMENT_SLOT_END)
+                    Set.Appearances[equipSlot] = int32(appearanceID);
+            }
         }
 
         Set.SetName.assign(reinterpret_cast<char const*>(remaining.data() + asciiStart), nameLength);
@@ -318,7 +343,12 @@ void TransmogOutfitUpdateSlots::Read()
 
             uint8 transmogSlot = slot.GetSlotIndex();
             uint8 equipSlot = TransmogOutfitSlotToEquipSlot(transmogSlot);
-            if (equipSlot < EQUIPMENT_SLOT_END)
+            if (equipSlot == EQUIPMENT_SLOT_END + 1)
+            {
+                Set.SecondaryShoulderApparanceID = int32(slot.AppearanceID);
+                Set.SecondaryShoulderSlot = 2;
+            }
+            else if (equipSlot < EQUIPMENT_SLOT_END)
                 Set.Appearances[equipSlot] = int32(slot.AppearanceID);
 
             TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS slot entry: appearance={} rawSlotField=0x{:X} transmogSlot={} equipSlot={} reserved1={} reserved2={}",

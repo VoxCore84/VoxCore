@@ -882,6 +882,9 @@ void CollectionMgr::SendFavoriteAppearances() const
         if (state != CollectionItemState::Removed)
             accountTransmogUpdate.FavoriteAppearances.push_back(itemModifiedAppearanceId);
 
+    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_ACCOUNT_TRANSMOG_UPDATE [{}]: fullUpdate=1 favorites={} new={}",
+        _owner->GetPlayerInfo(), accountTransmogUpdate.FavoriteAppearances.size(), accountTransmogUpdate.NewAppearances.size());
+
     _owner->SendPacket(accountTransmogUpdate.Write());
 }
 
