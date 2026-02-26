@@ -71,10 +71,10 @@ std::string BuildDiagnosticReadTrace(char const* opcodeName, WorldPacket const& 
 
 uint8 TransmogOutfitSlotToEquipSlot(uint8 transmogSlot)
 {
-    // 12.x client uses 1-based transmog slot indices:
-    //   1=Head, 2=Shoulder, 3=SecShoulder, 4=Back, 5=Chest, 6=new slot, 7=Tabard,
-    //   8=Body, 9=Wrists, 10=Hands, 11=Waist, 12=Legs, 13=Feet, 14=MainHand,
-    //   15=OffHand, 16=Ranged
+    // 12.x client uses 1-based transmog slot indices (15 slots, no gaps):
+    //   1=Head, 2=Shoulder, 3=SecShoulder, 4=Back, 5=Chest, 6=Body(shirt),
+    //   7=Tabard, 8=Wrists, 9=Hands, 10=Waist, 11=Legs, 12=Feet,
+    //   13=MainHand, 14=OffHand, 15=Ranged
     switch (transmogSlot)
     {
         case 1:  return EQUIPMENT_SLOT_HEAD;
@@ -82,17 +82,16 @@ uint8 TransmogOutfitSlotToEquipSlot(uint8 transmogSlot)
         case 3:  return TRANSMOG_SECONDARY_SHOULDER_SLOT;
         case 4:  return EQUIPMENT_SLOT_BACK;
         case 5:  return EQUIPMENT_SLOT_CHEST;
-        case 6:  return EQUIPMENT_SLOT_END;          // new 12.x slot (profession tool?) — no server-side equip slot
+        case 6:  return EQUIPMENT_SLOT_BODY;
         case 7:  return EQUIPMENT_SLOT_TABARD;
-        case 8:  return EQUIPMENT_SLOT_BODY;
-        case 9:  return EQUIPMENT_SLOT_WRISTS;
-        case 10: return EQUIPMENT_SLOT_HANDS;
-        case 11: return EQUIPMENT_SLOT_WAIST;
-        case 12: return EQUIPMENT_SLOT_LEGS;
-        case 13: return EQUIPMENT_SLOT_FEET;
-        case 14: return EQUIPMENT_SLOT_MAINHAND;
-        case 15: return EQUIPMENT_SLOT_OFFHAND;
-        case 16: return EQUIPMENT_SLOT_RANGED;
+        case 8:  return EQUIPMENT_SLOT_WRISTS;
+        case 9:  return EQUIPMENT_SLOT_HANDS;
+        case 10: return EQUIPMENT_SLOT_WAIST;
+        case 11: return EQUIPMENT_SLOT_LEGS;
+        case 12: return EQUIPMENT_SLOT_FEET;
+        case 13: return EQUIPMENT_SLOT_MAINHAND;
+        case 14: return EQUIPMENT_SLOT_OFFHAND;
+        case 15: return EQUIPMENT_SLOT_RANGED;
         default: return EQUIPMENT_SLOT_END;
     }
 }

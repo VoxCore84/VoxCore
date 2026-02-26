@@ -18060,7 +18060,7 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
         }
 
         // Map server EQUIPMENT_SLOT indices to 12.x client TransmogOutfitSlot indices (1-based)
-        // Two profession tool slots (6 and 12) are skipped — no server equip slot for those.
+        // 15 slots, no gaps: 1=Head..5=Chest, 6=Body, 7=Tabard, 8=Wrists..12=Feet, 13-15=weapons
         struct TransmogSlotMapping { int8 transmogSlot; uint8 equipSlot; };
         static constexpr TransmogSlotMapping slotMap[] = {
             {  1,  0 }, // Head            -> EQUIPMENT_SLOT_HEAD
@@ -18068,16 +18068,16 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
             {  3,  2 }, // ShoulderLeft    -> EQUIPMENT_SLOT_SHOULDERS (secondary)
             {  4, 14 }, // Back            -> EQUIPMENT_SLOT_BACK
             {  5,  4 }, // Chest           -> EQUIPMENT_SLOT_CHEST
+            {  6,  3 }, // Body (Shirt)    -> EQUIPMENT_SLOT_BODY
             {  7, 18 }, // Tabard          -> EQUIPMENT_SLOT_TABARD
-            {  8,  3 }, // Body (Shirt)    -> EQUIPMENT_SLOT_BODY
-            {  9,  8 }, // Wrist           -> EQUIPMENT_SLOT_WRISTS
-            { 10,  9 }, // Hand            -> EQUIPMENT_SLOT_HANDS
-            { 11,  5 }, // Waist           -> EQUIPMENT_SLOT_WAIST
-            { 13,  6 }, // Legs            -> EQUIPMENT_SLOT_LEGS
-            { 14,  7 }, // Feet            -> EQUIPMENT_SLOT_FEET
-            { 15, 15 }, // WeaponMainHand  -> EQUIPMENT_SLOT_MAINHAND
-            { 16, 16 }, // WeaponOffHand   -> EQUIPMENT_SLOT_OFFHAND
-            { 17, 17 }, // WeaponRanged    -> EQUIPMENT_SLOT_RANGED
+            {  8,  8 }, // Wrist           -> EQUIPMENT_SLOT_WRISTS
+            {  9,  9 }, // Hand            -> EQUIPMENT_SLOT_HANDS
+            { 10,  5 }, // Waist           -> EQUIPMENT_SLOT_WAIST
+            { 11,  6 }, // Legs            -> EQUIPMENT_SLOT_LEGS
+            { 12,  7 }, // Feet            -> EQUIPMENT_SLOT_FEET
+            { 13, 15 }, // WeaponMainHand  -> EQUIPMENT_SLOT_MAINHAND
+            { 14, 16 }, // WeaponOffHand   -> EQUIPMENT_SLOT_OFFHAND
+            { 15, 17 }, // WeaponRanged    -> EQUIPMENT_SLOT_RANGED
         };
 
         for (auto const& mapping : slotMap)
