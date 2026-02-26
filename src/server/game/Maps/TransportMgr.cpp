@@ -39,6 +39,9 @@ TransportTemplate& TransportTemplate::operator=(TransportTemplate&&) noexcept = 
 
 Optional<Position> TransportTemplate::ComputePosition(uint32 time, TransportMovementState* moveState, size_t* legIndex) const
 {
+    if (!TotalPathTime)
+        return {};
+
     time %= TotalPathTime;
 
     // find leg
@@ -229,6 +232,13 @@ void TransportMgr::LoadTransportTemplates()
         TransportTemplate& transport = _transportTemplates[entry];
 
         GeneratePath(goInfo, &transport);
+
+        if (!transport.TotalPathTime)
+        {
+            _transportTemplates.erase(entry);
+            TC_LOG_ERROR("sql.sql", "Transport {} (name: {}) has no valid path (TotalPathTime=0), skipped.", entry, goInfo->name);
+            continue;
+        }
 
         ++count;
     } while (result->NextRow());

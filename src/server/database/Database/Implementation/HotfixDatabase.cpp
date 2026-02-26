@@ -1596,7 +1596,7 @@ void HotfixDatabaseConnection::DoPrepareStatements()
     PREPARE_LOCALE_STMT(HOTFIX_SEL_RESEARCH_BRANCH, "SELECT ID, Name_lang FROM research_branch_locale WHERE (`VerifiedBuild` > 0) = ? AND locale = ?", CONNECTION_SYNCH);
 
     // ResearchProject.db2
-    PrepareStatement(HOTFIX_SEL_RESEARCH_PROJECT, "SELECT Name, Description, SpellId, ResearchBranchId, Rarity, NumSockets, Id, TextureFileId, "
+    PrepareStatement(HOTFIX_SEL_RESEARCH_PROJECT, "SELECT Id, Name, Description, Rarity, SpellId, ResearchBranchId, NumSockets, TextureFileId, "
         "RequiredWeight FROM research_project WHERE (`VerifiedBuild` > 0) = ?", CONNECTION_SYNCH);
     PREPARE_MAX_ID_STMT(HOTFIX_SEL_RESEARCH_PROJECT, "SELECT MAX(ID) + 1 FROM research_project", CONNECTION_SYNCH);
     PREPARE_LOCALE_STMT(HOTFIX_SEL_RESEARCH_PROJECT, "SELECT ID, Name_lang, Description_lang FROM research_project_locale"
