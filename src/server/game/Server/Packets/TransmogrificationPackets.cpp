@@ -169,17 +169,16 @@ void TransmogOutfitNew::Read()
             return;
         }
 
-        std::span<uint8 const> potentialSlotData = remaining.subspan(6, middleLength - 6);
-        if (!potentialSlotData.empty())
-            TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_NEW extra-middle-bytes={} hex={}",
-                potentialSlotData.size(), ByteArrayToHexStr(potentialSlotData));
-
-        if (!potentialSlotData.empty() && potentialSlotData.size() % 16 == 0)
+        std::size_t extraBytes = middleLength - 6;
+        if (extraBytes > 0 && extraBytes % 16 != 0)
+            TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_NEW: {} extra middle bytes (not multiple of 16), ignoring", extraBytes);
+        else if (extraBytes > 0)
         {
-            for (std::size_t i = 0; i < potentialSlotData.size(); i += 16)
+            std::span<uint8 const> slotData = remaining.subspan(6, extraBytes);
+            for (std::size_t i = 0; i < slotData.size(); i += 16)
             {
-                uint32 appearanceID = ReadLE<uint32>(potentialSlotData, i + 0);
-                uint32 rawSlotField = ReadLE<uint32>(potentialSlotData, i + 4);
+                uint32 appearanceID = ReadLE<uint32>(slotData, i + 0);
+                uint32 rawSlotField = ReadLE<uint32>(slotData, i + 4);
                 uint8 transmogSlot = uint8(rawSlotField >> 24);
                 uint8 equipSlot = TransmogOutfitSlotToEquipSlot(transmogSlot);
 
@@ -192,6 +191,11 @@ void TransmogOutfitNew::Read()
                     Set.Appearances[equipSlot] = int32(appearanceID);
             }
         }
+
+        Set.IgnoreMask = 0;
+        for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+            if (!Set.Appearances[slot])
+                Set.IgnoreMask |= (1u << slot);
 
         Set.SetName.assign(reinterpret_cast<char const*>(remaining.data() + asciiStart), nameLength);
         Set.SetIcon = std::to_string(IconFileDataID);
