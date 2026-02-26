@@ -16,6 +16,7 @@
  */
 
 #include "TransmogrificationPackets.h"
+#include "DB2Stores.h"
 #include "Log.h"
 #include "PacketOperators.h"
 #include "Util.h"
@@ -67,6 +68,26 @@ std::string BuildDiagnosticReadTrace(char const* opcodeName, WorldPacket const& 
         trace << " | u64@8=" << ReadLE<uint64>(payload, 8);
 
     return trace.str();
+}
+
+// Check if an IMAID corresponds to a weapon-type appearance (DisplayType 11/12/13/15).
+// Returns true for weapon appearances and for IMAID=0 (empty slot, caller handles separately).
+bool IsWeaponAppearance(uint32 itemModifiedAppearanceID)
+{
+    if (!itemModifiedAppearanceID)
+        return true; // empty — let caller decide
+
+    ItemModifiedAppearanceEntry const* modAppear = sItemModifiedAppearanceStore.LookupEntry(itemModifiedAppearanceID);
+    if (!modAppear)
+        return false;
+
+    ItemAppearanceEntry const* appear = sItemAppearanceStore.LookupEntry(modAppear->ItemAppearanceID);
+    if (!appear)
+        return false;
+
+    // DisplayType: 11=MainHand, 12=Ranged, 13=Shield, 15=OffHand
+    uint8 dt = uint8(appear->DisplayType);
+    return (dt == 11 || dt == 12 || dt == 13 || dt == 15);
 }
 
 uint8 TransmogOutfitSlotToEquipSlot(uint8 transmogSlot)
@@ -232,9 +253,16 @@ void TransmogOutfitNew::Read()
                 }
                 else if (equipSlot < EQUIPMENT_SLOT_END)
                 {
-                    // First non-zero IMAID wins — protect against multi-iteration clobbering
                     if (appearanceID && !Set.Appearances[equipSlot])
-                        Set.Appearances[equipSlot] = int32(appearanceID);
+                    {
+                        // For weapon slots, reject armor IMAIDs that the client duplicates
+                        // at tSlots 13/14/15 when no weapon transmog is selected.
+                        bool isWeaponSlot = (equipSlot == EQUIPMENT_SLOT_MAINHAND ||
+                                             equipSlot == EQUIPMENT_SLOT_OFFHAND ||
+                                             equipSlot == EQUIPMENT_SLOT_RANGED);
+                        if (!isWeaponSlot || IsWeaponAppearance(appearanceID))
+                            Set.Appearances[equipSlot] = int32(appearanceID);
+                    }
                 }
             }
         }
@@ -449,11 +477,24 @@ void TransmogOutfitUpdateSlots::Read()
             }
             else if (equipSlot < EQUIPMENT_SLOT_END)
             {
-                // Multi-iteration packets (slotCount > 15) send the same 15 slots multiple times.
-                // Only accept the first non-zero IMAID per slot to prevent later iterations
-                // from clobbering valid weapon appearances with armor IMAIDs.
+                // First non-zero IMAID wins — protects against multi-iteration clobbering
                 if (slot.AppearanceID && !Set.Appearances[equipSlot])
-                    Set.Appearances[equipSlot] = int32(slot.AppearanceID);
+                {
+                    // For weapon slots, the client duplicates armor IMAIDs at tSlots 13/14/15
+                    // when no weapon transmog is selected. Validate via DB2 DisplayType.
+                    bool isWeaponSlot = (equipSlot == EQUIPMENT_SLOT_MAINHAND ||
+                                         equipSlot == EQUIPMENT_SLOT_OFFHAND ||
+                                         equipSlot == EQUIPMENT_SLOT_RANGED);
+                    if (isWeaponSlot && !IsWeaponAppearance(slot.AppearanceID))
+                    {
+                        TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS entry[{}]: rejecting non-weapon IMAID {} at weapon equipSlot={}",
+                            i, slot.AppearanceID, equipSlot);
+                    }
+                    else
+                    {
+                        Set.Appearances[equipSlot] = int32(slot.AppearanceID);
+                    }
+                }
             }
 
             // Log ALL entries in the first iteration (first 15) to diagnose slot mapping
