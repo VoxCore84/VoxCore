@@ -251,10 +251,9 @@ void CompanionMgr::SummonSquad(Player* player)
             continue;
         }
 
-        // Set faction to match owner
+        // Match owner's level, faction, and flags
+        summon->SetLevel(player->GetLevel());
         summon->SetFaction(player->GetFaction());
-
-        // Make non-interactable by other players
         summon->SetImmuneToPC(true);
 
         // Start following if enabled
@@ -385,11 +384,11 @@ Companion::FormationOffset CompanionMgr::GetFormationOffset(Companion::Role role
 
     switch (role)
     {
-        case Companion::ROLE_TANK:   baseDist = 2.0f; baseAngle = 0.0f; break;
-        case Companion::ROLE_MELEE:  baseDist = 3.5f; baseAngle = 0.0f; break;
-        case Companion::ROLE_RANGED: baseDist = 5.5f; baseAngle = -0.3f; break;
-        case Companion::ROLE_CASTER: baseDist = 5.5f; baseAngle =  0.3f; break;
-        case Companion::ROLE_HEALER: baseDist = 6.5f; baseAngle = 0.0f; break;
+        case Companion::ROLE_TANK:   baseDist = 1.5f; baseAngle = 0.0f; break;
+        case Companion::ROLE_MELEE:  baseDist = 2.0f; baseAngle = 0.0f; break;
+        case Companion::ROLE_RANGED: baseDist = 3.5f; baseAngle = -0.3f; break;
+        case Companion::ROLE_CASTER: baseDist = 3.5f; baseAngle =  0.3f; break;
+        case Companion::ROLE_HEALER: baseDist = 4.0f; baseAngle = 0.0f; break;
         default: break;
     }
 
