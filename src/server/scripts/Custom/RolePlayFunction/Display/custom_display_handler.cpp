@@ -157,15 +157,17 @@ namespace RoleplayCore
             return;
 
         // Reset all appearance modifiers
-        static const std::array<ItemModifier, 8> modifiers = {
+        static const std::array<ItemModifier, 10> modifiers = {
             ITEM_MODIFIER_TRANSMOG_SECONDARY_APPEARANCE_SPEC_1,
             ITEM_MODIFIER_TRANSMOG_SECONDARY_APPEARANCE_SPEC_2,
             ITEM_MODIFIER_TRANSMOG_SECONDARY_APPEARANCE_SPEC_3,
             ITEM_MODIFIER_TRANSMOG_SECONDARY_APPEARANCE_SPEC_4,
+            ITEM_MODIFIER_TRANSMOG_SECONDARY_APPEARANCE_SPEC_5,
             ITEM_MODIFIER_TRANSMOG_APPEARANCE_SPEC_1,
             ITEM_MODIFIER_TRANSMOG_APPEARANCE_SPEC_2,
             ITEM_MODIFIER_TRANSMOG_APPEARANCE_SPEC_3,
-            ITEM_MODIFIER_TRANSMOG_APPEARANCE_SPEC_4
+            ITEM_MODIFIER_TRANSMOG_APPEARANCE_SPEC_4,
+            ITEM_MODIFIER_TRANSMOG_APPEARANCE_SPEC_5
         };
 
         for (auto mod : modifiers)
