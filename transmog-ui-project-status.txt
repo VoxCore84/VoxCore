@@ -1,0 +1,342 @@
+================================================================================
+TRANSMOG UI PROJECT — STATUS BRIEFING
+================================================================================
+Date: 2026-02-25
+Repo: VoxCore84/RoleplayCore (private, TrinityCore 12.x / Midnight client)
+Branch: master
+
+This document summarizes the current state of the Transmog Outfit system
+implementation for the 12.x WoW client. The goal is full retail-parity
+transmog wardrobe/outfit functionality.
+
+================================================================================
+1. WHAT HAS BEEN DONE (Completed Work)
+================================================================================
+
+A) GUID MISIDENTIFICATION FIX (PR #750, merged)
+   Commit: fda0f34dc8
+   ---------------------------------------------------------------
+   All four CMSG_TRANSMOG_OUTFIT_* packets were silently rejected because
+   the ObjectGuid field (named "PlayerGuid") was actually the transmogrifier
+   NPC's Creature GUID, not the player's GUID.
+
+   Fix: Renamed field to "Npc" across all packets, replaced
+   ValidateTransmogOutfitPlayerGuid() with ValidateTransmogOutfitNpc()
+   which uses GetNPCIfCanInteractWith(npcGuid, UNIT_NPC_FLAG_TRANSMOGRIFIER).
+
+   Files changed:
+   - src/server/game/Server/Packets/TransmogrificationPackets.h
+   - src/server/game/Server/Packets/TransmogrificationPackets.cpp
+   - src/server/game/Handlers/TransmogrificationHandler.cpp
+
+B) TRANSMOGSETITEM HOTFIX CRASH FIX
+   Commit: 2561f4eadd
+   ---------------------------------------------------------------
+   107 TransmogSetItem records in hotfix_data had Status=2 (RecordRemoved),
+   causing the server to instruct the client to delete DB2 records. This
+   created partially orphaned TransmogSets — the parent set existed but
+   some slot→item mappings were gone.
+
+   Client-side, C_TransmogOutfitInfo.GetSourceIDsForSlot() returned nil
+   for those slots, crashing Blizzard_Transmog.lua:2488 (40x per session):
+     "attempt to get length of local 'sourceIDs' (a nil value)"
+
+   Fix: SQL update removes the Status=2 hotfix_data entries for
+   TransmogSetItem (TableHash 0x1E21AFB4). Client keeps base DB2 data.
+
+   Also cleaned up 285 stale TransmogHoliday entries (283 Invalid + 2 Removed)
+   that caused VALIDATION_RESULT_INVALID noise in client Hotfix.log.
+
+   SQL files:
+   - sql/updates/hotfixes/master/2026_02_25_01_hotfixes.sql (TransmogSetItem)
+   - sql/updates/hotfixes/master/2026_02_25_02_hotfixes.sql (TransmogHoliday)
+
+C) SPELL EFFECT HANDLER — EffectEquipTransmogOutfit (Effect 347)
+   Commit: 4cc79bf36b
+   ---------------------------------------------------------------
+   Fully implemented in SpellEffects.cpp (line ~6003). When a spell with
+   SPELL_EFFECT_EQUIP_TRANSMOG_OUTFIT fires (e.g., spell 1247613 which is
+   EQUIP_TRANSMOG_OUTFIT_MANUAL_SPELL_ID from the client), it:
+   - Looks up outfit by SetID from MiscValue[0]
+   - Iterates equipment slots, applies ITEM_MODIFIER_TRANSMOG_APPEARANCE_ALL_SPECS
+   - Handles secondary shoulder, enchant illusions for MH/OH
+   - Calls SetVisibleItemSlot per slot to update visual
+
+D) LOGGER CONFIGURATION
+   ---------------------------------------------------------------
+   worldserver.conf (RelWithDebInfo) updated with transmog-specific debug loggers:
+   - Logger.network.opcode.transmog=2 (DEBUG)
+   - Logger.entities.player.items=2
+   - Logger.spells=2
+   - Console appender lowered to DEBUG
+
+E) OUTFIT LOAD/SAVE/SYNC PIPELINE
+   ---------------------------------------------------------------
+   Already implemented in Player.cpp:
+   - _LoadTransmogOutfits() — loads from character DB at login
+   - _SyncTransmogOutfitsToActivePlayerData() — pushes to client update fields
+   - GetTransmogOutfitBySetID() — lookup for spell effect handler
+   - Outfits stored as EquipmentSetInfo with Type=TRANSMOG
+   - Login delivery via SMSG_LOAD_EQUIPMENT_SET
+
+================================================================================
+2. WHAT IS IMPLEMENTED BUT NEEDS WORK (Fragile/Incomplete)
+================================================================================
+
+A) PACKET PARSING — HEURISTIC / REVERSE-ENGINEERED
+   File: TransmogrificationPackets.cpp
+   ---------------------------------------------------------------
+   The Read() methods for CMSG_TRANSMOG_OUTFIT_NEW and UPDATE_INFO use
+   heuristic parsing rather than clean field-by-field reads:
+
+   - TransmogOutfitNew::Read():
+     Reads NPC guid, then takes a raw span of remaining bytes.
+     Scans BACKWARDS from end for printable ASCII to find outfit name.
+     Hardcodes middle section as exactly 6 bytes: [type:u8][flags:u8][icon:u32].
+     Sets ParseSuccess=false on mismatch instead of throwing.
+
+   - TransmogOutfitUpdateInfo::Read():
+     Same pattern. Middle section is 5 bytes: [type:u8][icon:u32] (no flags).
+
+   - TransmogOutfitUpdateSlots::Read():
+     More structured: SetID, slotCount, Npc guid, then 16 bytes per slot.
+     Has alignment-gap handling for unknown extra bytes between guid and slots.
+     Each slot: AppearanceID(u32), RawSlotField(u32), Reserved1(u32), Reserved2(u32).
+     Slot index extracted via RawSlotField >> 24.
+
+   - TransmogOutfitUpdateSituations::Read():
+     Clean structured read. SetID, Npc, count, then 16-byte entries.
+     This is the only parser with no heuristic logic.
+
+   All parsers store diagnostic fields (ParseError, DiagnosticReadTrace,
+   PayloadSize, PayloadPreviewHex) for debugging.
+
+   RISK: The hardcoded byte sizes for middle sections in NEW/UPDATE_INFO
+   may break if the client's wire format changes in a patch.
+
+B) SLOT MAPPING BUG — TransmogOutfitSlotToEquipSlot()
+   File: TransmogrificationPackets.cpp
+   ---------------------------------------------------------------
+   The mapping function maps transmog outfit slots (0-14) to equipment slots.
+   BUG: Both transmog slot 1 AND slot 2 map to EQUIPMENT_SLOT_SHOULDERS.
+
+   The retail TransmogOutfitSlot enum has:
+     0 = Head, 1 = ShoulderRight, 2 = ShoulderLeft, 3 = Chest, ...
+
+   Slot 1 (ShoulderRight) → EQUIPMENT_SLOT_SHOULDERS is correct.
+   Slot 2 (ShoulderLeft) should map to the secondary shoulder appearance
+   (not the same equipment slot), or be handled specially.
+
+   Currently slot 2 silently overwrites slot 1's shoulder value.
+
+C) SMSG RESPONSE PACKETS — MINIMAL
+   File: TransmogrificationPackets.cpp (lines 388-414)
+   ---------------------------------------------------------------
+   All four SMSG_TRANSMOG_OUTFIT_* Write() methods serialize only:
+     uint32 SetID + uint64 Guid
+
+   This may be sufficient if the client only needs an ACK, but retail
+   responses may include additional data. Needs packet capture verification.
+
+   Opcodes:
+   - SMSG_TRANSMOG_OUTFIT_NEW_ENTRY_ADDED    = 0x42004A
+   - SMSG_TRANSMOG_OUTFIT_INFO_UPDATED       = 0x42004B
+   - SMSG_TRANSMOG_OUTFIT_SITUATIONS_UPDATED = 0x42004C
+   - SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED      = 0x42004D
+
+================================================================================
+3. WHAT IS NOT YET IMPLEMENTED (TODO)
+================================================================================
+
+A) SITUATION PERSISTENCE
+   File: TransmogrificationHandler.cpp, HandleTransmogOutfitUpdateSituations()
+   ---------------------------------------------------------------
+   The handler parses situation entries and sends an ACK, but the data
+   is discarded. Explicit comment: "(stored as no-op; TODO implement
+   situation persistence)"
+
+   Situations are the retail auto-outfit-switching system. Each situation
+   links a TransmogSituation enum value to a spec/loadout/equipment set:
+
+   TransmogSituation enum (0-21):
+     0=None, 1=Spec1, 2=Spec2, 3=Spec3, 4=Spec4,
+     5=InCapitalCity, 6=InBattlefield, 7=OnDragonback, 8=InRaid,
+     9=InDungeon, 10=Swimming, 11=Mounted, 12=InCombat,
+     13=BearForm, 14=CatForm, 15=FlightForm, 16=MoonkinForm,
+     17=TreeOfLifeForm, 18=GhostWolfForm, 19=TravelForm,
+     20=StagForm, 21=MetamorphosisForm
+
+   Needs:
+   - DB table (character DB) to persist situation entries per outfit
+   - Load at login, sync to client
+   - Runtime auto-switch logic when situation changes (zone, spec, form, etc.)
+
+   Priority: LOW for roleplay server. Players can manually equip outfits.
+
+B) OUTFIT DELETE FLOW
+   ---------------------------------------------------------------
+   There is NO CMSG_TRANSMOG_OUTFIT_DELETE opcode or handler.
+
+   Investigation found that outfit deletion goes through the existing
+   CMSG_DELETE_EQUIPMENT_SET opcode (since transmog outfits are stored
+   as EquipmentSetInfo with Type=TRANSMOG). This SHOULD already work
+   via the existing DeleteEquipmentSet handler, but needs testing.
+
+   Test: Create an outfit via the transmog UI, then delete it. Verify
+   the client sends CMSG_DELETE_EQUIPMENT_SET and the server removes it.
+
+C) APPEARANCE COLLECTION SYNC
+   ---------------------------------------------------------------
+   The client's wardrobe "Sets" tab depends on the server correctly
+   reporting which item appearances the player has collected.
+
+   AccountTransmogUpdate (SMSG_ACCOUNT_TRANSMOG_UPDATE) exists and has
+   Write() implemented, but the following needs verification:
+   - Is it sent at login with IsFullUpdate=true?
+   - Does it include all collected appearances?
+   - Does the client use this for "usable sets" calculation?
+
+   CollectionMgr::HasItemAppearance() is used by handlers for validation.
+   But whether the full collection is properly synced to the client for
+   UI display (checkmarks on sets, "X/8 collected" counts) is unverified.
+
+D) REMAINING HOTFIX VALIDATION ERRORS
+   ---------------------------------------------------------------
+   The client's Hotfix.log still has ~1,800+ stale entries across many
+   tables (Status=2 and Status=3 in hotfix_data). Largest offenders:
+
+   Count  Hex Hash     Status  Likely Table
+   -----  ----------   ------  ----------------------------------------
+    486   0xC9E0A749   3       CreatureDifficulty (?)
+    279   0xCE88EDCA   3       Unknown
+    271   0xB50CA635   3       Unknown
+    180   0x4553E9F7   3       Unknown
+    156   0x198E28B5   3       SpellVisualEvent (?)
+
+   These are not crashes — just noise. But they slow down client login
+   and indicate data mismatches between TC's hotfix DB and the 12.x client.
+
+   Fixing: Could delete all Status=3 (Invalid) entries from hotfix_data.
+   The server sends these as "this record is invalid" to the client, which
+   just logs a warning. Removing them would be safe — the client falls back
+   to its base DB2 data.
+
+E) HOTFIX BLOB CLEANUP (ALREADY DONE — 2026_02_25_00)
+   ---------------------------------------------------------------
+   Previously cleaned ~6,758 hotfix_blob entries for DB2 stores that have
+   typed tables (server was skipping them anyway). This is done.
+
+================================================================================
+4. CLIENT-SIDE REFERENCE (Retail WoW UI Source)
+================================================================================
+
+Key files examined from wow-ui-source-live:
+
+A) Blizzard_APIDocumentationGenerated/TransmogOutfitInfoDocumentation.lua
+   - C_TransmogOutfitInfo API: AddNewOutfit, CommitOutfitInfo,
+     CommitAndApplyAllPending, GetOutfitsInfo, GetSourceIDsForSlot, etc.
+   - GetSourceIDsForSlot has MayReturnNothing=true (can return nil)
+
+B) Blizzard_APIDocumentationGenerated/TransmogOutfitConstantsDocumentation.lua
+   - TransmogOutfitSlot enum (0-14): 15 slots
+     Head, ShoulderRight, ShoulderLeft, Chest, Waist, Legs, Feet,
+     Wrist, Hands, Back, Shirt, Tabard, MainHand, OffHand, Ranged
+   - TransmogOutfitTransactionFlags (bitmask):
+     UpdateMetadata=1, UpdateOutfitInfo=2, CreateOutfitInfo=4,
+     UpdateSlots=8, UpdateSituations=16
+   - TransmogSituation enum (0-21): see section 3A above
+
+C) Blizzard_TransmogShared/Blizzard_TransmogShared.lua
+   - TransmogUtil, TransmogLocationMixin, TRANSMOG_SLOTS table
+   - WardrobeSetsDataProviderMixin — the Sets tab data provider
+   - /customset v1 import/export format
+
+D) Blizzard_Transmog/Blizzard_Transmog.lua
+   - Main transmog NPC UI, WardrobeOutfitMixin
+   - GetFirstMatchingSetID (line ~2476) — the function that was crashing
+   - Line 466 was the original crash (before GUID fix) — empty outfit data
+
+================================================================================
+5. KEY ARCHITECTURE NOTES
+================================================================================
+
+- Transmog outfits are stored as EquipmentSetInfo with Type=TRANSMOG
+  (vs Type=EQUIPMENT for normal equipment sets). They share the same
+  DB table (character_equipmentsets) and load/save pipeline.
+
+- The client uses a unified C_TransmogOutfitInfo API for all outfit
+  operations. The CMSG opcode determines what's being updated.
+
+- SetID is server-assigned via FindNextAvailableTransmogSetID().
+  The Guid field in SMSG responses is the player's uint64 GUID.
+
+- Login delivery: outfits load via _LoadTransmogOutfits() and sync
+  to the client via SMSG_LOAD_EQUIPMENT_SET (same as regular sets).
+
+- The spell effect EQUIP_TRANSMOG_OUTFIT (347) is triggered when
+  the player clicks "Apply" — the client casts spell 1247613 with
+  the outfit's SetID as MiscValue[0].
+
+- Appearance validation at save time uses sItemModifiedAppearanceStore
+  and CollectionMgr::HasItemAppearance(). At equip time (spell effect),
+  validation is intentionally skipped (assumed valid from save).
+
+================================================================================
+6. FILE REFERENCE
+================================================================================
+
+Server-side C++ (in src/server/game/):
+  Handlers/TransmogrificationHandler.cpp     — All CMSG handlers
+  Server/Packets/TransmogrificationPackets.h — Packet class declarations
+  Server/Packets/TransmogrificationPackets.cpp — Read()/Write() implementations
+  Spells/SpellEffects.cpp                     — EffectEquipTransmogOutfit (~line 6003)
+  Entities/Player/Player.cpp                  — Load/save/sync transmog outfits
+  Entities/Player/EquipmentSet.h              — EquipmentSetData struct
+  Entities/Player/CollectionMgr.cpp           — HasItemAppearance() checks
+  DataStores/DB2Stores.cpp                    — TransmogSet/TransmogSetItem stores
+  DataStores/DB2Structure.h                   — TransmogSetEntry, TransmogSetItemEntry
+  Handlers/HotfixHandler.cpp                  — Hotfix delivery to client
+
+SQL updates (in sql/updates/hotfixes/master/):
+  2026_02_25_00_hotfixes.sql — hotfix_blob cleanup (6,758 dead entries)
+  2026_02_25_01_hotfixes.sql — TransmogSetItem DELETE removal (107 entries)
+  2026_02_25_02_hotfixes.sql — TransmogHoliday stale entry removal (285 entries)
+
+Client-side Lua reference (read-only, not in repo):
+  Blizzard_Transmog/Blizzard_Transmog.lua
+  Blizzard_TransmogShared/Blizzard_TransmogShared.lua
+  Blizzard_Collections/ (wardrobe tabs)
+  Blizzard_APIDocumentationGenerated/TransmogOutfitInfoDocumentation.lua
+  Blizzard_APIDocumentationGenerated/TransmogOutfitConstantsDocumentation.lua
+
+================================================================================
+7. RECOMMENDED NEXT STEPS (Priority Order)
+================================================================================
+
+1. TEST END-TO-END: Restart server, log in, open transmog NPC UI.
+   Verify the Lua 2488 error is gone. Try creating/renaming/applying an outfit.
+
+2. TEST DELETE FLOW: Create an outfit, then delete it. Verify CMSG_DELETE_EQUIPMENT_SET
+   fires and the server removes it properly.
+
+3. FIX SLOT MAPPING BUG: TransmogOutfitSlotToEquipSlot() maps slot 1 and 2
+   both to EQUIPMENT_SLOT_SHOULDERS. Slot 2 (ShoulderLeft) needs special handling
+   via the SecondaryShoulderAppearance field.
+
+4. VERIFY APPEARANCE COLLECTION: Check that SMSG_ACCOUNT_TRANSMOG_UPDATE is
+   sent at login with the full set of collected appearances. Without this,
+   the wardrobe Sets tab may show incorrect collection progress.
+
+5. HARDEN PACKET PARSING: The heuristic parsers for NEW and UPDATE_INFO are
+   fragile. Consider capturing more packets to build a definitive wire format
+   specification, then rewrite to clean field-by-field reads.
+
+6. IMPLEMENT SITUATION PERSISTENCE (Low priority): Add character DB table,
+   load/save, and runtime auto-switch logic for situations.
+
+7. CLEAN UP REMAINING HOTFIX NOISE (Low priority): ~1,800 stale hotfix_data
+   entries across various tables. Could delete all Status=3 entries.
+
+================================================================================
+END OF BRIEFING
+================================================================================
