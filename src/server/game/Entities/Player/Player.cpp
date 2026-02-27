@@ -18059,9 +18059,10 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
             sitSetter.ModifyValue(&UF::TransmogOutfitSituationInfo::EquipmentSetID).SetValue(sit.EquipmentSetID);
         }
 
-        // Map server EQUIPMENT_SLOT indices to DB2 TransmogOutfitSlotInfo.ID (1-based).
-        // The client indexes outfit slots by this DB2 ID, which corresponds to byte[15]
-        // in CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS packets.
+        // Map server EQUIPMENT_SLOT indices to ordinal slot IDs for the client's outfit UI.
+        // The db2SlotInfoID is sent as the Slot field in the TransmogOutfitSlotData UpdateField.
+        // Note: in CMSG packets, byte[0] is this ordinal but is NOT the routing key —
+        // the wire DisplayType (bytes[6-7]) routes IMAIDs to equipment slots.
         struct TransmogSlotMapping { uint8 db2SlotInfoID; uint8 equipSlot; };
         static constexpr TransmogSlotMapping slotMap[] = {
             {  1,  0 }, // ID 1  = Head            -> EQUIPMENT_SLOT_HEAD

@@ -496,6 +496,16 @@ void WorldSession::HandleTransmogrifyItems(WorldPackets::Transmogrification::Tra
                     TC_LOG_DEBUG("network.opcode.transmog", "HandleTransmogrifyItems [{}]: syncing IMAID {} to outfit {} equipSlot={}",
                         GetPlayerInfo(), appearancePair.first, activeOutfitID, slot);
                 }
+
+                // Sync secondary shoulder appearance
+                if (slot == EQUIPMENT_SLOT_SHOULDERS && appearancePair.second)
+                {
+                    activeOutfit->SecondaryShoulderApparanceID = int32(appearancePair.second);
+                    activeOutfit->SecondaryShoulderSlot = EQUIPMENT_SLOT_SHOULDERS;
+                    outfitChanged = true;
+                    TC_LOG_DEBUG("network.opcode.transmog", "HandleTransmogrifyItems [{}]: syncing secondary shoulder IMAID {} to outfit {}",
+                        GetPlayerInfo(), appearancePair.second, activeOutfitID);
+                }
             }
 
             // Also sync enchant illusions for weapons
@@ -514,6 +524,22 @@ void WorldSession::HandleTransmogrifyItems(WorldPackets::Transmogrification::Tra
                 }
             }
 
+            // Sync reset illusions (illusion removed from weapon)
+            for (Item* item : resetIllusionItems)
+            {
+                uint8 slot = item->GetSlot();
+                if (slot == EQUIPMENT_SLOT_MAINHAND && activeOutfit->Enchants[0])
+                {
+                    activeOutfit->Enchants[0] = 0;
+                    outfitChanged = true;
+                }
+                else if (slot == EQUIPMENT_SLOT_OFFHAND && activeOutfit->Enchants[1])
+                {
+                    activeOutfit->Enchants[1] = 0;
+                    outfitChanged = true;
+                }
+            }
+
             // Sync reset appearances (transmog removed from slot)
             for (Item* item : resetAppearanceItems)
             {
@@ -522,6 +548,14 @@ void WorldSession::HandleTransmogrifyItems(WorldPackets::Transmogrification::Tra
                 {
                     activeOutfit->Appearances[slot] = 0;
                     activeOutfit->IgnoreMask |= (1u << slot);
+                    outfitChanged = true;
+                }
+
+                // Clear secondary shoulder when shoulder appearance is reset
+                if (slot == EQUIPMENT_SLOT_SHOULDERS && activeOutfit->SecondaryShoulderApparanceID)
+                {
+                    activeOutfit->SecondaryShoulderApparanceID = 0;
+                    activeOutfit->SecondaryShoulderSlot = 0;
                     outfitChanged = true;
                 }
             }
