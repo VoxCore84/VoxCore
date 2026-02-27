@@ -446,7 +446,7 @@ class spell_pal_consecration : public AuraScript
     void HandleEffectPeriodic(AuraEffect const* /*aurEff*/)
     {
         if (AreaTrigger* at = GetTarget()->GetAreaTrigger(SPELL_PALADIN_CONSECRATION))
-            GetTarget()->CastSpell(at->GetPosition(), SPELL_PALADIN_CONSECRATION_DAMAGE);
+            GetTarget()->CastSpell(at->GetPosition(), SPELL_PALADIN_CONSECRATION_DAMAGE, TRIGGERED_IGNORE_CAST_IN_PROGRESS);
     }
 
     void Register() override
