@@ -6,13 +6,13 @@ description: Look up faction template IDs or search faction names from Wago DB2 
 ## Context
 
 The user wants to look up WoW faction data. Two CSVs are needed:
-- **FactionTemplate** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66066/enUS/FactionTemplate-enUS.csv`
+- **FactionTemplate** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66192/enUS/FactionTemplate-enUS.csv`
   - Columns: `ID`, `Faction` (FK to Faction.ID), `Flags`, `FactionGroup`, `FriendGroup`, `EnemyGroup`, `Enemies_0..7`, `Friend_0..7`
   - ~1862 rows. The `ID` here is what `creature_template.faction` references.
-- **Faction** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66066/enUS/Faction-enUS.csv`
+- **Faction** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66192/enUS/Faction-enUS.csv`
   - Columns: `ID`, `Name_lang`, `Description_lang`, `ReputationIndex`, `ParentFactionID`, `Expansion`, ...
   - ~858 rows. Has readable names.
-- In Python, use `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66066/enUS/<filename>'` to resolve paths
+- In Python, use `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66192/enUS/<filename>'` to resolve paths
 
 ## FactionGroup flags
 - 1 = Player (Alliance or Horde), 2 = Alliance, 4 = Horde

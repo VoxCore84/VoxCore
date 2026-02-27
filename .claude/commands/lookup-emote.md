@@ -6,13 +6,13 @@ description: Look up emote IDs or search emote names from Wago DB2 CSVs
 ## Context
 
 The user wants to look up WoW emote data. Two CSVs are relevant:
-- **EmotesText** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66066/enUS/EmotesText-enUS.csv`
+- **EmotesText** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66192/enUS/EmotesText-enUS.csv`
   - Columns: `ID`, `Name` (e.g., AGREE, AMAZE, WAVE), `EmoteID`
   - Small table — these are the slash command emotes players use (/wave, /agree, etc.)
-- **Emotes** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66066/enUS/Emotes-enUS.csv`
+- **Emotes** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66192/enUS/Emotes-enUS.csv`
   - Columns: `ID`, `RaceMask`, `EmoteSlashCommand` (e.g., ONESHOT_NONE), `AnimID`, `EmoteFlags`, `EmoteSpecProc`, `EmoteSpecProcParam`, `EventSoundID`, `SpellVisualKitID`, `ClassMask`
   - ~494 rows. These are animation-level emotes used in SmartAI and creature_text.
-- In Python, use `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66066/enUS/<filename>'` to resolve paths
+- In Python, use `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66192/enUS/<filename>'` to resolve paths
 
 ## Arguments
 

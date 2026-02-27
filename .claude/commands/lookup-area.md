@@ -6,10 +6,10 @@ description: Look up area/zone IDs or search area names from Wago AreaTable DB2 
 ## Context
 
 The user wants to look up WoW area/zone data. The source is the Wago DB2 export:
-- **AreaTable** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66066/enUS/AreaTable-enUS.csv`
+- **AreaTable** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66192/enUS/AreaTable-enUS.csv`
   - Key columns: `ID`, `ZoneName` (internal name), `AreaName_lang` (display name), `ContinentID`, `ParentAreaID`, `ContentTuningID`, `Flags_0`, `Flags_1`
   - ~9848 rows
-- In Python, use `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66066/enUS/AreaTable-enUS.csv'` to resolve paths
+- In Python, use `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66192/enUS/AreaTable-enUS.csv'` to resolve paths
 
 ## ContinentID values
 - 0 = Eastern Kingdoms, 1 = Kalimdor, 530 = Outland, 571 = Northrend, 860 = Pandaria, 1116 = Draenor, 1220 = Broken Isles, 1643 = Kul Tiras, 1669 = Zandalar, 2222 = Shadowlands, 2444 = Dragon Isles, 2552 = Khaz Algar
