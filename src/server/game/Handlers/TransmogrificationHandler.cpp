@@ -473,6 +473,63 @@ void WorldSession::HandleTransmogrifyItems(WorldPackets::Transmogrification::Tra
             }
         }
     }
+
+    // Sync individual transmog changes back into the active transmog outfit.
+    // HandleTransmogrifyItems modifies item modifiers (which updates the game-world avatar
+    // via SetVisibleItemSlot), but the Transmog UI reads from ViewedOutfit update fields.
+    // Without this sync, HEAD/MH/OH transmogs done individually won't appear in the UI avatar.
+    uint32 activeOutfitID = player->GetActiveTransmogOutfitID();
+    if (activeOutfitID)
+    {
+        if (EquipmentSetInfo::EquipmentSetData* activeOutfit = player->GetMutableTransmogOutfitBySetID(activeOutfitID))
+        {
+            bool outfitChanged = false;
+
+            for (auto& [item, appearancePair] : transmogItems)
+            {
+                uint8 slot = item->GetSlot();
+                if (slot < EQUIPMENT_SLOT_END && appearancePair.first)
+                {
+                    activeOutfit->Appearances[slot] = int32(appearancePair.first);
+                    activeOutfit->IgnoreMask &= ~(1u << slot);
+                    outfitChanged = true;
+                    TC_LOG_DEBUG("network.opcode.transmog", "HandleTransmogrifyItems [{}]: syncing IMAID {} to outfit {} equipSlot={}",
+                        GetPlayerInfo(), appearancePair.first, activeOutfitID, slot);
+                }
+            }
+
+            // Also sync enchant illusions for weapons
+            for (auto& [item, enchantId] : illusionItems)
+            {
+                uint8 slot = item->GetSlot();
+                if (slot == EQUIPMENT_SLOT_MAINHAND)
+                {
+                    activeOutfit->Enchants[0] = int32(enchantId);
+                    outfitChanged = true;
+                }
+                else if (slot == EQUIPMENT_SLOT_OFFHAND)
+                {
+                    activeOutfit->Enchants[1] = int32(enchantId);
+                    outfitChanged = true;
+                }
+            }
+
+            // Sync reset appearances (transmog removed from slot)
+            for (Item* item : resetAppearanceItems)
+            {
+                uint8 slot = item->GetSlot();
+                if (slot < EQUIPMENT_SLOT_END && activeOutfit->Appearances[slot])
+                {
+                    activeOutfit->Appearances[slot] = 0;
+                    activeOutfit->IgnoreMask |= (1u << slot);
+                    outfitChanged = true;
+                }
+            }
+
+            if (outfitChanged)
+                player->SetEquipmentSet(*activeOutfit); // persists + re-syncs update fields
+        }
+    }
 }
 
 

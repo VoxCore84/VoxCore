@@ -90,29 +90,32 @@ bool IsWeaponAppearance(uint32 itemModifiedAppearanceID)
     return (dt == 11 || dt == 12 || dt == 13 || dt == 15);
 }
 
-uint8 TransmogOutfitSlotToEquipSlot(uint8 transmogSlot)
+uint8 DisplayTypeToEquipSlot(uint8 displayType)
 {
-    // 12.x client uses 1-based transmog slot indices (15 slots, no gaps):
-    //   1=Head, 2=Shoulder, 3=SecShoulder, 4=Back, 5=Chest, 6=Body(shirt),
-    //   7=Tabard, 8=Wrists, 9=Hands, 10=Waist, 11=Legs, 12=Feet,
-    //   13=MainHand, 14=OffHand, 15=Ranged
-    switch (transmogSlot)
+    // Maps ItemAppearance.DisplayType (wire byte[5] in outfit slot entries)
+    // to server EQUIPMENT_SLOT constants.
+    //
+    // IMPORTANT: This is ItemAppearance.DisplayType, NOT TransmogOutfitSlotEnum!
+    // They are different enums with different orderings:
+    //   DisplayType: 0=Head, 1=Shoulder, 2=Shirt, 3=Chest, 4=Waist, 5=Legs,
+    //                6=Feet, 7=Wrist, 8=Hands, 9=Back, 10=Tabard, 11=MH, 13=Shield, 15=OH
+    //   SlotEnum:    0=Head, 1=ShoulderR, 2=ShoulderL, 3=Back, 4=Chest, 5=Tabard, ...
+    switch (displayType)
     {
-        case 1:  return EQUIPMENT_SLOT_HEAD;
-        case 2:  return EQUIPMENT_SLOT_SHOULDERS;
-        case 3:  return TRANSMOG_SECONDARY_SHOULDER_SLOT;
-        case 4:  return EQUIPMENT_SLOT_BACK;
-        case 5:  return EQUIPMENT_SLOT_CHEST;
-        case 6:  return EQUIPMENT_SLOT_BODY;
-        case 7:  return EQUIPMENT_SLOT_TABARD;
-        case 8:  return EQUIPMENT_SLOT_WRISTS;
-        case 9:  return EQUIPMENT_SLOT_HANDS;
-        case 10: return EQUIPMENT_SLOT_WAIST;
-        case 11: return EQUIPMENT_SLOT_LEGS;
-        case 12: return EQUIPMENT_SLOT_FEET;
-        case 13: return EQUIPMENT_SLOT_MAINHAND;
-        case 14: return EQUIPMENT_SLOT_OFFHAND;
-        case 15: return EQUIPMENT_SLOT_RANGED;
+        case 0:  return EQUIPMENT_SLOT_HEAD;
+        case 1:  return EQUIPMENT_SLOT_SHOULDERS;  // both shoulders share DT=1; caller handles secondary
+        case 2:  return EQUIPMENT_SLOT_BODY;        // Shirt
+        case 3:  return EQUIPMENT_SLOT_CHEST;
+        case 4:  return EQUIPMENT_SLOT_WAIST;
+        case 5:  return EQUIPMENT_SLOT_LEGS;
+        case 6:  return EQUIPMENT_SLOT_FEET;
+        case 7:  return EQUIPMENT_SLOT_WRISTS;
+        case 8:  return EQUIPMENT_SLOT_HANDS;
+        case 9:  return EQUIPMENT_SLOT_BACK;
+        case 10: return EQUIPMENT_SLOT_TABARD;
+        case 11: return EQUIPMENT_SLOT_MAINHAND;
+        case 13: return EQUIPMENT_SLOT_OFFHAND;     // Shield
+        case 15: return EQUIPMENT_SLOT_OFFHAND;     // Off-hand (non-shield)
         default: return EQUIPMENT_SLOT_END;
     }
 }
@@ -236,14 +239,17 @@ void TransmogOutfitNew::Read()
         else if (extraBytes > 0)
         {
             std::span<uint8 const> slotData = remaining.subspan(6, extraBytes);
+            bool seenPrimaryShoulder = false;
             for (std::size_t i = 0; i < slotData.size(); i += 16)
             {
                 uint32 appearanceID = ReadLE<uint32>(slotData, i + 0);
                 uint32 rawSlotField = ReadLE<uint32>(slotData, i + 4);
-                uint8 transmogSlot = uint8(rawSlotField >> 24);
-                uint8 equipSlot = TransmogOutfitSlotToEquipSlot(transmogSlot);
+                uint8 displayType = uint8((rawSlotField >> 8) & 0xFF);  // byte[5] = ItemAppearance.DisplayType
+                uint8 transmogSlot = uint8(rawSlotField >> 24);         // byte[7] of entry, diagnostic only
+                uint8 equipSlot = DisplayTypeToEquipSlot(displayType);
 
-                if (equipSlot == TRANSMOG_SECONDARY_SHOULDER_SLOT)
+                // DisplayType=1 (Shoulder) appears twice: first is primary, second is secondary
+                if (equipSlot == EQUIPMENT_SLOT_SHOULDERS && seenPrimaryShoulder)
                 {
                     if (appearanceID && !Set.SecondaryShoulderApparanceID)
                     {
@@ -251,19 +257,24 @@ void TransmogOutfitNew::Read()
                         Set.SecondaryShoulderSlot = 2;
                     }
                 }
-                else if (equipSlot < EQUIPMENT_SLOT_END)
+                else
                 {
-                    if (appearanceID && !Set.Appearances[equipSlot])
+                    if (equipSlot == EQUIPMENT_SLOT_SHOULDERS)
+                        seenPrimaryShoulder = true;
+
+                    if (equipSlot < EQUIPMENT_SLOT_END && appearanceID && !Set.Appearances[equipSlot])
                     {
                         // For weapon slots, reject armor IMAIDs that the client duplicates
-                        // at tSlots 13/14/15 when no weapon transmog is selected.
+                        // at tSlots 13/14 when no weapon transmog is selected.
                         bool isWeaponSlot = (equipSlot == EQUIPMENT_SLOT_MAINHAND ||
-                                             equipSlot == EQUIPMENT_SLOT_OFFHAND ||
-                                             equipSlot == EQUIPMENT_SLOT_RANGED);
+                                             equipSlot == EQUIPMENT_SLOT_OFFHAND);
                         if (!isWeaponSlot || IsWeaponAppearance(appearanceID))
                             Set.Appearances[equipSlot] = int32(appearanceID);
                     }
                 }
+
+                TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_NEW entry[{}]: appear={} displayType={} transmogSlot={} rawSlotField=0x{:08X} equipSlot={}",
+                    i / 16, appearanceID, displayType, transmogSlot, rawSlotField, equipSlot);
             }
         }
 
@@ -452,11 +463,12 @@ void TransmogOutfitUpdateSlots::Read()
                 curRpos, ByteArrayToHexStr(std::span(_worldPacket.data() + curRpos, dumpSize)));
         }
 
-        // Multi-iteration packets (slotCount > 15) contain situation variants.
-        // Only the FIRST 15 entries (iteration 0) represent the base outfit.
+        // Multi-iteration packets (slotCount > 14) contain situation variants.
+        // Only the FIRST 14 entries (iteration 0) represent the base outfit.
         // Subsequent iterations are alternate "situations" with different/shuffled IMAIDs
         // and must NOT be mixed into the base Appearances array.
-        uint32 baseSlotCount = std::min(slotCount, uint32(15));
+        uint32 baseSlotCount = std::min(slotCount, uint32(14));
+        bool seenPrimaryShoulder = false; // Track first vs second DT=1 (Shoulder) entry
 
         for (uint32 i = 0; i < slotCount; ++i)
         {
@@ -465,12 +477,12 @@ void TransmogOutfitUpdateSlots::Read()
             // Read 16 raw bytes per entry
             _worldPacket.read(slot.RawBytes, 16);
 
-            // Wire format: [u8:0x00][u32:AppearanceID LE][u8:DisplayType][9 bytes:reserved][u8:SlotIndex]
+            // Wire format: [u8:byte0][u32:AppearanceID LE][u8:DisplayType][9 bytes:reserved][u8:SlotIndex]
             slot.AppearanceID = ReadLE<uint32>(std::span<uint8 const>(slot.RawBytes, 16), 1);
-            slot.Flags = slot.RawBytes[5];
+            slot.Flags = slot.RawBytes[5];   // ItemAppearance.DisplayType
             slot.SlotIndex = slot.RawBytes[15];
 
-            // Only process the first 15 entries for the base outfit
+            // Only process the first 14 entries for the base outfit
             if (i >= baseSlotCount)
             {
                 TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS entry[{}]: appear={} flags={} transmogSlot={} (situation data, skipped)",
@@ -478,25 +490,32 @@ void TransmogOutfitUpdateSlots::Read()
                 continue;
             }
 
-            uint8 transmogSlot = slot.SlotIndex;
-            uint8 equipSlot = TransmogOutfitSlotToEquipSlot(transmogSlot);
-            if (equipSlot == TRANSMOG_SECONDARY_SHOULDER_SLOT)
+            uint8 transmogSlot = slot.SlotIndex; // byte[15], diagnostic only
+            uint8 equipSlot = DisplayTypeToEquipSlot(slot.Flags); // byte[5] = ItemAppearance.DisplayType
+
+            // DisplayType=1 (Shoulder) appears twice: first is primary, second is secondary
+            if (equipSlot == EQUIPMENT_SLOT_SHOULDERS && seenPrimaryShoulder)
             {
                 if (slot.AppearanceID)
                 {
                     Set.SecondaryShoulderApparanceID = int32(slot.AppearanceID);
                     Set.SecondaryShoulderSlot = 2;
                 }
+                TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS entry[{}]: appear={} flags={} transmogSlot={} equipSlot=SECONDARY_SHOULDER",
+                    i, slot.AppearanceID, slot.Flags, transmogSlot);
+                continue;
             }
-            else if (equipSlot < EQUIPMENT_SLOT_END)
+            if (equipSlot == EQUIPMENT_SLOT_SHOULDERS)
+                seenPrimaryShoulder = true;
+
+            if (equipSlot < EQUIPMENT_SLOT_END)
             {
                 if (slot.AppearanceID)
                 {
-                    // For weapon slots, the client duplicates armor IMAIDs at tSlots 13/14/15
+                    // For weapon slots, the client duplicates armor IMAIDs at tSlots 13/14
                     // when no weapon transmog is selected. Validate via DB2 DisplayType.
                     bool isWeaponSlot = (equipSlot == EQUIPMENT_SLOT_MAINHAND ||
-                                         equipSlot == EQUIPMENT_SLOT_OFFHAND ||
-                                         equipSlot == EQUIPMENT_SLOT_RANGED);
+                                         equipSlot == EQUIPMENT_SLOT_OFFHAND);
                     if (isWeaponSlot && !IsWeaponAppearance(slot.AppearanceID))
                     {
                         TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS entry[{}]: rejecting non-weapon IMAID {} at weapon equipSlot={}",
@@ -513,9 +532,9 @@ void TransmogOutfitUpdateSlots::Read()
                 i, slot.AppearanceID, slot.Flags, transmogSlot, equipSlot);
         }
 
-        if (slotCount > 15)
-            TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS: {} total entries, using first 15 as base outfit, {} situation entries skipped",
-                slotCount, slotCount - 15);
+        if (slotCount > 14)
+            TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS: {} total entries, using first 14 as base outfit, {} situation entries skipped",
+                slotCount, slotCount - 14);
 
         for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
             if (!Set.Appearances[slot])

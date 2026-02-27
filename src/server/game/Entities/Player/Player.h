@@ -2529,6 +2529,8 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void DeleteEquipmentSet(uint64 id);
         EquipmentSetInfo::EquipmentSetData const* GetEquipmentSetData(uint64 id) const;
         EquipmentSetInfo::EquipmentSetData const* GetTransmogOutfitBySetID(uint32 setID) const;
+        EquipmentSetInfo::EquipmentSetData* GetMutableTransmogOutfitBySetID(uint32 setID);
+        uint32 GetActiveTransmogOutfitID() const;
 
         void SendInitWorldStates(uint32 zoneId, uint32 areaId);
         void SendUpdateWorldState(uint32 variable, uint32 value, bool hidden = false) const;

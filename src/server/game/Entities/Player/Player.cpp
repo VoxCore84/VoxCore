@@ -18059,32 +18059,32 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
             sitSetter.ModifyValue(&UF::TransmogOutfitSituationInfo::EquipmentSetID).SetValue(sit.EquipmentSetID);
         }
 
-        // Map server EQUIPMENT_SLOT indices to 12.x client TransmogOutfitSlot indices (1-based)
-        // 15 slots, no gaps: 1=Head..5=Chest, 6=Body, 7=Tabard, 8=Wrists..12=Feet, 13-15=weapons
-        struct TransmogSlotMapping { int8 transmogSlot; uint8 equipSlot; };
+        // Map server EQUIPMENT_SLOT indices to DB2 TransmogOutfitSlotInfo.ID (1-based).
+        // The client indexes outfit slots by this DB2 ID, which corresponds to byte[15]
+        // in CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS packets.
+        struct TransmogSlotMapping { uint8 db2SlotInfoID; uint8 equipSlot; };
         static constexpr TransmogSlotMapping slotMap[] = {
-            {  1,  0 }, // Head            -> EQUIPMENT_SLOT_HEAD
-            {  2,  2 }, // ShoulderRight   -> EQUIPMENT_SLOT_SHOULDERS
-            {  3,  2 }, // ShoulderLeft    -> EQUIPMENT_SLOT_SHOULDERS (secondary)
-            {  4, 14 }, // Back            -> EQUIPMENT_SLOT_BACK
-            {  5,  4 }, // Chest           -> EQUIPMENT_SLOT_CHEST
-            {  6,  3 }, // Body (Shirt)    -> EQUIPMENT_SLOT_BODY
-            {  7, 18 }, // Tabard          -> EQUIPMENT_SLOT_TABARD
-            {  8,  8 }, // Wrist           -> EQUIPMENT_SLOT_WRISTS
-            {  9,  9 }, // Hand            -> EQUIPMENT_SLOT_HANDS
-            { 10,  5 }, // Waist           -> EQUIPMENT_SLOT_WAIST
-            { 11,  6 }, // Legs            -> EQUIPMENT_SLOT_LEGS
-            { 12,  7 }, // Feet            -> EQUIPMENT_SLOT_FEET
-            { 13, 15 }, // WeaponMainHand  -> EQUIPMENT_SLOT_MAINHAND
-            { 14, 16 }, // WeaponOffHand   -> EQUIPMENT_SLOT_OFFHAND
-            { 15, 17 }, // WeaponRanged    -> EQUIPMENT_SLOT_RANGED
+            {  1,  0 }, // ID 1  = Head            -> EQUIPMENT_SLOT_HEAD
+            {  2,  2 }, // ID 2  = ShoulderRight   -> EQUIPMENT_SLOT_SHOULDERS
+            {  3,  2 }, // ID 3  = ShoulderLeft    -> EQUIPMENT_SLOT_SHOULDERS (secondary)
+            {  4,  3 }, // ID 4  = Shirt           -> EQUIPMENT_SLOT_BODY
+            {  5,  4 }, // ID 5  = Chest           -> EQUIPMENT_SLOT_CHEST
+            {  6,  5 }, // ID 6  = Waist           -> EQUIPMENT_SLOT_WAIST
+            {  7,  6 }, // ID 7  = Legs            -> EQUIPMENT_SLOT_LEGS
+            {  8,  7 }, // ID 8  = Feet            -> EQUIPMENT_SLOT_FEET
+            {  9,  8 }, // ID 9  = Wrist           -> EQUIPMENT_SLOT_WRISTS
+            { 10,  9 }, // ID 10 = Hands           -> EQUIPMENT_SLOT_HANDS
+            { 11, 14 }, // ID 11 = Back            -> EQUIPMENT_SLOT_BACK
+            { 12, 18 }, // ID 12 = Tabard          -> EQUIPMENT_SLOT_TABARD
+            { 13, 15 }, // ID 13 = WeaponMainHand  -> EQUIPMENT_SLOT_MAINHAND
+            { 14, 16 }, // ID 14 = WeaponOffHand   -> EQUIPMENT_SLOT_OFFHAND
         };
 
         for (auto const& mapping : slotMap)
         {
-            // Slot 3 (SecondaryShoulder) uses its own dedicated field, not Appearances[]
+            // ID 3 (SecondaryShoulder / ShoulderLeft) uses its own dedicated field, not Appearances[]
             uint32 imaID;
-            if (mapping.transmogSlot == 3)
+            if (mapping.db2SlotInfoID == 3)
                 imaID = equipmentSet->SecondaryShoulderApparanceID > 0 ? uint32(equipmentSet->SecondaryShoulderApparanceID) : 0;
             else
                 imaID = (mapping.equipSlot < EQUIPMENT_SLOT_END && equipmentSet->Appearances[mapping.equipSlot] > 0)
@@ -18099,14 +18099,13 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
 
             // SlotOption tells the client how to render the slot:
             //   0 = empty/unused, 1 = visible armor, 3 = hidden undergarment (shirt/tabard)
-            // The 12.x client sends byte[5]=1 for visible armor and byte[5]=3 for shirt/tabard
-            // in CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS. We derive this from DB2 DisplayType.
+            // Derived from ItemAppearance.DisplayType.
             uint8 slotOption = 0;
             if (imaID)
                 slotOption = (displayType == 2 /*Shirt*/ || displayType == 10 /*Tabard*/) ? 3 : 1;
 
             auto slotSetter = AddDynamicUpdateFieldValue(outfitSetter.ModifyValue(&UF::TransmogOutfitData::Slots));
-            slotSetter.ModifyValue(&UF::TransmogOutfitSlotData::Slot).SetValue(mapping.transmogSlot);
+            slotSetter.ModifyValue(&UF::TransmogOutfitSlotData::Slot).SetValue(mapping.db2SlotInfoID);
             slotSetter.ModifyValue(&UF::TransmogOutfitSlotData::SlotOption).SetValue(slotOption);
             slotSetter.ModifyValue(&UF::TransmogOutfitSlotData::ItemModifiedAppearanceID).SetValue(imaID);
             slotSetter.ModifyValue(&UF::TransmogOutfitSlotData::AppearanceDisplayType).SetValue(displayType);
@@ -18162,8 +18161,19 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
     SetUpdateFieldValue(transmogMetadataSetter.ModifyValue(&UF::TransmogOutfitMetadata::Locked), false);
     SetUpdateFieldValue(transmogMetadataSetter.ModifyValue(&UF::TransmogOutfitMetadata::TransmogOutfitID), firstOutfitId);
     SetUpdateFieldValue(transmogMetadataSetter.ModifyValue(&UF::TransmogOutfitMetadata::SituationTrigger), uint8(0));
-    SetUpdateFieldValue(transmogMetadataSetter.ModifyValue(&UF::TransmogOutfitMetadata::StampedOptionMainHand), uint8(0));
-    SetUpdateFieldValue(transmogMetadataSetter.ModifyValue(&UF::TransmogOutfitMetadata::StampedOptionOffHand), uint8(0));
+    // StampedOption tells the client whether weapon slots have a valid outfit appearance.
+    // 0 = no weapon transmog, 1 = weapon transmog present. Without this, the Transmog UI
+    // avatar won't render weapon visuals even if the Appearances array has MH/OH IMAIDs.
+    uint8 stampedMH = 0, stampedOH = 0;
+    if (firstOutfitData)
+    {
+        if (firstOutfitData->Appearances[EQUIPMENT_SLOT_MAINHAND])
+            stampedMH = 1;
+        if (firstOutfitData->Appearances[EQUIPMENT_SLOT_OFFHAND])
+            stampedOH = 1;
+    }
+    SetUpdateFieldValue(transmogMetadataSetter.ModifyValue(&UF::TransmogOutfitMetadata::StampedOptionMainHand), stampedMH);
+    SetUpdateFieldValue(transmogMetadataSetter.ModifyValue(&UF::TransmogOutfitMetadata::StampedOptionOffHand), stampedOH);
     SetUpdateFieldValue(transmogMetadataSetter.ModifyValue(&UF::TransmogOutfitMetadata::CostMod), 0.0f);
 
     auto viewedOutfitSetter = activePlayerData.ModifyValue(&UF::ActivePlayerData::ViewedOutfit);
@@ -28760,6 +28770,38 @@ EquipmentSetInfo::EquipmentSetData const* Player::GetTransmogOutfitBySetID(uint3
     }
 
     return nullptr;
+}
+
+EquipmentSetInfo::EquipmentSetData* Player::GetMutableTransmogOutfitBySetID(uint32 setID)
+{
+    for (auto& [_, equipmentSet] : _equipmentSets)
+    {
+        if (equipmentSet.State == EQUIPMENT_SET_DELETED)
+            continue;
+
+        if (equipmentSet.Data.Type == EquipmentSetInfo::TRANSMOG && equipmentSet.Data.SetID == setID)
+            return &equipmentSet.Data;
+    }
+
+    return nullptr;
+}
+
+uint32 Player::GetActiveTransmogOutfitID() const
+{
+    // Return the smallest valid SetID > 0 (matches _SyncTransmogOutfitsToActivePlayerData logic)
+    uint32 firstId = 0;
+    for (auto const& [_, equipmentSet] : _equipmentSets)
+    {
+        if (equipmentSet.State == EQUIPMENT_SET_DELETED)
+            continue;
+        if (equipmentSet.Data.Type != EquipmentSetInfo::TRANSMOG)
+            continue;
+        if (equipmentSet.Data.SetID == 0)
+            continue;
+        if (!firstId || equipmentSet.Data.SetID < firstId)
+            firstId = equipmentSet.Data.SetID;
+    }
+    return firstId;
 }
 
 void Player::DeleteEquipmentSet(uint64 id)
