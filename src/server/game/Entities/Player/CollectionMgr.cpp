@@ -352,8 +352,29 @@ void CollectionMgr::CheckHeirloomUpgrades(Item* item)
 
 void CollectionMgr::LoadMounts()
 {
+    Player* player = _owner->GetPlayer();
+
     for (auto const& m : _mounts)
-        AddMount(m.first, m.second, false, false);
+        AddMount(m.first, m.second, false, true);
+
+    // Learn mount spells that the player doesn't already know.
+    // We pass learned=true above to suppress per-mount SendSingleMountUpdate()
+    // since a bulk SMSG_ACCOUNT_MOUNT_UPDATE is sent later during login.
+    if (player)
+    {
+        for (auto const& m : _mounts)
+        {
+            MountEntry const* mount = sDB2Manager.GetMount(m.first);
+            if (!mount)
+                continue;
+
+            if (!ConditionMgr::IsPlayerMeetingCondition(player, mount->PlayerConditionID))
+                continue;
+
+            if (!player->HasSpell(m.first))
+                player->LearnSpell(m.first, true);
+        }
+    }
 }
 
 void CollectionMgr::LoadAccountMounts(PreparedQueryResult result)
