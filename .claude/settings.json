@@ -1,0 +1,13 @@
+{
+  "model": "opus",
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(C:/Dev/RoleplayCore/**)",
+      "Edit(C:/Dev/RoleplayCore/**)",
+      "mcp__mysql__*",
+      "mcp__wago-db2__*",
+      "mcp__codeintel__*"
+    ]
+  }
+}
