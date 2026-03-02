@@ -128,6 +128,19 @@ bool ValidateTransmogOutfitSet(WorldSession* session, EquipmentSetInfo::Equipmen
         if (!illusion)
             return false;
 
+        // Check via TransmogIllusion DB2 first (authoritative for transmog enchants).
+        // Some enchantments have Flags=0 in SpellItemEnchantment but are valid transmog
+        // illusions via the TransmogIllusion table.
+        TransmogIllusionEntry const* transmogIllusion = sDB2Manager.GetTransmogIllusionForEnchantment(enchantId);
+        if (transmogIllusion)
+        {
+            if (!ConditionMgr::IsPlayerMeetingCondition(session->GetPlayer(), transmogIllusion->UnlockConditionID))
+                return false;
+
+            return true;
+        }
+
+        // Fallback: direct SpellItemEnchantment validation
         if (!illusion->ItemVisual || !illusion->GetFlags().HasFlag(SpellItemEnchantmentFlags::AllowTransmog))
             return false;
 
@@ -819,8 +832,9 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
 
     auto& pending = *_transmogBridgePendingOutfit;
 
-    // Merge bridge overrides if any are buffered
+    // Merge bridge overrides if any are buffered — track which equip slots were set
     bool mergedOverrides = false;
+    uint32 bridgeOverriddenMask = 0; // bitmask of equipment slots the bridge explicitly set
     if (!_transmogBridgeOverrides.empty())
     {
         mergedOverrides = true;
@@ -852,23 +866,62 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
                 pending.Outfit.Appearances[equipSlot] = ov.TransmogID;
                 pending.Outfit.IgnoreMask &= ~(1u << equipSlot);
                 pending.HasAnyAppearance = true;
+                bridgeOverriddenMask |= (1u << equipSlot);
                 TC_LOG_DEBUG("network.opcode.transmog", "TransmogBridge [{}]: merged clientSlot={} -> equipSlot={} IMAID={}",
                     GetPlayerInfo(), ov.ClientSlot, equipSlot, ov.TransmogID);
             }
 
-            // Weapon illusion override
-            if (ov.IllusionID > 0)
-            {
-                if (equipSlot == EQUIPMENT_SLOT_MAINHAND)
-                    pending.Outfit.Enchants[0] = ov.IllusionID;
-                else if (equipSlot == EQUIPMENT_SLOT_OFFHAND)
-                    pending.Outfit.Enchants[1] = ov.IllusionID;
-                TC_LOG_DEBUG("network.opcode.transmog", "TransmogBridge [{}]: merged illusion={} for equipSlot={}",
-                    GetPlayerInfo(), ov.IllusionID, equipSlot);
-            }
+            // Illusion merging disabled for now — appearances only until core is stable
         }
 
         _transmogBridgeOverrides.clear();
+    }
+
+    // Fix stale serializer data: for slots NOT overridden by the bridge, the client
+    // sends the item's base appearance instead of the active transmog. Detect this by
+    // comparing against GetItemModifiedAppearance()->ID and replace with the item's
+    // current ITEM_MODIFIER_TRANSMOG_APPEARANCE_ALL_SPECS value.
+    // Skip bridge-overridden slots — those contain the user's intentional choice.
+    if (Player* player = GetPlayer())
+    {
+        for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
+        {
+            // Skip slots the bridge already set — user's intentional choice
+            if (bridgeOverriddenMask & (1u << slot))
+                continue;
+
+            // Skip slots the outfit doesn't care about (ignored)
+            if (pending.Outfit.IgnoreMask & (1u << slot))
+                continue;
+
+            int32 outfitIMAID = pending.Outfit.Appearances[slot];
+            if (outfitIMAID <= 0)
+                continue;
+
+            Item* equippedItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+            if (!equippedItem)
+                continue;
+
+            // Get the item's base (un-transmogged) appearance
+            ItemModifiedAppearanceEntry const* baseAppearance = equippedItem->GetItemModifiedAppearance();
+            if (!baseAppearance)
+                continue;
+
+            // If the outfit IMAID matches the base appearance, the client likely sent stale data.
+            // Check if the item actually has an active transmog that should be preserved.
+            if (static_cast<uint32>(outfitIMAID) == baseAppearance->ID)
+            {
+                uint32 activeTransmog = equippedItem->GetModifier(ITEM_MODIFIER_TRANSMOG_APPEARANCE_ALL_SPECS);
+                if (activeTransmog && activeTransmog != baseAppearance->ID)
+                {
+                    pending.Outfit.Appearances[slot] = static_cast<int32>(activeTransmog);
+                    pending.HasAnyAppearance = true;
+                    TC_LOG_DEBUG("network.opcode.transmog",
+                        "TransmogBridge [{}]: slot {} stale data corrected: base IMAID={} -> active transmog IMAID={}",
+                        GetPlayerInfo(), slot, baseAppearance->ID, activeTransmog);
+                }
+            }
+        }
     }
 
     // Validate, save, apply, respond — single pass with correct IMAIDs

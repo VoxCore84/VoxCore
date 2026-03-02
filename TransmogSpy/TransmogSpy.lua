@@ -11,6 +11,16 @@ local RESET = "|r"
 -- SavedVariables
 TransmogSpyDB = TransmogSpyDB or {}
 
+-- Server-side log relay — shows up in Debug.log alongside TransmogBridge entries
+local LOG_PREFIX = "TSPY_LOG"
+C_ChatInfo.RegisterAddonMessagePrefix(LOG_PREFIX)
+local function ServerLog(msg)
+    -- Strip WoW color codes for clean server logs
+    local clean = msg:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+    if #clean > 255 then clean = clean:sub(1, 255) end
+    pcall(C_ChatInfo.SendAddonMessage, LOG_PREFIX, clean, "WHISPER", UnitName("player"))
+end
+
 local eventLog = {}
 local autoMode = false
 local autoTicker = nil
@@ -105,6 +115,8 @@ local function Log(msg)
     if #TransmogSpyDB.log > 2000 then
         table.remove(TransmogSpyDB.log, 1)
     end
+    -- Relay to server Debug.log
+    ServerLog(msg)
 end
 
 local function SlotLabel(slot)

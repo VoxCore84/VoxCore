@@ -619,22 +619,21 @@ void WorldSession::HandleChatAddonMessage(ChatMsg type, std::string prefix, std:
 
         for (std::string_view token : Trinity::Tokenize(std::string_view(payload), ';', false))
         {
-            // Format: "clientSlot.transmogID.illusionID.option"
+            // Format: "clientSlot.transmogID.option"
             std::vector<std::string_view> fields = Trinity::Tokenize(token, '.', true);
-            if (fields.size() < 3)
+            if (fields.size() < 2)
                 continue;
 
             Optional<uint8> clientSlot = Trinity::StringTo<uint8>(fields[0]);
             Optional<int32> transmogID = Trinity::StringTo<int32>(fields[1]);
-            Optional<int32> illusionID = Trinity::StringTo<int32>(fields[2]);
-            if (!clientSlot || !transmogID || !illusionID)
+            if (!clientSlot || !transmogID)
                 continue;
 
             if (*clientSlot > 13)
                 continue;
 
-            if (*transmogID > 0 || *illusionID > 0)
-                _transmogBridgeOverrides.push_back({*clientSlot, *transmogID, *illusionID});
+            if (*transmogID > 0)
+                _transmogBridgeOverrides.push_back({*clientSlot, *transmogID});
         }
 
         TC_LOG_DEBUG("network.opcode.transmog", "TransmogBridge [{}]: received {} overrides",
@@ -646,6 +645,15 @@ void WorldSession::HandleChatAddonMessage(ChatMsg type, std::string prefix, std:
         if (_transmogBridgePendingOutfit)
             FinalizeTransmogBridgePendingOutfit();
 
+        return;
+    }
+
+    // Client-side log relays — write addon log entries to Debug.log
+    if (prefix == "TMOG_LOG" || prefix == "TSPY_LOG")
+    {
+        TC_LOG_DEBUG("network.opcode.transmog", "{} [{}]: {}",
+            prefix == "TMOG_LOG" ? "TransmogBridge client" : "TransmogSpy client",
+            GetPlayerInfo(), text);
         return;
     }
 

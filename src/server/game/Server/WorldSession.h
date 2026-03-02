@@ -1838,7 +1838,6 @@ class TC_GAME_API WorldSession
         {
             uint8  ClientSlot;   // Client API slot index (0=HEAD, 1=SHOULDER, ..., 13=OH)
             int32  TransmogID;   // IMAID, 0 = no appearance override
-            int32  IllusionID;   // SpellItemEnchantmentID, 0 = no illusion override
         };
         struct TransmogBridgePendingOutfit
         {
