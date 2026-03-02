@@ -25,6 +25,7 @@
 #include "ChatPackets.h"
 #include "DatabaseEnvFwd.h"
 #include "Duration.h"
+#include "EquipmentSet.h"
 #include "IteratorPair.h"
 #include "LockedQueue.h"
 #include "ObjectGuid.h"
@@ -282,6 +283,7 @@ namespace WorldPackets
         class SetPlayerDeclinedNames;
         class SavePersonalEmblem;
         class SetupWarbandGroups;
+        class GetAccountCharacterList;
 
         enum class LoginFailureReason : uint8;
     }
@@ -456,7 +458,6 @@ namespace WorldPackets
         class RepairItem;
         class ReadItem;
         class SellItem;
-        class SellAllJunkItems;
         class SplitItem;
         class SwapInvItem;
         class SwapItem;
@@ -554,6 +555,8 @@ namespace WorldPackets
         class ShowTradeSkill;
         class ActivateSoulbind;
         class ChromieTimeSelectExpansion;
+        class OpenTradeskillNpc;
+        class RequestWeeklyRewards;
     }
 
     namespace Movement
@@ -575,6 +578,7 @@ namespace WorldPackets
         class MoveApplyMovementForceAck;
         class MoveRemoveMovementForceAck;
         class MoveInitActiveMoverComplete;
+        class MoveSetTurnRateCheat;
     }
 
     namespace NPC
@@ -835,6 +839,10 @@ namespace WorldPackets
     namespace Transmogrification
     {
         class TransmogrifyItems;
+        class TransmogOutfitNew;
+        class TransmogOutfitUpdateInfo;
+        class TransmogOutfitUpdateSituations;
+        class TransmogOutfitUpdateSlots;
     }
 
     namespace Vehicle
@@ -1248,6 +1256,7 @@ class TC_GAME_API WorldSession
         void HandleCharEnum(CharacterDatabaseQueryHolder const& holder);
         void HandleCharEnumOpcode(WorldPackets::Character::EnumCharacters& /*enumCharacters*/);
         void HandleCharUndeleteEnumOpcode(WorldPackets::Character::EnumCharacters& /*enumCharacters*/);
+        void HandleGetAccountCharacterList(WorldPackets::Character::GetAccountCharacterList& packet);
         void HandleSetupWarbandGroups(WorldPackets::Character::SetupWarbandGroups& setupWarbandGroups);
         void HandleCharDeleteOpcode(WorldPackets::Character::CharDelete& charDelete);
         void HandleCharCreateOpcode(WorldPackets::Character::CreateCharacter& charCreate);
@@ -1399,6 +1408,7 @@ class TC_GAME_API WorldSession
         void HandleMoveTimeSkippedOpcode(WorldPackets::Movement::MoveTimeSkipped& moveTimeSkipped);
         void HandleMovementAckMessage(WorldPackets::Movement::MovementAckMessage& movementAck);
         void HandleMoveInitActiveMoverComplete(WorldPackets::Movement::MoveInitActiveMoverComplete const& moveInitActiveMoverComplete);
+        void HandleMoveSetTurnRateCheat(WorldPackets::Movement::MoveSetTurnRateCheat& packet);
 
         void HandleRequestRaidInfoOpcode(WorldPackets::Party::RequestRaidInfo& packet);
 
@@ -1555,8 +1565,7 @@ class TC_GAME_API WorldSession
         void HandleSwapInvItemOpcode(WorldPackets::Item::SwapInvItem& swapInvItem);
         void HandleDestroyItemOpcode(WorldPackets::Item::DestroyItem& destroyItem);
         void HandleAutoEquipItemOpcode(WorldPackets::Item::AutoEquipItem& autoEquipItem);
-        void HandleSellItemOpcode(WorldPackets::Item::SellItem const& sellItem);
-        void HandleSellAllJunkItems(WorldPackets::Item::SellAllJunkItems const& sellAllJunkItems);
+        void HandleSellItemOpcode(WorldPackets::Item::SellItem& packet);
         void HandleBuyItemOpcode(WorldPackets::Item::BuyItem& packet);
         void HandleListInventoryOpcode(WorldPackets::NPC::Hello& packet);
         void HandleAutoStoreBagItemOpcode(WorldPackets::Item::AutoStoreBagItem& packet);
@@ -1815,6 +1824,30 @@ class TC_GAME_API WorldSession
 
         // Transmogrification
         void HandleTransmogrifyItems(WorldPackets::Transmogrification::TransmogrifyItems& transmogrifyItems);
+        void HandleTransmogOutfitNew(WorldPackets::Transmogrification::TransmogOutfitNew& transmogOutfitNew);
+        void HandleTransmogOutfitUpdateInfo(WorldPackets::Transmogrification::TransmogOutfitUpdateInfo& transmogOutfitUpdateInfo);
+        void HandleTransmogOutfitUpdateSituations(WorldPackets::Transmogrification::TransmogOutfitUpdateSituations& transmogOutfitUpdateSituations);
+        void HandleTransmogOutfitUpdateSlots(WorldPackets::Transmogrification::TransmogOutfitUpdateSlots& transmogOutfitUpdateSlots);
+
+        // TransmogBridge: addon-message-based workaround for 12.x client serializer bug.
+        // The client's CommitAndApplyAllPending C++ serializer omits HEAD/MH/OH/enchants
+        // and sends stale IMAIDs for all other slots. A client addon captures the correct
+        // pending IMAIDs and sends them via addon message. HandleTransmogOutfitUpdateSlots
+        // defers finalization so the addon message can merge overrides before save/apply.
+        struct TransmogBridgeOverride
+        {
+            uint8  ClientSlot;   // Client API slot index (0=HEAD, 1=SHOULDER, ..., 13=OH)
+            int32  TransmogID;   // IMAID, 0 = no appearance override
+        };
+        struct TransmogBridgePendingOutfit
+        {
+            EquipmentSetInfo::EquipmentSetData Outfit;
+            bool HasAnyAppearance = false;
+        };
+        void FinalizeTransmogBridgePendingOutfit();
+        std::vector<TransmogBridgeOverride> _transmogBridgeOverrides;
+        std::string _transmogBridgePartialPayload;
+        Optional<TransmogBridgePendingOutfit> _transmogBridgePendingOutfit;
 
         // Miscellaneous
         void HandleSpellClick(WorldPackets::Spells::SpellClick& spellClick);
@@ -1862,6 +1895,10 @@ class TC_GAME_API WorldSession
         void HandleSceneTriggerEvent(WorldPackets::Scenes::SceneTriggerEvent& sceneTriggerEvent);
         void HandleScenePlaybackComplete(WorldPackets::Scenes::ScenePlaybackComplete& scenePlaybackComplete);
         void HandleScenePlaybackCanceled(WorldPackets::Scenes::ScenePlaybackCanceled& scenePlaybackCanceled);
+
+        // Tradeskill / Weekly Rewards
+        void HandleOpenTradeskillNpc(WorldPackets::Misc::OpenTradeskillNpc& packet);
+        void HandleRequestWeeklyRewards(WorldPackets::Misc::RequestWeeklyRewards& packet);
 
         // Token
         void HandleCommerceTokenGetLog(WorldPackets::Token::CommerceTokenGetLog& updateListedAuctionableTokens);
