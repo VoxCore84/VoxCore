@@ -1,0 +1,5 @@
+-- 2026_03_04_00_hotfixes.sql
+-- Re-enable Haranir character creation (disabled by Blizzard as of build 66192)
+
+REPLACE INTO `chr_races` VALUES (86, 'Hr', 'Harronir', 'Haranir', '', 'haranir', '', 'Haranir', '', 'haranir', '', 'Ferocious, watchful guardians, the haranir keep an ever-present vigil over the wild domains of their long-absent Goddess, in hopes that she might one day return.', 'Haranir', '', 'haranir', '', 17301516, 4, 0, 15007, 1096, 623712, 7446723, 651555, 0, 0, 0, 0, 0, 0, 0, 1, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 0, 91, 0, 1, 0, 4, 0, 4, 1, 4, 0, 4, 1, 4, 0, 66198);
+REPLACE INTO `chr_races` VALUES (91, 'Hr', 'Harronir', 'Haranir', NULL, 'haranir', NULL, 'Haranir', NULL, 'haranir', NULL, 'Ferocious, watchful guardians, the haranir keep an ever-present vigil over the wild domains of their long-absent Goddess, in hopes that she might one day return.', 'Haranir', NULL, 'haranir', NULL, 6815756, 116, 0, 15007, 1096, 623714, 7446723, 651558, 0, 0, 0, 0, 0, 0, 0, 10, 0, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7, 1, 86, 0, 1, 0, 86, 0, 86, 1, 86, 0, 86, 1, 4, 0, 66198);
