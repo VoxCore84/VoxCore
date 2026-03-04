@@ -33,7 +33,7 @@ from collections import defaultdict
 
 CDI_CSV = (
     r"C:\Users\atayl\source\wago\wago_csv\major_12"
-    r"\12.0.1.66192\enUS\CreatureDisplayInfo-enUS.csv"
+    r"\12.0.1.66220\enUS\CreatureDisplayInfo-enUS.csv"
 )
 OUTPUT_DIR = r"C:\Dev\RoleplayCore\sql\exports\cleanup"
 MYSQL_BIN = r"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"

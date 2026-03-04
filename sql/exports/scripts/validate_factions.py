@@ -8,7 +8,7 @@ Checks:
   3. Service NPCs (vendor, trainer, innkeeper, etc.) with hostile-to-player factions
 
 Data sources:
-  - FactionTemplate DB2 CSV (12.0.1.66192)
+  - FactionTemplate DB2 CSV (12.0.1.66220)
   - Faction DB2 CSV (for human-readable names)
   - MySQL: world.creature_template
 
@@ -26,11 +26,11 @@ from collections import defaultdict
 # ── Paths ──────────────────────────────────────────────────────────────────────
 MYSQL = r"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
 FACTION_TEMPLATE_CSV = (
-    r"C:\Users\atayl\source\wago\wago_csv\major_12\12.0.1.66192\enUS"
+    r"C:\Users\atayl\source\wago\wago_csv\major_12\12.0.1.66220\enUS"
     r"\FactionTemplate-enUS.csv"
 )
 FACTION_CSV = (
-    r"C:\Users\atayl\source\wago\wago_csv\major_12\12.0.1.66192\enUS"
+    r"C:\Users\atayl\source\wago\wago_csv\major_12\12.0.1.66220\enUS"
     r"\Faction-enUS.csv"
 )
 REPORT_OUT = r"C:\Dev\RoleplayCore\sql\exports\cleanup\faction_validation_report.txt"

@@ -40,7 +40,7 @@ Events 13, 15, 23, 24: if repeat min AND max are both 0 and event_flags bit 0x01
 ### 8. Spell ID Validation (optional)
 - Actions 11 (CAST), 85 (SELF_CAST), 86 (CROSS_CAST), 134 (INVOKER_CAST): action_param1 should be a valid spell ID
 - Events 8 (SPELLHIT), 22 (SPELLHIT_TARGET), 83-85 (ON_SPELL_*), 89-90 (ON_AURA_*): event_param1 should be a valid spell ID
-- Can cross-reference against Wago SpellName CSV at: `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66192/enUS/SpellName-enUS.csv'`
+- Can cross-reference against Wago SpellName CSV at: `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66220/enUS/SpellName-enUS.csv'`
 
 ## Arguments
 

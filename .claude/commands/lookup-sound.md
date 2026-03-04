@@ -6,10 +6,10 @@ description: Look up SoundKit IDs from Wago DB2 CSV to validate they exist
 ## Context
 
 The user wants to look up or validate WoW SoundKit IDs. The source is the Wago DB2 export:
-- **SoundKit** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66192/enUS/SoundKit-enUS.csv`
+- **SoundKit** (bash): `/c/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66220/enUS/SoundKit-enUS.csv`
   - Columns: `ID`, `SoundType`, `VolumeFloat`, `Flags`, `MinDistance`, `DistanceCutoff`, `EAXDef`, `SoundKitAdvancedID`, `DialogType`, ...
   - ~315k rows. No human-readable name column — SoundKit names are internal Blizzard filenames not in the DB2.
-- In Python, use `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66192/enUS/SoundKit-enUS.csv'` to resolve paths
+- In Python, use `os.path.expanduser('~') + '/source/wago/wago_csv/major_12/12.0.1.66220/enUS/SoundKit-enUS.csv'` to resolve paths
 
 ## SoundType values
 - 1 = Spell, 2 = UI, 3 = Footsteps, 4 = Combat Impacts, 6 = NPC Combat, 10 = Zone Music, 12 = Zone Ambience, 13 = Doodad, 14 = Death, 16 = NPC Greetings, 17 = Emotes, 19 = Looping, 21 = Cinematic, 28 = Creature Loop, 50 = Zone Intro Music

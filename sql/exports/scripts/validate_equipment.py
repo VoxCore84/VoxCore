@@ -24,7 +24,7 @@ MYSQL_USER = "root"
 MYSQL_PASS = "admin"
 
 ITEMSPARSE_CSV = Path(
-    r"C:/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66192/enUS/ItemSparse-enUS.csv"
+    r"C:/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66220/enUS/ItemSparse-enUS.csv"
 )
 
 REPORT_PATH = Path(r"C:/Dev/RoleplayCore/sql/exports/cleanup/equipment_validation_report.txt")
