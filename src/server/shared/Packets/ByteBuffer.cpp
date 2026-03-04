@@ -89,7 +89,9 @@ void ByteBuffer::append(uint8 const* src, size_t cnt)
 {
     ASSERT(src, "Attempted to put a NULL-pointer in ByteBuffer (pos: " SZFMTD " size: " SZFMTD ")", _wpos, size());
     ASSERT(cnt, "Attempted to put a zero-sized value in ByteBuffer (pos: " SZFMTD " size: " SZFMTD ")", _wpos, size());
-    ASSERT((size() + cnt) < 100000000);
+    // Raised from 100MB to 500MB to support large hotfix payloads (1M+ hotfix_data rows).
+    // HandleHotfixRequest chunking (Phase 2) keeps individual packets well under this limit.
+    ASSERT((size() + cnt) < 500000000);
 
     FlushBits();
 
@@ -103,7 +105,15 @@ void ByteBuffer::append(uint8 const* src, size_t cnt)
         else if (newSize < 6000)
             _storage.reserve(10000);
         else
-            _storage.reserve(400000);
+        {
+            // Bug #4: Exponential growth for large buffers instead of fixed 400KB steps.
+            // Doubles current capacity (capped at 32MB growth step) to reduce reallocation
+            // churn on large packets like SMSG_HOTFIX_CONNECT. No external callers depend
+            // on the previous fixed-step behavior — all checked via codebase audit.
+            size_t const currentCap = _storage.capacity();
+            size_t const growth = std::min(currentCap, size_t(32 * 1024 * 1024));
+            _storage.reserve(std::max(newSize, currentCap + growth));
+        }
     }
 
     if (_storage.size() < newSize)

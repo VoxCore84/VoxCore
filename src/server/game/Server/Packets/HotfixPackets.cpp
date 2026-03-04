@@ -119,7 +119,16 @@ WorldPacket const* HotfixConnect::Write()
         _worldPacket << hotfix;
 
     _worldPacket << Size<uint32>(HotfixContent);
-    _worldPacket.append(HotfixContent);
+    if (!HotfixContent.empty())
+        _worldPacket.append(HotfixContent);
+
+    // Bug #3: Release intermediate buffers immediately after serializing into _worldPacket.
+    // Prevents holding ~50MB in HotfixContent simultaneously with _worldPacket
+    // while SendPacket copies the final packet into the send queue.
+    Hotfixes.clear();
+    Hotfixes.shrink_to_fit();
+    HotfixContent.clear();
+    HotfixContent.shrink_to_fit();
 
     return &_worldPacket;
 }
