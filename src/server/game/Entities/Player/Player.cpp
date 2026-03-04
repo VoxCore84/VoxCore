@@ -18023,6 +18023,10 @@ void Player::_LoadTransmogOutfitSituations(PreparedQueryResult result)
 
 void Player::_SyncTransmogOutfitsToActivePlayerData()
 {
+    TC_LOG_DEBUG("network.opcode.transmog",
+        "_SyncTransmogOutfitsToActivePlayerData [{}]: FIRED — clearing {} existing ViewedOutfit entries and rebuilding",
+        GetGUID().ToString(), m_activePlayerData->TransmogOutfits.size());
+
     auto activePlayerData = m_values.ModifyValue(&Player::m_activePlayerData);
 
     std::vector<uint32> existingOutfitIds;

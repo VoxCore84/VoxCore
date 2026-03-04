@@ -65,6 +65,17 @@ bool ApplyTransmogOutfitToPlayer(Player* player, EquipmentSetInfo::EquipmentSetD
             continue;
 
         int32 appearanceId = outfit.Appearances[slot];
+        int32 oldAppearance = item->GetModifier(ITEM_MODIFIER_TRANSMOG_APPEARANCE_ALL_SPECS);
+
+        // Diagnostic: log every slot being processed, especially clears
+        if (appearanceId == 0 && oldAppearance != 0)
+            TC_LOG_DEBUG("network.opcode.transmog",
+                "ApplyTransmogOutfitToPlayer [{}]: CLEARING slot={} old IMAID={} -> 0",
+                player->GetGUID().ToString(), slot, oldAppearance);
+        else if (appearanceId != oldAppearance)
+            TC_LOG_DEBUG("network.opcode.transmog",
+                "ApplyTransmogOutfitToPlayer [{}]: CHANGING slot={} IMAID {} -> {}",
+                player->GetGUID().ToString(), slot, oldAppearance, appearanceId);
 
         // Set or clear primary appearance (ALL_SPECS + clear per-spec)
         item->SetModifier(ITEM_MODIFIER_TRANSMOG_APPEARANCE_ALL_SPECS, appearanceId);

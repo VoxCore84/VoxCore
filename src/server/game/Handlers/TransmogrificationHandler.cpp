@@ -172,6 +172,10 @@ bool ValidateTransmogOutfitSet(WorldSession* session, EquipmentSetInfo::Equipmen
 void WorldSession::HandleTransmogrifyItems(WorldPackets::Transmogrification::TransmogrifyItems& transmogrifyItems)
 {
     Player* player = GetPlayer();
+
+    TC_LOG_DEBUG("network.opcode.transmog", "HandleTransmogrifyItems [{}]: SINGLE-ITEM transmog fired ({} items in packet)",
+        GetPlayerInfo(), transmogrifyItems.Items.size());
+
     // Validate
     if (!player->GetNPCIfCanInteractWith(transmogrifyItems.Npc, UNIT_NPC_FLAG_TRANSMOGRIFIER, UNIT_NPC_FLAG_2_NONE))
     {
@@ -575,6 +579,13 @@ void WorldSession::HandleTransmogrifyItems(WorldPackets::Transmogrification::Tra
 
             if (outfitChanged)
             {
+                TC_LOG_DEBUG("network.opcode.transmog",
+                    "HandleTransmogrifyItems [{}]: syncing outfit {} to SetEquipmentSet — IgnoreMask=0x{:X} (THIS TRIGGERS FULL ViewedOutfit REBUILD)",
+                    GetPlayerInfo(), activeOutfitID, activeOutfit->IgnoreMask);
+                for (uint8 s = 0; s < EQUIPMENT_SLOT_END; ++s)
+                    TC_LOG_DEBUG("network.opcode.transmog", "  single-item sync: equipSlot={} Appearances={} ignored={}",
+                        s, activeOutfit->Appearances[s], (activeOutfit->IgnoreMask & (1u << s)) != 0);
+
                 player->SetEquipmentSet(*activeOutfit); // persists + re-syncs update fields
                 player->SendUpdateToPlayer(player);
                 player->ClearUpdateMask(true);
