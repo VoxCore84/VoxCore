@@ -103,7 +103,7 @@ _patches_transmog/       # Reference git diff patches for the transmog outfit fe
 2. Define `void AddSC_<name>()` at the bottom
 3. Add the declaration + call in `custom_script_loader.cpp`
 4. If it needs new RBAC perms, add to `RBAC.h` and `sql/RoleplayCore/1. auth db.sql`
-5. Build with `ninja -j4 scripts`
+5. Build with `ninja -j16 scripts`
 
 ## Key Files to Know
 
@@ -130,6 +130,31 @@ _patches_transmog/       # Reference git diff patches for the transmog outfit fe
 - **Logs**: `Server.log`, `DBErrors.log`, `Debug.log`, `GM.log`, `Bnet.log`, `PacketLog/`
 - **worldserver.conf**: in runtime dir (NOT in source tree)
 - **MySQL**: UniServerZ 9.5.0 (bundled), client at `C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe`, root/admin
+
+## Wago DB2 CSV Export Oscillation Warning
+
+Wago.tools CSV exports fluctuate wildly between builds in how many rows they include for certain tables. This is a Wago export-side behavior, NOT actual Blizzard content changes. Known affected tables:
+
+| Table               | "Reduced" builds (66044, 66192, 66220) | "Full" builds (66102, 66198) |
+|---------------------|----------------------------------------|------------------------------|
+| SpellEffect         | ~269K-511K rows                        | ~608K rows                   |
+| ItemSparse          | ~125K-171K rows                        | ~171K rows                   |
+| SpellMisc           | ~136K-404K rows                        | ~404K rows                   |
+| CriteriaTree        | ~4K-115K rows                          | ~115K rows                   |
+| Criteria            | ~14K-63K rows                          | ~63K rows                    |
+| CreatureDisplayInfo | ~15K-118K rows                         | ~118K rows                   |
+
+**Implications for build diffs:**
+- Never diff between a "full" and "reduced" export build — you'll see hundreds of thousands of false additions/removals
+- Always diff same-type builds, or better yet, diff all builds incrementally to spot the pattern
+- For SpellEffect coverage, prefer "full export" builds (66102, 66198) as the data source for imports
+- For latest content (new spells, items, quests), use the newest build (currently 66220)
+
+**How to detect which type a build is:**
+```bash
+wc -l SpellEffect-enUS.csv  # >500K = full, <400K = reduced
+wc -l CriteriaTree-enUS.csv # >100K = full, <10K = reduced
+```
 
 ## DB Schema Gotchas
 
