@@ -1,20 +1,11 @@
 RoleplayCore â€” Session Changelog (WoW 12.x private server)
 
-## 2026-03-05 — Silvermoon Portal Fix (Session 58)
 
-### Redirect All Silvermoon Portals to New Midnight City
-- **Root cause**: Stormwind Wizard's Sanctum portal (GO 621992, spell 1286187) sent players to old BC Silvermoon on Map 530 instead of new Midnight Silvermoon on Map 0
-- Fixed `spell_target_position` for the Stormwind portal spell
-- Added **9 missing** `spell_target_position` entries for new Midnight teleport/portal spells (1224058, 1225676, 1258128, 1259190, 1262778, 1263937, 1264716, 1271884, 1278017)
-- Fixed invisible portal: displayId 114258 (unrenderable exp11 model) → 55666 (`8fx_portalroom_silvermoon.m2`)
-- Updated `game_tele` SilvermoonCity to new Midnight coordinates
-- Legacy BC spells (32272, 121855, etc.) intentionally left pointing to old Silvermoon
-- Commit `f5fa5444`
 
-## 2026-03-05 — ATT Mega-Parser (Session 54)
+## 2026-03-05 â€” ATT Mega-Parser (Session 54)
 
 ### AllTheThings Complete Data Extraction
-- **`att_to_sqlite.py`** — comprehensive SQLite extractor for ALL AllTheThings data
+- **`att_to_sqlite.py`** â€” comprehensive SQLite extractor for ALL AllTheThings data
 - **60 normalized tables** from 30 data loaders, 52.6 MB database, 27s full rebuild
 - Phase 1: Lua AST parse of 1,635 files -> quests (47K), NPCs (6.3K), items (175K), encounters (946), coords (54K), timelines (32K), costs (19K)
 - Phase 2: 30 supplementary loaders covering:
@@ -28,7 +19,6 @@ RoleplayCore â€” Session Changelog (WoW 12.x private server)
   - Collectibles: Mount Mods, Music Rolls, Pepe, Pocopoc (490 total)
 - Commit `b1f0bd0` (wago-tooling repo)
 
-# RoleplayCore â€” Session Changelog
 
 Chronological log of all database, code, and infrastructure changes. Each entry includes the session number, what changed, and the commit hash where applicable.
 
@@ -36,10 +26,39 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 
 ## Mar 5, 2026
 
-### 2026-03-05 — Website QA Round 2
+### Session 58 — Wowhead Gap Scraper (Mar 5 2026)
+- Built 3-script pipeline: generate_gap_targets.py → scrape_gaps_tor.py → import_scraped_gaps.py
+- Scraped 5,653 Wowhead pages via 30 Tor workers at 45K/hr (0 WAF blocks)
+- Fixed parsers: quest pages use WH.markup.printHtml custom markup, vendor data needs balanced-bracket JSON extraction
+- Applied: 592 creature quest starters, 683 creature quest enders, 202 GO starters, 208 GO enders, 8,799 vendor items
+- Reverted gossip import (56 NPCs) — scraper picked up user comments instead of NPC dialogue
+- Cleaned 73 orphaned GO quest entries (TWW Candy Buckets without templates)
+- Also committed: audit_talent_spells.py (183 critical + 242 high priority broken talent spells identified)
+
+
+### 2026-03-05 â€” Website QA Round 2
 - Cross-page sidebar, back-to-top, accuracy audit (30/30 stats verified, 7 stale values fixed)
 - Architecture diagram, Konami easter egg
 - Commit: `068c81c`
+
+### Session 55 â€” VoxCore Website QA Round 2
+- Site architecture overhaul: cross-page sidebar, external CSS/JS, accuracy audit (30/30 stats verified)
+- `refresh_content.py` + `update_site.bat` build pipeline
+- Commit: `068c81c` (roleplaycore-report)
+
+### Session 53 â€” TACT/Wago CSV Merge Pipeline
+- **TACT vs Wago audit**: 251K missing SpellEffect rows in Wago, 7,119 stale hotfix overrides found
+- **`merge_csv_sources.py` created** â€” TACT base + Wago CDN extras (998 TACT-only + 99 merged tables)
+- `wago_common.py` WAGO_CSV_DIR auto-points to merged output â€” zero downstream changes needed
+- `tact_extract.py` QA: fixed default output (data-loss risk), 3 file handle leaks
+- Commits: `1c3534d`+`bcbc07f` (wago-tooling)
+
+### Session 51 â€” Missing Spawns + Phase Resolution + ATT Import
+- **1,755 quest NPC spawns** deployed (84% reduction in missing quest NPCs)
+- **Phase-duplicate resolution**: 214 entries analyzed, 207 re-inserted, 7 REMOVED skipped
+- **ATT data applied**: 4,630 quest starters, 3,081 quest chains, 1,510 vendor items
+- **QA fixes**: 11 HealthModifier=0, 30,130 orphaned waypoint nodes, 51 orphaned loot refs
+- Commits: `68e154e68c`, `fcf1cf2738`, `1d53f2a1d3`, `04c0d4652c`
 
 ### 2026-03-05 â€” Transmog: Retail Sniffer-Informed Fix Pass
 - Decoded Ymir retail packet capture (build 66220, 2.77M lines) â€” ground truth for transmog packet analysis
@@ -195,7 +214,7 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 
 | Database | Tables | Size | Key Metric |
 |----------|--------|------|------------|
-| world | 259 | 1,267 MB | 662K creatures, 294K SmartAI scripts |
+| world | 259 | 1,267 MB | 664K creatures, 294K SmartAI scripts |
 | hotfixes | 517 | 535 MB | 227K hotfix_data, ~244K content rows |
 | characters | 151 | 7.6 MB | |
 | auth | 50 | 1.9 MB | |
@@ -206,9 +225,10 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 | Repo | Latest Commit | Purpose |
 |------|--------------|---------|
 | VoxCore84/RoleplayCore | `fae00afb86` | Main server |
-| VoxCore84/wago-tooling | `b56bfb0` | Wago/LW/hotfix tools |
+| VoxCore84/wago-tooling | `b1f0bd0` | Wago/LW/hotfix tools |
 | VoxCore84/tc-packet-tools | `821e74f` | WPP + packet analysis |
 | VoxCore84/code-intel | â€” | C++ MCP server |
 | VoxCore84/trinitycore-claude-skills | `25967f7` | Claude Code skills |
 
 *Updated March 5, 2026*
+
