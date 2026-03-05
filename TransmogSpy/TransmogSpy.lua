@@ -1200,10 +1200,10 @@ local function CmdItems()
     Log(CYAN .. "=== EQUIPPED ITEMS ===" .. RESET)
 
     for _, slot in ipairs(SLOT_IDS) do
-        if slot == 2 then goto continue end -- secondary shoulder has no inventory slot
+        if slot == 2 then goto next_slot end -- secondary shoulder has no inventory slot
 
         local invName = INV_SLOT_NAMES[slot]
-        if not invName then goto continue end
+        if not invName then goto next_slot end
 
         local slotID = GetInventorySlotInfo(invName)
         local itemLink = GetInventoryItemLink("player", slotID)
@@ -1219,7 +1219,7 @@ local function CmdItems()
         else
             parts[#parts + 1] = "(empty)"
             Log(table.concat(parts, " "))
-            goto continue
+            goto next_slot
         end
 
         -- Base visual (what the item looks like without transmog)
@@ -1249,7 +1249,7 @@ local function CmdItems()
         end
 
         Log(table.concat(parts, " "))
-        ::continue::
+        ::next_slot::
     end
 end
 

@@ -952,7 +952,7 @@ def write_output(output_path, pkt_dir, transmog_packets, addon_messages, field_u
 
     with open(output_path, 'w', encoding='utf-8') as out:
         out.write("=" * 100 + "\n")
-        out.write("  TRANSMOG PACKET EXTRACT\n")
+        out.write("  PACKETSCOPE REPORT\n")
         out.write(f"  Generated from WPP output files in: {pkt_dir}\n")
         out.write("=" * 100 + "\n\n")
 
@@ -1087,23 +1087,36 @@ def write_output(output_path, pkt_dir, transmog_packets, addon_messages, field_u
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract transmog-related content from WPP output")
+    parser = argparse.ArgumentParser(description="PacketScope — WPP packet log analyzer")
     parser.add_argument('--pkt-dir', type=Path, default=DEFAULT_PKT_DIR,
-                        help='PacketLog directory containing World_parsed.txt')
+                        help='Directory containing *_parsed.txt (auto-detected)')
     args = parser.parse_args()
 
     pkt_dir = args.pkt_dir
+
+    # Auto-detect parsed file: prefer World_parsed.txt, fall back to any *_parsed.txt
     parsed_file = pkt_dir / "World_parsed.txt"
-    errors_file = pkt_dir / "World_errors.txt"
-    output_file = pkt_dir / "transmog_extract.txt"
-
-    print("Transmog Packet Extractor")
-    print("=" * 50)
-    print(f"  PacketLog dir: {pkt_dir}")
-
     if not parsed_file.exists():
-        print(f"\n  ERROR: {parsed_file} not found.")
-        sys.exit(1)
+        candidates = sorted(pkt_dir.glob("*_parsed.txt"))
+        if candidates:
+            parsed_file = candidates[-1]  # most recent
+        else:
+            print(f"\n  ERROR: No *_parsed.txt found in {pkt_dir}")
+            sys.exit(1)
+
+    # Auto-detect errors file similarly
+    errors_file = pkt_dir / "World_errors.txt"
+    if not errors_file.exists():
+        err_candidates = sorted(pkt_dir.glob("*_errors.txt"))
+        if err_candidates:
+            errors_file = err_candidates[-1]
+
+    output_file = pkt_dir / "packetscope_report.txt"
+
+    print("PacketScope — WPP Packet Log Analyzer")
+    print("=" * 50)
+    print(f"  Directory:    {pkt_dir}")
+    print(f"  Parsed file:  {parsed_file.name}")
 
     # Discover SQL files dynamically
     hotfixes_sql, wpp_sql, world_sql = find_sql_files(pkt_dir)
