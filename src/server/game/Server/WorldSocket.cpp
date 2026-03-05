@@ -668,36 +668,36 @@ void WorldSocket::HandleAuthSessionCallback(WorldPackets::Auth::AuthSession cons
         return;
     }
 
-    // TODO: revert auth bypass after 66220 keys land — restore the original early-return on missing key
     ClientBuild::VariantId buildVariant = { .Platform = joinTicket->platform(), .Arch = joinTicket->clientarch(), .Type = joinTicket->type() };
     auto clientBuildAuthKey = std::ranges::find(buildInfo->AuthKeys, buildVariant, &ClientBuild::AuthKey::Variant);
-    if (clientBuildAuthKey != buildInfo->AuthKeys.end())
+    if (clientBuildAuthKey == buildInfo->AuthKeys.end())
     {
-        Trinity::Crypto::SHA512 digestKeyHash;
-        digestKeyHash.UpdateData(account.Game.KeyData.data(), account.Game.KeyData.size());
-        digestKeyHash.UpdateData(clientBuildAuthKey->Key.data(), clientBuildAuthKey->Key.size());
-        digestKeyHash.Finalize();
-
-        Trinity::Crypto::HMAC_SHA512 hmac(digestKeyHash.GetDigest());
-        hmac.UpdateData(authSession->LocalChallenge);
-        hmac.UpdateData(_serverChallenge);
-        hmac.UpdateData(AuthCheckSeed);
-        hmac.Finalize();
-
-        // Check that Key and account name are the same on client and server
-        if (memcmp(hmac.GetDigest().data(), authSession->Digest.data(), authSession->Digest.size()) != 0)
-        {
-            SendAuthResponseError(ERROR_DENIED);
-            TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: Authentication failed for account: {} ('{}') address: {}", account.Game.Id, joinTicket->gameaccount(), address);
-            DelayedCloseSocket();
-            return;
-        }
-    }
-    else
-    {
-        TC_LOG_WARN("network", "WorldSocket::HandleAuthSession: Missing auth key for build {} variant {}-{}-{} — BYPASSING auth check (local dev mode) ({}).", account.Game.Build,
+        SendAuthResponseError(ERROR_DENIED);
+        TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: Missing auth key for build {} variant {}-{}-{} ({}).", account.Game.Build,
             ClientBuild::ToCharArray(buildVariant.Platform).data(), ClientBuild::ToCharArray(buildVariant.Arch).data(),
             ClientBuild::ToCharArray(buildVariant.Type).data(), address);
+        DelayedCloseSocket();
+        return;
+    }
+
+    Trinity::Crypto::SHA512 digestKeyHash;
+    digestKeyHash.UpdateData(account.Game.KeyData.data(), account.Game.KeyData.size());
+    digestKeyHash.UpdateData(clientBuildAuthKey->Key.data(), clientBuildAuthKey->Key.size());
+    digestKeyHash.Finalize();
+
+    Trinity::Crypto::HMAC_SHA512 hmac(digestKeyHash.GetDigest());
+    hmac.UpdateData(authSession->LocalChallenge);
+    hmac.UpdateData(_serverChallenge);
+    hmac.UpdateData(AuthCheckSeed);
+    hmac.Finalize();
+
+    // Check that Key and account name are the same on client and server
+    if (memcmp(hmac.GetDigest().data(), authSession->Digest.data(), authSession->Digest.size()) != 0)
+    {
+        SendAuthResponseError(ERROR_DENIED);
+        TC_LOG_ERROR("network", "WorldSocket::HandleAuthSession: Authentication failed for account: {} ('{}') address: {}", account.Game.Id, joinTicket->gameaccount(), address);
+        DelayedCloseSocket();
+        return;
     }
 
     Trinity::Crypto::SHA512 keyData;
