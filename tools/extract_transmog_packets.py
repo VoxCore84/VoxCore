@@ -6,24 +6,22 @@ Produces a single output file with sections:
   2. TransmogBridge Addon Messages (TMOG_LOG, TMOG_BRIDGE, TSPY_LOG)
   3. Transmog-related UPDATE_OBJECT fields (ViewedOutfit, TransmogrifyDisabledSlotMask)
   4. Hotfix SQL tables (item_modified_appearance, transmog_illusion, transmog_set, etc.)
-  5. Broadcast text / NPC gossip mentioning transmog
+  5. Other SQL file mentions of transmog
   6. Errors file transmog entries
+
+Usage:
+  python3 extract_transmog_packets.py                          # Use default PacketLog dir
+  python3 extract_transmog_packets.py --pkt-dir /path/to/dir   # Use custom dir
 """
 
+import argparse
 import re
 import sys
-import os
 from pathlib import Path
 from collections import defaultdict
 
-# --- Config ---
-PKT_DIR = Path(r"C:\Dev\RoleplayCore\out\build\x64-RelWithDebInfo\bin\RelWithDebInfo\PacketLog")
-PARSED_FILE = PKT_DIR / "World_parsed.txt"
-HOTFIXES_SQL = PKT_DIR / "2026_03_04_14_16_14_World.pkt_hotfixes.sql"
-WPP_SQL = PKT_DIR / "2026_03_04_14_16_14_World.pkt_wpp.sql"
-WORLD_SQL = PKT_DIR / "2026_03_04_14_16_14_World.pkt_world.sql"
-ERRORS_FILE = PKT_DIR / "World_errors.txt"
-OUTPUT_FILE = PKT_DIR / "transmog_extract.txt"
+# --- Default config ---
+DEFAULT_PKT_DIR = Path(r"C:\Dev\RoleplayCore\out\build\x64-RelWithDebInfo\bin\RelWithDebInfo\PacketLog")
 
 # Patterns
 PACKET_HEADER_RE = re.compile(r'^(ClientToServer|ServerToClient): (\S+)')
@@ -35,85 +33,78 @@ TRANSMOG_FIELD_RE = re.compile(r'(ViewedOutfit|TransmogrifyDisabledSlotMask|Tran
 HOTFIX_TABLES = [
     'item_modified_appearance',
     'item_modified_appearance_extra',
+    'item_appearance',
     'transmog_illusion',
     'transmog_set',
     'transmog_set_item',
     'transmog_set_group',
+    'transmog_set_member',
 ]
 
 
-def extract_packet_block(lines, start_idx):
-    """Given lines and a start index at a packet header, return all lines until next packet or blank-line gap."""
-    block = [lines[start_idx]]
-    i = start_idx + 1
-    while i < len(lines):
-        line = lines[i]
-        # Next packet header = end of block
-        if PACKET_HEADER_RE.match(line):
-            break
-        block.append(line)
-        i += 1
-    return block, i
-
-
 def process_parsed_file(filepath):
-    """Process World_parsed.txt, extracting transmog packets, addon messages, and field updates."""
+    """Process World_parsed.txt via streaming — one packet block at a time."""
     transmog_packets = []
     addon_messages = []
     field_updates = []
 
-    print(f"  Reading {filepath.name} ({filepath.stat().st_size / 1024 / 1024:.1f} MB)...")
+    size_mb = filepath.stat().st_size / 1024 / 1024
+    print(f"  Reading {filepath.name} ({size_mb:.1f} MB)...")
 
+    current_block = []
+    current_opcode = None
+
+    def flush_block():
+        nonlocal current_block, current_opcode
+        if not current_block or not current_opcode:
+            current_block = []
+            current_opcode = None
+            return
+
+        if TRANSMOG_OPCODE_RE.search(current_opcode):
+            transmog_packets.append(current_block)
+        elif 'CMSG_CHAT_ADDON_MESSAGE' in current_opcode:
+            block_text = ''.join(current_block)
+            if ADDON_PREFIX_RE.search(block_text):
+                addon_messages.append(current_block)
+        elif 'SMSG_UPDATE_OBJECT' in current_opcode:
+            if any(TRANSMOG_FIELD_RE.search(l) for l in current_block):
+                field_updates.append(current_block)
+
+        current_block = []
+        current_opcode = None
+
+    line_count = 0
     with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
-        lines = f.readlines()
+        for line in f:
+            line_count += 1
+            header_match = PACKET_HEADER_RE.match(line)
+            if header_match:
+                flush_block()
+                current_opcode = header_match.group(2)
+                current_block = [line]
+            elif current_block:
+                current_block.append(line)
 
-    print(f"  {len(lines):,} lines loaded, scanning...")
+    flush_block()
 
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        header_match = PACKET_HEADER_RE.match(line)
-
-        if header_match:
-            opcode = header_match.group(2)
-
-            # 1. Transmog protocol packets
-            if TRANSMOG_OPCODE_RE.search(opcode):
-                block, i = extract_packet_block(lines, i)
-                transmog_packets.append(block)
-                continue
-
-            # 2. Addon messages with transmog prefixes
-            if 'CMSG_CHAT_ADDON_MESSAGE' in opcode:
-                block, next_i = extract_packet_block(lines, i)
-                block_text = ''.join(block)
-                if ADDON_PREFIX_RE.search(block_text):
-                    addon_messages.append(block)
-                i = next_i
-                continue
-
-            # 3. UPDATE_OBJECT with transmog fields (ViewedOutfit, TransmogrifyDisabledSlotMask)
-            if 'SMSG_UPDATE_OBJECT' in opcode:
-                block, next_i = extract_packet_block(lines, i)
-                # Only include if it has transmog-relevant fields
-                relevant_lines = [l for l in block if TRANSMOG_FIELD_RE.search(l)]
-                if relevant_lines:
-                    field_updates.append(block)
-                i = next_i
-                continue
-
-        i += 1
-
+    print(f"  {line_count:,} lines scanned.")
     return transmog_packets, addon_messages, field_updates
 
 
 def process_hotfixes_sql(filepath):
     """Extract transmog-related table INSERTs from hotfixes SQL."""
     sections = defaultdict(list)
+
+    if not filepath.exists():
+        print(f"  {filepath.name} not found — skipping.")
+        return sections
+
+    size_mb = filepath.stat().st_size / 1024 / 1024
+    print(f"  Reading {filepath.name} ({size_mb:.1f} MB)...")
+
     current_table = None
     in_transmog_block = False
-
-    print(f"  Reading {filepath.name} ({filepath.stat().st_size / 1024 / 1024:.1f} MB)...")
 
     with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
         for line in f:
@@ -136,7 +127,7 @@ def process_hotfixes_sql(filepath):
     return sections
 
 
-def process_sql_file(filepath, label):
+def process_sql_file(filepath):
     """Extract any transmog-related lines from a SQL file."""
     results = []
     if not filepath.exists():
@@ -164,7 +155,21 @@ def process_errors_file(filepath):
     return results
 
 
-def write_output(output_path, transmog_packets, addon_messages, field_updates,
+def find_sql_files(pkt_dir):
+    """Dynamically find WPP-generated SQL files in the PacketLog directory."""
+    hotfix_sqls = sorted(pkt_dir.glob("*_World.pkt*hotfixes.sql"))
+    wpp_sqls = sorted(pkt_dir.glob("*_World.pkt*wpp.sql"))
+    world_sqls = sorted(pkt_dir.glob("*_World.pkt*world.sql"))
+
+    # Use the most recent match (last after sort), or a nonexistent placeholder
+    return (
+        hotfix_sqls[-1] if hotfix_sqls else pkt_dir / "NO_HOTFIXES.sql",
+        wpp_sqls[-1] if wpp_sqls else pkt_dir / "NO_WPP.sql",
+        world_sqls[-1] if world_sqls else pkt_dir / "NO_WORLD.sql",
+    )
+
+
+def write_output(output_path, pkt_dir, transmog_packets, addon_messages, field_updates,
                  hotfix_sections, wpp_lines, world_lines, error_lines):
     """Write all extracted content to a single output file."""
     total_items = 0
@@ -172,7 +177,7 @@ def write_output(output_path, transmog_packets, addon_messages, field_updates,
     with open(output_path, 'w', encoding='utf-8') as out:
         out.write("=" * 100 + "\n")
         out.write("  TRANSMOG PACKET EXTRACT\n")
-        out.write(f"  Generated from WPP output files in: {PKT_DIR}\n")
+        out.write(f"  Generated from WPP output files in: {pkt_dir}\n")
         out.write("=" * 100 + "\n\n")
 
         # --- Section 1: Transmog Protocol Packets ---
@@ -226,32 +231,34 @@ def write_output(output_path, transmog_packets, addon_messages, field_updates,
         out.write(f"  SECTION 4: HOTFIX SQL TABLES ({len(hotfix_sections)} tables)\n")
         out.write("  item_modified_appearance, transmog_illusion, transmog_set, etc.\n")
         out.write("=" * 100 + "\n\n")
-        for table_name, lines in sorted(hotfix_sections.items()):
-            # Count rows (approximate by counting lines with leading parentheses in VALUES)
-            row_count = sum(1 for l in lines if l.strip().startswith('('))
-            out.write(f"--- {table_name} ({row_count} rows, {len(lines)} SQL lines) ---\n")
-            # For large tables, write summary + first/last few rows
-            if row_count > 50:
-                # Write the DELETE + INSERT header
-                for line in lines:
-                    if line.strip().startswith('('):
-                        break
-                    out.write(line)
-                # First 10 data rows
-                data_rows = [l for l in lines if l.strip().startswith('(')]
-                out.write(f"-- First 10 of {row_count} rows:\n")
-                for row in data_rows[:10]:
-                    out.write(row)
-                out.write(f"-- ... ({row_count - 20} rows omitted) ...\n")
-                out.write(f"-- Last 10 rows:\n")
-                for row in data_rows[-10:]:
-                    out.write(row)
-                out.write('\n')
-            else:
-                for line in lines:
-                    out.write(line)
-                out.write('\n')
-        total_items += sum(len(v) for v in hotfix_sections.values())
+        if hotfix_sections:
+            for table_name, lines in sorted(hotfix_sections.items()):
+                row_count = sum(1 for l in lines if l.strip().startswith('('))
+                out.write(f"--- {table_name} ({row_count} rows, {len(lines)} SQL lines) ---\n")
+                if row_count > 50:
+                    # Write the DELETE + INSERT header
+                    for line in lines:
+                        if line.strip().startswith('('):
+                            break
+                        out.write(line)
+                    data_rows = [l for l in lines if l.strip().startswith('(')]
+                    out.write(f"-- First 10 of {row_count} rows:\n")
+                    for row in data_rows[:10]:
+                        out.write(row)
+                    omitted = max(0, row_count - 20)
+                    if omitted > 0:
+                        out.write(f"-- ... ({omitted} rows omitted) ...\n")
+                    out.write(f"-- Last 10 rows:\n")
+                    for row in data_rows[-10:]:
+                        out.write(row)
+                    out.write('\n')
+                else:
+                    for line in lines:
+                        out.write(line)
+                    out.write('\n')
+            total_items += sum(len(v) for v in hotfix_sections.values())
+        else:
+            out.write("  (no hotfix SQL files found or no transmog tables present)\n\n")
 
         # --- Section 5: WPP/World SQL Mentions ---
         out.write("=" * 100 + "\n")
@@ -300,42 +307,63 @@ def write_output(output_path, transmog_packets, addon_messages, field_updates,
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Extract transmog-related content from WPP output")
+    parser.add_argument('--pkt-dir', type=Path, default=DEFAULT_PKT_DIR,
+                        help='PacketLog directory containing World_parsed.txt')
+    args = parser.parse_args()
+
+    pkt_dir = args.pkt_dir
+    parsed_file = pkt_dir / "World_parsed.txt"
+    errors_file = pkt_dir / "World_errors.txt"
+    output_file = pkt_dir / "transmog_extract.txt"
+
     print("Transmog Packet Extractor")
     print("=" * 50)
+    print(f"  PacketLog dir: {pkt_dir}")
+
+    if not parsed_file.exists():
+        print(f"\n  ERROR: {parsed_file} not found.")
+        sys.exit(1)
+
+    # Discover SQL files dynamically
+    hotfixes_sql, wpp_sql, world_sql = find_sql_files(pkt_dir)
 
     # Process all files
     print("\n[1/5] Processing parsed packet log...")
-    transmog_packets, addon_messages, field_updates = process_parsed_file(PARSED_FILE)
+    transmog_packets, addon_messages, field_updates = process_parsed_file(parsed_file)
 
     print(f"  Found: {len(transmog_packets)} transmog packets, "
           f"{len(addon_messages)} addon messages, "
           f"{len(field_updates)} update objects")
 
     print("\n[2/5] Processing hotfixes SQL...")
-    hotfix_sections = process_hotfixes_sql(HOTFIXES_SQL)
-    for table, lines in sorted(hotfix_sections.items()):
-        row_count = sum(1 for l in lines if l.strip().startswith('('))
-        print(f"  {table}: {row_count} rows")
+    hotfix_sections = process_hotfixes_sql(hotfixes_sql)
+    if hotfix_sections:
+        for table, lines in sorted(hotfix_sections.items()):
+            row_count = sum(1 for l in lines if l.strip().startswith('('))
+            print(f"  {table}: {row_count} rows")
+    else:
+        print("  (no hotfix SQL found)")
 
     print("\n[3/5] Processing WPP SQL...")
-    wpp_lines = process_sql_file(WPP_SQL, "wpp")
+    wpp_lines = process_sql_file(wpp_sql)
     print(f"  Found: {len(wpp_lines)} lines")
 
     print("\n[4/5] Processing world SQL...")
-    world_lines = process_sql_file(WORLD_SQL, "world")
+    world_lines = process_sql_file(world_sql)
     print(f"  Found: {len(world_lines)} lines")
 
     print("\n[5/5] Processing errors file...")
-    error_lines = process_errors_file(ERRORS_FILE)
+    error_lines = process_errors_file(errors_file)
     print(f"  Found: {len(error_lines)} lines")
 
     # Write output
-    print(f"\nWriting output to {OUTPUT_FILE}...")
-    write_output(OUTPUT_FILE, transmog_packets, addon_messages, field_updates,
+    print(f"\nWriting output to {output_file}...")
+    write_output(output_file, pkt_dir, transmog_packets, addon_messages, field_updates,
                  hotfix_sections, wpp_lines, world_lines, error_lines)
 
-    size_mb = OUTPUT_FILE.stat().st_size / 1024 / 1024
-    print(f"\nDone! Output: {OUTPUT_FILE} ({size_mb:.1f} MB)")
+    size_mb = output_file.stat().st_size / 1024 / 1024
+    print(f"\nDone! Output: {output_file} ({size_mb:.1f} MB)")
 
 
 if __name__ == '__main__':
