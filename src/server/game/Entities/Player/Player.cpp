@@ -18088,6 +18088,23 @@ void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
         TC_LOG_DEBUG("entities.player", "fillOutfitData [{}]: slotMap size={} setName='{}' ignoreMask=0x{:X}",
             GetGUID().ToString(), std::size(slotMap), equipmentSet->SetName, equipmentSet->IgnoreMask);
 
+        // --- IgnoreMask repair: DB value cannot be trusted ---
+        // If a slot has a non-zero IMAID, it MUST be active (bit CLEAR).
+        // The DB may store 0x7FFFF (all ignored) from a previous buggy save.
+        uint32 repairedIgnoreMask = equipmentSet->IgnoreMask;
+        for (uint8 s = 0; s < EQUIPMENT_SLOT_END; ++s)
+        {
+            if (equipmentSet->Appearances[s] != 0)
+                repairedIgnoreMask &= ~(1u << s);
+        }
+        // Also force-clear shoulder bit if secondary shoulder has an appearance
+        if (equipmentSet->SecondaryShoulderApparanceID != 0)
+            repairedIgnoreMask &= ~(1u << EQUIPMENT_SLOT_SHOULDERS);
+
+        TC_LOG_DEBUG("network.opcode.transmog",
+            "fillOutfitData [{}]: REPAIRED ignoreMask=0x{:X} (was 0x{:X}) for outfit '{}'",
+            GetGUID().ToString(), repairedIgnoreMask, equipmentSet->IgnoreMask, equipmentSet->SetName);
+
         for (auto const& mapping : slotMap)
         {
             // ID 3 (SecondaryShoulder / ShoulderLeft) uses its own dedicated field, not Appearances[]
@@ -18104,7 +18121,7 @@ void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
             // the user's outfit intentionally has no transmog for that slot. Don't override with
             // the item's current transmog (which may not have been cleared yet by ApplyTransmogOutfitToPlayer).
             if (imaID == 0 && mapping.db2SlotInfoID != 3 && mapping.equipSlot < EQUIPMENT_SLOT_END
-                && (equipmentSet->IgnoreMask & (1u << mapping.equipSlot)))
+                && (repairedIgnoreMask & (1u << mapping.equipSlot)))
             {
                 if (Item* equippedItem = GetItemByPos(INVENTORY_SLOT_BAG_0, mapping.equipSlot))
                 {
@@ -18117,7 +18134,7 @@ void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
                 }
             }
             else if (imaID == 0 && mapping.db2SlotInfoID != 3 && mapping.equipSlot < EQUIPMENT_SLOT_END
-                && !(equipmentSet->IgnoreMask & (1u << mapping.equipSlot)))
+                && !(repairedIgnoreMask & (1u << mapping.equipSlot)))
             {
                 // Canary: bootstrap was skipped because IgnoreMask bit is CLEAR (explicit bridge clear).
                 // Log if the equipped item still has a stale transmog modifier — confirms the fix is
@@ -18129,19 +18146,28 @@ void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
                             GetGUID().ToString(), mapping.equipSlot, staleIMAID);
             }
 
-            // Look up the real AppearanceDisplayType from DB2 (matches SetVisibleItemSlot logic)
-            uint8 displayType = 0;
-            if (imaID)
-                if (ItemModifiedAppearanceEntry const* modAppear = sItemModifiedAppearanceStore.LookupEntry(imaID))
-                    if (ItemAppearanceEntry const* appear = sItemAppearanceStore.LookupEntry(modAppear->ItemAppearanceID))
-                        displayType = uint8(appear->DisplayType);
+            // AppearanceDisplayType tells the client what to do with this slot:
+            //   0 = Unassigned — slot not in outfit, skip (don't touch existing transmog)
+            //   1 = Assigned   — apply this specific appearance
+            //   3 = Hidden     — apply hidden visual IMA (requires real hidden IMA ID, never IMA=0)
+            uint8 displayType = (imaID > 0) ? 1 : 0;
+
+            TC_LOG_DEBUG("network.opcode.transmog", "fillOutfitData [{}]: db2Slot={} equipSlot={} IMAID={} DT={} ignored={}",
+                GetGUID().ToString(), mapping.db2SlotInfoID, mapping.equipSlot, imaID, displayType,
+                (mapping.equipSlot < EQUIPMENT_SLOT_END && (repairedIgnoreMask & (1u << mapping.equipSlot))) != 0);
 
             // SlotOption tells the client how to render the slot:
             //   0 = empty/unused, 1 = visible armor, 3 = hidden undergarment (shirt/tabard)
-            // Derived from ItemAppearance.DisplayType.
+            // Derived from ItemAppearance.DisplayType when an appearance is assigned.
             uint8 slotOption = 0;
             if (imaID)
-                slotOption = (displayType == 2 /*Shirt*/ || displayType == 10 /*Tabard*/) ? 3 : 1;
+            {
+                uint8 dbDisplayType = 0;
+                if (ItemModifiedAppearanceEntry const* modAppear = sItemModifiedAppearanceStore.LookupEntry(imaID))
+                    if (ItemAppearanceEntry const* appear = sItemAppearanceStore.LookupEntry(modAppear->ItemAppearanceID))
+                        dbDisplayType = uint8(appear->DisplayType);
+                slotOption = (dbDisplayType == 2 /*Shirt*/ || dbDisplayType == 10 /*Tabard*/) ? 3 : 1;
+            }
 
             auto slotSetter = AddDynamicUpdateFieldValue(outfitSetter.ModifyValue(&UF::TransmogOutfitData::Slots));
             slotSetter.ModifyValue(&UF::TransmogOutfitSlotData::Slot).SetValue(mapping.db2SlotInfoID);

@@ -462,12 +462,9 @@ void TransmogOutfitUpdateSlots::Read()
                 curRpos, ByteArrayToHexStr(std::span(_worldPacket.data() + curRpos, dumpSize)));
         }
 
-        // Multi-group packets (slotCount > 14) contain one 14-slot group per situation.
-        // Process ALL groups with "first non-zero wins" — Group 1 has the user's new
-        // armor picks, Group 2+ have head/back/tabard that Group 1 omits.
+        // Read ALL entries from the wire (we must consume all bytes regardless)
         for (uint32 i = 0; i < slotCount; ++i)
         {
-
             TransmogOutfitSlotEntry& slot = Slots[i];
 
             // Read 16 raw bytes per entry
@@ -483,7 +480,13 @@ void TransmogOutfitUpdateSlots::Read()
             slot.Flags = slot.RawBytes[1];    // Always 0 in observed packets
             slot.AppearanceID = ReadLE<uint32>(std::span<uint8 const>(slot.RawBytes, 16), 2);
             slot.WireDisplayType = ReadLE<uint16>(std::span<uint8 const>(slot.RawBytes, 16), 6);
+        }
 
+        // Process all entries — retail sends up to 30 (12 armor + 18 weapon options).
+        // Use "first non-zero wins" so the earliest valid entry for each slot takes priority.
+        for (uint32 i = 0; i < slotCount; ++i)
+        {
+            TransmogOutfitSlotEntry& slot = Slots[i];
             uint8 ordinal = slot.SlotIndex; // byte[0], sequential index (1-14)
 
             // Empty slot = IMAID is 0 (no transmog applied) — skip, don't overwrite
@@ -515,17 +518,13 @@ void TransmogOutfitUpdateSlots::Read()
                 continue;
             }
 
-            // "First non-zero wins" — only set if not already populated by an earlier group
+            // First non-zero wins — earliest valid entry for each slot takes priority
             if (equipSlot < EQUIPMENT_SLOT_END && !Set.Appearances[equipSlot])
                 Set.Appearances[equipSlot] = int32(slot.AppearanceID);
 
             TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS entry[{}]: appear={} ordinal={} wireDT={} serverDT={} group={} equipSlot={}",
                 i, slot.AppearanceID, ordinal, slot.WireDisplayType, serverDT, i / 14, equipSlot);
         }
-
-        if (slotCount > 14)
-            TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS: {} total entries ({} groups of 14), merged with first-non-zero precedence",
-                slotCount, slotCount / 14);
 
         for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
             if (!Set.Appearances[slot])
