@@ -2,14 +2,34 @@ RoleplayCore â€” Session Changelog (WoW 12.x private server)
 
 
 
+### Session 67 — Stormwind Retail Sniff + Hero's Call Board Dedup (Mar 5 2026)
+- **Retail sniff import**: 152 creature spawns, 21 GO spawns, 9 equipment templates from Stormwind retail ground truth
+- **Sniff enrichment**: 161 updates — creature type/family/Classification/unit_class, HP/Mana modifiers, portal deduplication
+- **Stormwind Wowhead scrape**: 28 Hero's Call Board quest starters applied, then reverted (duplicate of newer GO 281339)
+- **Hero's Call Board dedup**: Removed old GO 206111 overlapping newer GO 281339 + 5 SmartAI orphan cleanups
+- Commits: `9962076dbf`, `c5cb54ec54`, `c7bada7e1d`, `9e53777d55`
+
+### Session 67 — Transmog Hidden Appearance + PacketScope (Mar 5 2026)
+- **Hidden appearance detection**: Proper DT=3 handling for hidden visual IMA IDs
+- **Paired weapon DT=4**: Display type for paired weapon transmog
+- **TransmogSpy label fix**: Corrected display type labels in diagnostic output
+- **PacketScope improvements**: Better transmog packet inspection tooling
+- Commit: `8d36580ac4`
+
+### Session 66 — Midnight Expansion Scrape + BtWQuests Enrichment (Mar 5 2026)
+- **Midnight expansion scrape R2**: 226 queststarters, 181 questenders, 174 vendor items, 11 GO quest links from Wowhead
+- **BtWQuests CT + ATT enrichment**: 228 ContentTuningID fills, 252 vendor items, 426 exclusive groups
+- **Transmog addon QA**: Name-Realm whisper fix, button hook reliability, failed event logging, nil guard on payload send, pcall on Layer 1
+- Commits: `c76813221d`, `6be6f4682b`, `e0bd9ef78b`, `0014c37771`
+
 ### Session 65 — NPC Mega-Scrape + ATT Cross-Reference + Quest Chains (Mar 5 2026)
 - **NPC mega-scrape**: 80,943 Wowhead pages scraped with 120 Tor workers (~250K/hr)
   - 1,727 creature queststarters, 2,979 creature questenders, 2,535 vendor items
 - **ATT cross-reference import**: 170 creature QS, 124 GO QS, 176 quest chain links
 - **Quest chain application**: 572 PrevQuestID + 2,008 NextQuestID from BtWQuests
 - **Scraper v2 built**: shared priority queue, adaptive delay, 100+ workers, auto-parse
-- **Running totals**: creature_queststarter 34,421 | creature_questender 36,845 | gameobject_queststarter 2,058 | npc_vendor 176,427
-- **Remaining gaps**: 16,630 quests without starter, 13,311 without ender
+- **Running totals**: creature_queststarter 34,647 | creature_questender 37,026 | gameobject_queststarter 2,066 | npc_vendor 176,853
+- **Remaining gaps**: 16,552 quests without starter, 13,165 without ender
 
 ### Session 64 — Build 66263 Data Pipeline Bump (Mar 5 2026)
 - **TACT extraction**: 1,094 DB2 tables from local CASC (build 66263, cleanup build: -813 rows in key tables)
@@ -307,7 +327,7 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 
 | Database | Tables | Size | Key Metric |
 |----------|--------|------|------------|
-| world | 259 | 1,267 MB | 664K creatures, 294K SmartAI scripts |
+| world | 259 | 1,267 MB | 666K creatures, 294K SmartAI scripts |
 | hotfixes | 517 | 535 MB | 227K hotfix_data, ~244K content rows |
 | characters | 151 | 7.6 MB | |
 | auth | 50 | 1.9 MB | |
@@ -317,7 +337,7 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 
 | Repo | Latest Commit | Purpose |
 |------|--------------|---------|
-| VoxCore84/RoleplayCore | `9340906e9d` | Main server |
+| VoxCore84/RoleplayCore | `8d36580ac4` | Main server |
 | VoxCore84/wago-tooling | `966e0eb` | Wago/LW/hotfix tools |
 | VoxCore84/tc-packet-tools | `821e74f` | WPP + packet analysis |
 | VoxCore84/code-intel | â€” | C++ MCP server |

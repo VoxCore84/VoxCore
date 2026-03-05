@@ -74,12 +74,22 @@ All figures are **net** â€” accounting for subsequent cleanup and deduplica
 - **Wowhead vendor scrape R2**: 772 pages scraped, 92 had vendor data, 1,435 new npc_vendor entries across 82 NPCs
 - **Running totals**: creature_queststarter 32,458 | gameobject_queststarter 1,933 | npc_vendor 173,855
 
+### Stormwind Retail Sniff + Hero's Call Board Dedup (Sessions 66-67)
+- **Retail ground truth**: 152 creature spawns, 21 GO spawns, 9 equipment templates from Stormwind retail sniff
+- **Sniff enrichment**: 161 creature updates &mdash; type, family, Classification, unit_class, HP/Mana modifiers, portal dedup
+- **Hero's Call Board dedup**: Old GO 206111 removed (overlaps newer GO 281339). Stormwind Wowhead scrape of 28 quest starters reverted as duplicate
+- **5 SmartAI orphan cleanups** from Stormwind area
+
+### Midnight Expansion Scrape R2 + BtWQuests CT Enrichment (Session 66)
+- **Midnight scrape R2**: 226 queststarters, 181 questenders, 174 vendor items, 11 GO quest links
+- **BtWQuests CT + ATT enrichment**: 228 ContentTuningID fills, 252 vendor items, 426 exclusive groups
+
 ### NPC Mega-Scrape + ATT Cross-Reference + Quest Chains (Session 65)
 - **NPC mega-scrape**: 80,943 Wowhead pages scraped with 120 Tor workers (~250K/hr) &mdash; 1,727 creature queststarters, 2,979 creature questenders, 2,535 vendor items
 - **ATT cross-reference import**: 170 creature QS, 124 GO QS, 176 quest chain links
 - **Quest chain application**: 572 PrevQuestID + 2,008 NextQuestID from BtWQuests
 - **Scraper v2 built**: shared priority queue, adaptive delay, 100+ workers, auto-parse
-- **Running totals**: creature_queststarter 34,421 | creature_questender 36,845 | gameobject_queststarter 2,058 | gameobject_questender 1,624 | npc_vendor 176,427
+- **Running totals**: creature_queststarter 34,647 | creature_questender 37,026 | gameobject_queststarter 2,066 | gameobject_questender 1,625 | npc_vendor 176,853
 
 ---
 
@@ -365,10 +375,10 @@ Reimported from LoreWalkerTDB to ensure completeness:
 
 | Table | Rows |
 |-------|------|
-| creature_queststarter | 34,421 |
-| creature_questender | 36,845 |
-| gameobject_queststarter | 2,058 |
-| gameobject_questender | 1,624 |
+| creature_queststarter | 34,647 |
+| creature_questender | 37,026 |
+| gameobject_queststarter | 2,066 |
+| gameobject_questender | 1,625 |
 
 ### 4.5 Hero's Call / Warchief's Command Board Dedup
 
@@ -627,11 +637,11 @@ Over 50 Python scripts, MCP servers, audit tools, and SQL generators were built 
 
 | Table | Rows | Notes |
 |-------|------|-------|
-| creature | 664,284 | NPC spawn instances |
-| gameobject | 175,368 | World object spawn instances |
-| creature_loot_template | 2,904,341 | NPC loot tables (deduplicated, with PKs) |
+| creature | 665,965 | NPC spawn instances |
+| gameobject | 175,386 | World object spawn instances |
+| creature_loot_template | 2,905,160 | NPC loot tables (deduplicated, with PKs) |
 | smart_scripts | 294,416 | NPC AI behavior scripts (validated â€” see [Section 6.3](#63-post-import-cleanup-47478-rows)) |
-| npc_vendor | 176,427 | Vendor inventory entries |
+| npc_vendor | 176,853 | Vendor inventory entries |
 | waypoint_path_node | 130,654 | NPC patrol path nodes |
 | quest_template_addon | 47,164 | Quest chain/config data |
 | quest_poi | 134,856 | Quest map markers |
@@ -695,7 +705,7 @@ Over 50 Python scripts, MCP servers, audit tools, and SQL generators were built 
 - All NPCs at correct levels with proper ContentTuning scaling
 - 294K validated SmartAI scripts â€” NPCs patrol, react, run events (26K net new scripts added, entire dataset validated)
 - Clean spawns â€” no duplicates, no stacked/invisible NPCs
-- 25,609 quest chain links, 135K POI entries, 60K quest objectives
+- 25,609 quest chain links, 135K POI entries, 60K quest objectives, 34.6K quest starters, 37K quest enders
 - 1.6M+ item locale entries across 10 languages
 - Correct drop rates with enforced primary keys on all loot tables
 - 78,475 NPC corrections (levels, factions, flags, names, pathing)
@@ -887,7 +897,7 @@ LW import places old-framework quest boards (entries 206294/206116) at exact coo
 | **Mar 1** | 11-12 | Transmog confirmed working in-game, PR cleanup, cross-repo PR #760 |
 | **Mar 3** | 13-30 | Wowhead mega-audit (54,571 ops), Raidbots/Wago pipeline (locales + quests), LW import #2 (665K rows), post-import cleanup (47K rows), hotfix repair build 66220, MySQL tuning, build diff audit (5 builds), hotfix pipeline crash fix, transmog multi-bug fixes |
 | **Mar 4** | 31-38 | Hotfix redundancy audit rounds 1-3 (10.8M â†’ 244K content rows), WTL DBC pipeline, world DB cleanup (NPC/portal fixes, SmartAI orphans), transmog client wiki, auth key update |
-| **Mar 5** | 39-65 | Report updates, transmog diagnostics, TACT pipeline, ATT parser, website, Wowhead gap scraper (5,653 pages, 10K+ rows applied), Midnight data import, BtWQuests parse, vendor scrape R2, transmog 5-agent audit, auth 66263, NPC mega-scrape (80,943 pages, 120 Tor workers) |
+| **Mar 5** | 39-67 | Report updates, transmog diagnostics + 5-agent audit (phases 1-4) + hidden appearance/DT=4, TACT pipeline, ATT parser, website, Wowhead gap scraper (5,653 pages, 10K+ rows applied), Midnight data import (2 rounds), BtWQuests parse + CT enrichment, vendor scrape R2, auth 66263, NPC mega-scrape (80,943 pages, 120 Tor workers), Stormwind retail sniff (152 creatures, 21 GOs), Hero's Call Board dedup |
 
 </details>
 
@@ -942,7 +952,7 @@ LW import places old-framework quest boards (entries 206294/206116) at exact coo
 
 | Tool | Checks | Scope |
 |------|--------|-------|
-| `npc_audit.py` | 27 | 664K creatures vs Wago DB2 + Wowhead |
+| `npc_audit.py` | 27 | 666K creatures vs Wago DB2 + Wowhead |
 | `go_audit.py` | 15 | 175K gameobjects vs Wago DB2 |
 | `quest_audit.py` | 15 | 47K quests vs Wago DB2 |
 | `creature_placement_audit.py` | 5 | Position comparison vs LW |

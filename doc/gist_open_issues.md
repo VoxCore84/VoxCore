@@ -125,10 +125,12 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 - **Session 58**: Wowhead gap scraper applied 8,799 vendor items — 404 of 687 vendor NPCs now have items
 - **Session 64**: BtWQuests parse added 1,062 creature_queststarter + 57 gameobject_queststarter; vendor scrape R2 added 1,435 npc_vendor entries across 82 NPCs
 - **Session 65**: NPC mega-scrape (80,943 pages, 120 Tor workers) — 1,727 creature QS, 2,979 creature QE, 2,535 vendor items; ATT cross-ref — 170 creature QS, 124 GO QS, 176 chains; BtWQuests — 572 PrevQuestID + 2,008 NextQuestID
+- **Session 66**: Midnight scrape R2 — 226 QS, 181 QE, 174 vendor items, 11 GO quest links; BtWQuests CT enrichment — 228 CT fills, 252 vendor items, 426 exclusive groups
+- **Session 67**: Stormwind retail sniff — 152 creature spawns, 21 GO spawns, 9 equipment templates, 161 enrichment updates; Hero's Call Board dedup
 - **Remaining**: 68 vendor NPCs still have zero items after scrape (Wowhead has no data for them)
 - **Gossip text broken**: Scraper picks up user comments instead of NPC dialogue — gossip import reverted for 56 NPCs
-- **Current counts**: creature_queststarter 34,421 | creature_questender 36,845 | gameobject_queststarter 2,058 | gameobject_questender 1,624 | npc_vendor 176,427 | PrevQuestID set 25,609
-- **Remaining gaps**: 16,630 quests without starter, 13,311 without ender, 68 empty vendors, 420 gossip NPCs without menus
+- **Current counts**: creature_queststarter 34,647 | creature_questender 37,026 | gameobject_queststarter 2,066 | gameobject_questender 1,625 | npc_vendor 176,853 | PrevQuestID set 25,609
+- **Remaining gaps**: 16,552 quests without starter, 13,165 without ender, 68 empty vendors, 420 gossip NPCs without menus
 - **Loot data**: 402K drops extracted but not yet imported (need reference_loot_template mapping)
 - **Trainer data**: 32K spells extracted but not yet imported
 
@@ -141,10 +143,10 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 - ~20K missing rows from schema mismatches
 - `model_file_data`/`texture_file_data`: massive gaps (client-only rendering data)
 
-### Build 66263 Auth Keys — WAITING FOR TC
-- **Bypass active** in WorldSocket.cpp (commit `e3fc8cd9d6`) — logs warning, doesn't reject
-- **When TC publishes keys**: Fill SQL template in `2026_03_05_00_auth.sql`, apply to DB, revert WorldSocket.cpp bypass
-- **Also needed**: Data pipeline bump to 66263 (wago_common.py, CSVs, TACT, merge, hotfix repair), Ymir update
+### Build 66263 Auth Keys — RESOLVED
+- ~~**Bypass active** in WorldSocket.cpp~~ — **REVERTED** (commit `9a813f6ad9`): TC published 66263 keys, bypass removed
+- **Data pipeline bumped to 66263**: wago_common.py, CSVs, TACT extraction, Ymir all updated
+- **Remaining**: Hotfix repair needs re-run against 66263 baseline
 
 ### Auth Key Self-Service Extraction
 - x64dbg + WoWDumpFix or Frida method â€” documented, not yet attempted
@@ -152,6 +154,9 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 ---
 
 ## Recently Completed
+- ~~Stormwind Retail Sniff + Hero's Call Board Dedup (session 67)~~: 152 creature spawns, 21 GO spawns, 9 equipment templates, 161 enrichment updates from retail ground truth. Old GO 206111 removed (Hero's Call Board dedup)
+- ~~Midnight Scrape R2 + BtWQuests Enrichment (session 66)~~: 226 queststarters, 181 questenders, 174 vendor items, 11 GO quest links, 228 CT fills, 252 vendor items, 426 exclusive groups
+- ~~Transmog Hidden Appearance + DT=4 (session 67)~~: Hidden appearance detection, paired weapon display type, PacketScope improvements, addon QA fixes
 - ~~NPC Mega-Scrape + ATT + Quest Chains (session 65)~~: 80,943 pages scraped (120 Tor workers), 1,727+2,979 quest starters/enders, 2,535 vendor items, 170+124 ATT QS/GO, 572+2,008 quest chains from BtWQuests. Scraper v2 built
 - ~~BtWQuests + Vendor Scrape R2 (session 64)~~: 1,062 creature_queststarter + 57 gameobject_queststarter from BtWQuests, 1,435 npc_vendor entries from Wowhead scrape R2
 - ~~Midnight Data Import (session 61/64)~~: 58 quest starters, 60 quest enders, 819 loot entries, 526 creature spells
@@ -182,5 +187,5 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ---
 
-*Updated March 5, 2026 (session 65)*
+*Updated March 5, 2026 (session 67)*
 
