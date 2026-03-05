@@ -351,6 +351,7 @@ Build output where the compiled server actually runs. Configs, logs, extracted d
 | **TrinityCore-master** | `C:/Tools/TrinityCore-master/` | Stock TrinityCore source reference (upstream comparison) |
 | **wow-export** | `C:/Tools/wow-export/` | wow-export tool (CASC data extraction) — `installer.exe` + `data.pak` |
 | **wow-ui-source-live** | `C:/Tools/wow-ui-source-live/` | Blizzard WoW UI Lua/XML source (Interface/ tree) |
+| **Transmog_UI_LUAs** | `C:/Tools/Transmog_UI_LUAs/` | Curated transmog-related Blizzard Lua files (quick reference subset of wow-ui-source-live) |
 | **docs** | `C:/Tools/docs/` | Analysis/reference markdown docs (transmog bridge, etc.) |
 
 ---

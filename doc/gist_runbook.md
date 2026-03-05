@@ -480,6 +480,7 @@ C:\Python314\python.exe decode_dbcache.py
 | **ATT Database** | `C:/Tools/ATT-Database/` | AllTheThings community data (git pull to update) |
 | **TrinityCore ref** | `C:/Tools/TrinityCore-master/` | Stock TC source for comparison |
 | **WoW UI Source** | `C:/Tools/wow-ui-source-live/` | Official client Lua/XML reference |
+| **Transmog UI LUAs** | `C:/Tools/Transmog_UI_LUAs/` | Curated transmog Lua quick reference |
 
 ---
 

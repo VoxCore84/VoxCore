@@ -32,7 +32,8 @@
 - **Remote control**: `claude-remote.bat` launches `claude remote-control server` with worktree isolation
 
 ## Tools — [full inventory](tooling-inventory.md)
-- **Tools dir**: `C:/Tools/` — consolidated third-party tools + reference data (WPP, WTL, DBC2CSV, Ymir, LoreWalkerTDB, TrinityCore-master, wow-export, wow-ui-source-live, lua-language-server, docs)
+- **Tools dir**: `C:/Tools/` — consolidated third-party tools + reference data (WPP, WTL, DBC2CSV, Ymir, LoreWalkerTDB, TrinityCore-master, wow-export, wow-ui-source-live, Transmog_UI_LUAs, lua-language-server, docs)
+- **Transmog_UI_LUAs**: `C:/Tools/Transmog_UI_LUAs/` — curated subset of transmog-related Blizzard Lua files (quick reference). Full UI source still at `wow-ui-source-live`
 - **clangd-lsp gotcha**: Must be in settings.json (was disabled thinking it conflicted with codeintel MCP — real issue was user-level config override)
 - **Packet logging**: Server must be stopped before WPP can read .pkt files
 - **Ymir**: `C:/Tools/ymir_retail_12.0.1.66220/ymir_retail.exe` (build 66220). Does NOT work with private server
