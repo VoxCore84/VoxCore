@@ -2,6 +2,15 @@ RoleplayCore â€” Session Changelog (WoW 12.x private server)
 
 
 
+### Session 65 — NPC Mega-Scrape + ATT Cross-Reference + Quest Chains (Mar 5 2026)
+- **NPC mega-scrape**: 80,943 Wowhead pages scraped with 120 Tor workers (~250K/hr)
+  - 1,727 creature queststarters, 2,979 creature questenders, 2,535 vendor items
+- **ATT cross-reference import**: 170 creature QS, 124 GO QS, 176 quest chain links
+- **Quest chain application**: 572 PrevQuestID + 2,008 NextQuestID from BtWQuests
+- **Scraper v2 built**: shared priority queue, adaptive delay, 100+ workers, auto-parse
+- **Running totals**: creature_queststarter 34,421 | creature_questender 36,845 | gameobject_queststarter 2,058 | npc_vendor 176,427
+- **Remaining gaps**: 16,630 quests without starter, 13,311 without ender
+
 ### Session 64 — Build 66263 Data Pipeline Bump (Mar 5 2026)
 - **TACT extraction**: 1,094 DB2 tables from local CASC (build 66263, cleanup build: -813 rows in key tables)
 - **Wago CSVs downloaded**: 66263 CSVs merged with TACT data
