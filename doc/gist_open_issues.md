@@ -6,6 +6,13 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ## HIGH Priority
 
+### VoxCore Website — "Arcane Codex" Asset Pipeline (NEW)
+- **Phase 0**: Extract WoW visuals via wow-export for website
+  - 83 assets curated: 30 dungeon journal art, 21 boss portraits, 32 creature models (SL/DF/TWW/Midnight)
+  - wow-export auto-configured (WebP, GLB, no bloat). Scripts at `C:\Tools\website-assets\`
+  - Priority: Enchanted Tome (mascot), Xal'atath, Alleria, Khadgar, Midnight raid journal art
+- **Phases 1–5**: Arcane visual refresh, animated pipeline, tool explorer, before/after slider, interactive timeline
+
 ### Transmog: 5-Bug Investigation (session 36)
 **Status**: Diagnostic build deployed, awaiting testing
 - **Bug A**: Paperdoll naked on 2nd UI open
@@ -31,6 +38,11 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 ### Skyriding / Dragonriding
 - `spell_dragonriding.cpp:39`: `SPELL_RIDING_ABROAD = 432503` — TODO outside dragon isles
 - `Player.cpp:19509`: forces legacy flight instead of proper skyriding
+
+### Silvermoon: Orgrimmar Portal Room
+- Orgrimmar portal room still uses BC-era GO 323854 / spell 121855 → old Silvermoon (Map 530)
+- Needs GO 613810 with Midnight-era teleport spell pointing to new coords (Map 0)
+- Other Silvermoon portals already fixed (session 58)
 
 ### Dead HandleTransmogrifyItems Handler
 - `TransmogrificationHandler.cpp` lines 172-567 — 400 lines of dead code
@@ -81,30 +93,15 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ## DEFERRED / BLOCKED
 
-### ~~Wowhead 403 Block~~ RESOLVED
-- 403 expired on its own (Mar 4 2026). Scraper upgraded with curl_cffi Chrome131 TLS fingerprint
-
-### ATT Data Import — READY TO APPLY
-- AllTheThings Database parser extracts quest/NPC/vendor data from 1,576 curated Lua files
-- **8,950 validated new rows**: 4,359 quest starters, 3,081 quest chain links, 1,510 vendor items
-- All rows validated against TC quest_template + creature_template
-- SQL generated at `att_validated.sql` in wago-tooling repo
-
-### Missing Spawns (3,716 high-priority)
-- 2,004 quest NPCs + 1,712 service NPCs
-- `coord_transformer.py` built — 1,856 critical + 1,626 high spawns transformable
-- **Not yet applied** — needs spot-check and in-game verification
+### Missing Spawns High Tier — READY
+- 1,626 service NPC spawns (vendors/trainers/FMs) transformable
+- Run: `python coord_transformer.py --tier high`
 
 ### Service Gaps (997 vendors/trainers)
 - VENDOR/TRAINER flag but zero inventory/spell data
 
 ### Equipment Gaps (~13,001 NPCs)
 - Cross-reference LoreWalkerTDB `creature_equip_template` — not yet attempted
-
-### Missing quest_offer_reward (27,328 quests) — READY TO SCRAPE
-- TDB delta applied (+1,967 rows). 27,328 remaining
-- Scraper hardened with curl_cffi, ~2 hours via two-phase approach
-- Import pipeline: `import_quest_rewards.py` converts JSON to SQL
 
 ### Hotfix Repair Persistent Issues
 - `mail_template`: 110 rows with truncated multi-line bodies
@@ -114,6 +111,16 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ### Auth Key Self-Service Extraction
 - x64dbg + WoWDumpFix or Frida method — documented, not yet attempted
+
+---
+
+## Recently Completed
+- ~~ATT Data Import~~: 4,630 quest starters, 3,081 chains, 1,510 vendor items applied
+- ~~Missing Spawns Critical~~: 1,541 quest NPC spawns + 207 phase-aware re-inserts applied
+- ~~Quest Reward Text Scrape~~: 21,533 pages scraped via Tor, 13,494 offer_reward + 6,792 request_items imported. 14,278 still missing (mostly modern expansion quests)
+- ~~Wowhead 403 Block~~: Expired on its own, scraper upgraded with curl_cffi
+- ~~DBCD Audit~~: 363 redundant hotfix rows removed, 393 missing broadcast_text filled
+- ~~Silvermoon Portals~~: All portals redirected from BC Map 530 to Midnight Map 0
 
 ---
 
@@ -127,7 +134,6 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ## Future Audit Passes
 - C++ ScriptName bindings vs compiled script classes
-- DBC/DB2 spell/item existence cross-ref against Wago CSVs
 - Map coordinates validity (spawn positions vs map boundaries)
 - Client-side rendering data coverage audit
 
