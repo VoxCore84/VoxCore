@@ -1,0 +1,7 @@
+-- 2026_03_05_11_world.sql
+-- ATT (AllTheThings) data import: quest starters, quest chains, vendor items
+-- Source: ATT Database repo parsed by att_parser.py, cross-validated by att_generate_sql.py
+-- Applied directly from att_validated.sql (wago-tooling repo)
+-- 4,359 creature_queststarter, 3,081 quest_template_addon PrevQuestID, 1,510 npc_vendor
+-- All IDs validated against quest_template + creature_template; deprecated/DNT/PH excluded
+-- This file is an audit trail only — the data was applied via att_validated.sql
