@@ -3137,7 +3137,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         void _LoadEquipmentSets(PreparedQueryResult result);
         void _LoadTransmogOutfits(PreparedQueryResult result);
         void _LoadTransmogOutfitSituations(PreparedQueryResult result);
-        void _SyncTransmogOutfitsToActivePlayerData();
+        void _SyncTransmogOutfitsToActivePlayerData(char const* caller = "unknown");
         void _LoadBGData(PreparedQueryResult result);
         void _LoadGlyphs(PreparedQueryResult result);
         void _LoadTalents(PreparedQueryResult result);

@@ -6,6 +6,14 @@
 
 bool ApplyTransmogOutfitToPlayer(Player* player, EquipmentSetInfo::EquipmentSetData const& outfit)
 {
+    // --- Entry diagnostic: dump full outfit state so we can diff vs post-reapply log ---
+    TC_LOG_DEBUG("network.opcode.transmog", "ApplyTransmogOutfitToPlayer [{}]: ENTRY IgnoreMask=0x{:X}",
+        player->GetGUID().ToString(), outfit.IgnoreMask);
+    for (uint8 s = 0; s < EQUIPMENT_SLOT_END; ++s)
+        if (outfit.Appearances[s] || !(outfit.IgnoreMask & (1u << s)))
+            TC_LOG_DEBUG("network.opcode.transmog", "  slot={} IMAID={} ignored={}",
+                s, outfit.Appearances[s], (outfit.IgnoreMask & (1u << s)) != 0);
+
     // --- Phase 1: Calculate gold cost ---
     int64 cost = 0;
 
@@ -58,7 +66,15 @@ bool ApplyTransmogOutfitToPlayer(Player* player, EquipmentSetInfo::EquipmentSetD
     for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot)
     {
         if (outfit.IgnoreMask & (1u << slot))
+        {
+            // Log skipped slots so we can verify IgnoreMask state (Bug B diagnostic)
+            if (Item* skipItem = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
+                if (uint32 skipIMAID = skipItem->GetModifier(ITEM_MODIFIER_TRANSMOG_APPEARANCE_ALL_SPECS))
+                    TC_LOG_DEBUG("network.opcode.transmog",
+                        "ApplyTransmogOutfitToPlayer [{}]: SKIPPED slot={} (IgnoreMask SET) — item has IMAID={} that WON'T be cleared",
+                        player->GetGUID().ToString(), slot, skipIMAID);
             continue;
+        }
 
         Item* item = player->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
         if (!item)

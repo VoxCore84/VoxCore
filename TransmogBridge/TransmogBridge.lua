@@ -202,17 +202,32 @@ hooksecurefunc(C_TransmogOutfitInfo, "CommitAndApplyAllPending", function(useDis
     -- Detect hidden appearances: slots nil across all 3 layers.
     -- HEAD (0), SECONDARY_SHOULDER (2), MH (12), OH (13) are ALWAYS nil
     -- due to client serializer bugs — defer these to server baseline.
+    -- EXCEPTION: if Layer 2 (SetPendingTransmog) captured data for an always-nil slot,
+    -- the user explicitly clicked it — send it regardless of always-nil status.
+    -- (Layer 2 processing above should have set merged[slot] already, but this is a safety
+    -- net for the case where that didn't happen. Also handles pendingOverrides with transmogID=0
+    -- which Layer 2 sets into merged but we double-check here.)
     -- All other slots being nil means a hidden appearance — send explicit clear (slot.0.0).
     local missing = {}
     local nilCount = 0
     local clearCount = 0
+    local layer2OverrideCount = 0
     for slot = 0, 13 do
         if not merged[slot] then
             nilCount = nilCount + 1
             local isAlwaysNil = ALWAYS_NIL_SLOTS[slot]
-            Log(string.format("nil-detect: slot=%d isAlwaysNil=%s", slot, tostring(isAlwaysNil)))
+            Log(string.format("nil-detect: slot=%d isAlwaysNil=%s layer2=%s", slot, tostring(isAlwaysNil), tostring(pendingOverrides[slot] ~= nil)))
             if isAlwaysNil then
-                missing[#missing + 1] = slot
+                -- Check if Layer 2 has explicit data for this always-nil slot.
+                -- If so, user manually clicked it — override the always-nil deferral.
+                if pendingOverrides[slot] then
+                    local tmogID = pendingOverrides[slot].transmogID or 0
+                    merged[slot] = { transmogID = tmogID, option = pendingOverrides[slot].option or 0 }
+                    layer2OverrideCount = layer2OverrideCount + 1
+                    Log(string.format("always-nil OVERRIDE: slot=%d Layer2 has IMAID=%d, sending instead of deferring", slot, tmogID))
+                else
+                    missing[#missing + 1] = slot
+                end
             else
                 -- Nil across all layers = hidden appearance, send explicit clear
                 merged[slot] = { transmogID = 0, option = 0 }
@@ -221,7 +236,7 @@ hooksecurefunc(C_TransmogOutfitInfo, "CommitAndApplyAllPending", function(useDis
             end
         end
     end
-    Log(string.format("nil-detection found %d nil slots, generated %d clears", nilCount, clearCount))
+    Log(string.format("nil-detection found %d nil slots, generated %d clears, %d always-nil overrides", nilCount, clearCount, layer2OverrideCount))
     if #missing > 0 then
         Log(string.format("Deferred to server baseline: slots %s (always-nil client slots)",
             table.concat(missing, ",")))

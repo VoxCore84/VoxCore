@@ -1031,6 +1031,12 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
         pending.Outfit.SecondaryShoulderSlot = 0;
     }
 
+    // Bug #1 fix: If secondary shoulder has an appearance, force-process equipment slot 2.
+    // ValidateTransmogOutfitSet sets IgnoreMask bit 2 when Appearances[2]==0 (no primary shoulder),
+    // which blocks ApplyTransmogOutfitToPlayer from writing the secondary shoulder modifier.
+    if (pending.Outfit.SecondaryShoulderApparanceID != 0)
+        pending.Outfit.IgnoreMask &= ~(1u << EQUIPMENT_SLOT_SHOULDERS);
+
     // Diagnostic: verify IgnoreMask state after re-apply — confirms equipment-slot-indexed
     // bridgeClearedMask correctly undid ValidateTransmogOutfitSet's IgnoreMask re-set.
     TC_LOG_DEBUG("network.opcode.transmog",

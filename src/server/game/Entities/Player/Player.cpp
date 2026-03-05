@@ -18021,11 +18021,11 @@ void Player::_LoadTransmogOutfitSituations(PreparedQueryResult result)
     } while (result->NextRow());
 }
 
-void Player::_SyncTransmogOutfitsToActivePlayerData()
+void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
 {
     TC_LOG_DEBUG("network.opcode.transmog",
-        "_SyncTransmogOutfitsToActivePlayerData [{}]: FIRED — clearing {} existing ViewedOutfit entries and rebuilding",
-        GetGUID().ToString(), m_activePlayerData->TransmogOutfits.size());
+        "_SyncTransmogOutfitsToActivePlayerData [{}]: FIRED from '{}' — clearing {} existing ViewedOutfit entries and rebuilding",
+        GetGUID().ToString(), caller, m_activePlayerData->TransmogOutfits.size());
 
     auto activePlayerData = m_values.ModifyValue(&Player::m_activePlayerData);
 
@@ -18169,6 +18169,8 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
 
     for (auto const& [_, equipmentSet] : _equipmentSets)
     {
+        if (equipmentSet.State == EQUIPMENT_SET_DELETED)
+            continue;
         if (equipmentSet.Data.Type != EquipmentSetInfo::TRANSMOG)
             continue;
 
@@ -18230,11 +18232,22 @@ void Player::_SyncTransmogOutfitsToActivePlayerData()
     fillOutfitData(viewedOutfitSetter, firstOutfitData);
     TC_LOG_DEBUG("network.opcode.transmog", "ClearDynamicUpdateFieldValues: fillOutfitData complete, ViewedOutfit rebuilt");
 
+    // Dump the appearance array that was written to ViewedOutfit (Bug A diagnostic)
+    if (firstOutfitData)
+    {
+        TC_LOG_DEBUG("network.opcode.transmog",
+            "_SyncTransmogOutfitsToActivePlayerData [{}]: caller='{}' wrote ViewedOutfit from outfit '{}' (IgnoreMask=0x{:X}):",
+            GetGUID().ToString(), caller, firstOutfitData->SetName, firstOutfitData->IgnoreMask);
+        for (uint8 s = 0; s < EQUIPMENT_SLOT_END; ++s)
+            TC_LOG_DEBUG("network.opcode.transmog", "  ViewedOutfit: equipSlot={} Appearances={} ignored={}",
+                s, firstOutfitData->Appearances[s], (firstOutfitData->IgnoreMask & (1u << s)) != 0);
+    }
+
     // Force-flush ViewedOutfit update fields to client — clear+rebuild alone doesn't
     // trigger a model refresh without an explicit SMSG_UPDATE_OBJECT delivery.
     if (IsInWorld())
     {
-        TC_LOG_DEBUG("network.opcode.transmog", "_SyncTransmogOutfitsToActivePlayerData: flushing update to player");
+        TC_LOG_DEBUG("network.opcode.transmog", "_SyncTransmogOutfitsToActivePlayerData: flushing update to player (caller='{}').", caller);
         SendUpdateToPlayer(this);
         ClearUpdateMask(true);
     }
@@ -19202,7 +19215,7 @@ bool Player::LoadFromDB(ObjectGuid guid, CharacterDatabaseQueryHolder const& hol
     _LoadEquipmentSets(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_EQUIPMENT_SETS));
     _LoadTransmogOutfits(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_TRANSMOG_OUTFITS));
     _LoadTransmogOutfitSituations(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_TRANSMOG_OUTFIT_SITUATIONS));
-    _SyncTransmogOutfitsToActivePlayerData();
+    _SyncTransmogOutfitsToActivePlayerData("PlayerLogin");
 
     _LoadCUFProfiles(holder.GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_CUF_PROFILES));
 
@@ -28737,7 +28750,7 @@ void Player::SetEquipmentSet(EquipmentSetInfo::EquipmentSetData const& newEqSet)
         int32(eqSlot.Data.Type), int32(eqSlot.State), eqSlot.Data.SetName);
 
     if (eqSlot.Data.Type == EquipmentSetInfo::TRANSMOG)
-        _SyncTransmogOutfitsToActivePlayerData();
+        _SyncTransmogOutfitsToActivePlayerData("SetEquipmentSet");
 }
 
 void Player::_SaveEquipmentSets(CharacterDatabaseTransaction trans)
@@ -28970,7 +28983,7 @@ void Player::DeleteEquipmentSet(uint64 id)
                 itr->second.State = EQUIPMENT_SET_DELETED;
 
             if (isTransmogOutfit)
-                _SyncTransmogOutfitsToActivePlayerData();
+                _SyncTransmogOutfitsToActivePlayerData("DeleteEquipmentSet");
 
             break;
         }
