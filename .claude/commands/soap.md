@@ -8,7 +8,7 @@ Bash(bash, curl)
 
 ## Instructions
 
-Send the user's command to the running RoleplayCore worldserver via the SOAP remote console.
+Send the user's command to the running VoxCore worldserver via the SOAP remote console.
 
 ### Usage
 The user provides a GM command as the argument, e.g.:

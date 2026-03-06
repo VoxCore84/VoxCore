@@ -8,7 +8,7 @@ Read, Bash(python3, wc), Grep, Glob
 
 ## Instructions
 
-Check the RoleplayCore server logs for errors and notable entries.
+Check the VoxCore server logs for errors and notable entries.
 
 ### Log files (check in priority order)
 

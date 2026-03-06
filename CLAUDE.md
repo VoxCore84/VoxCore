@@ -14,7 +14,7 @@ TrinityCore-based WoW private server targeting the **12.x / Midnight** client, s
 - **Scripts only**: `cd /c/Dev/RoleplayCore/out/build/x64-Debug && ninja -j16 scripts 2>&1`
 - **CMake reconfigure**: `cmake -B out/build/x64-Debug -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`
 - **Key CMake options**: `SCRIPTS=static`, `ELUNA=ON`, `TOOLS=ON`
-- **Compiler**: MSVC (VS 2022), Generator: Ninja, C++20
+- **Compiler**: MSVC (VS 2026), Generator: Ninja, C++20
 - **MySQL**: `C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe` — root/admin
 
 ## Databases (5 total)

@@ -8,7 +8,7 @@ Read, Bash(python3), Grep, Glob
 
 ## Instructions
 
-Parse packet capture data for the RoleplayCore 12.x (Midnight) client.
+Parse packet capture data for the VoxCore 12.x (Midnight) client.
 
 ### Input formats
 

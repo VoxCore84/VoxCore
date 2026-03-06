@@ -2,6 +2,24 @@ RoleplayCore â€” Session Changelog (WoW 12.x private server)
 
 
 
+### Session 74 — Wowhead 310K QA Pipeline + Coord Converter + SQLite DB (Mar 6 2026)
+- **310K NPC reparse**: Fixed models/displayID extractor (3 regex patterns: ModelViewer.showLightbox, dataset.displayId, data-mv-display-id). 204,136 model entries extracted (up from 0%). 3,345s, 0 errors
+- **Coordinate converter** (`coord_convert.py`): Wowhead UI-map percentages → TrinityCore world coordinates via UiMapAssignment DB2 (1,909 maps, 22,494 assignments). Key discovery: axes SWAPPED + INVERTED. Validated <10 unit accuracy across 4 zones
+- **SQLite database** (`wowhead_npcs.db`): 338 MB, 16 tables, fully indexed. 309,996 NPCs, 2,092,045 coords, 538,169 drops, 204,136 models, 1,538,668 sounds. Import: 99s, 0 errors
+- **QA Pass 1** (field completeness): 99.1% names, 70.8% creature type, 32.2% with coords
+- **QA Pass 2** (coord quality): 0 out-of-range, 162 continent uiMaps (82K NPCs safe), 56 instance maps (26K must NOT spawn)
+- **QA Pass 3** (DB cross-reference): 38,119 gap NPCs — 478 CRITICAL (quest), 145 HIGH (vendor), 12,017 MEDIUM (SmartAI), 25,479 NORMAL. 99.3% type match, 100% classification match
+- **Oddities analysis**: 8 oddities identified, 5 safe vs 5 risky actions classified
+- **Integration architecture**: Designed 6 Flask routes, Leaflet.js maps, spawn SQL pipeline
+- **VoxCore Data Intelligence Report**: 1,434-line/77KB comprehensive report covering all 11 data sources, Vox Army specs, optimization roadmap, buildable products
+- Wago commit: `2351879`
+
+### Session 73 — Scraper V2 + Full Wowhead NPC Scrape (Mar 5 2026)
+- **Scraper V2**: Complete overhaul of `scrape_all_gaps_tor.py` (1,262 lines). 5 entity types, enriched NPC parser, HTML caching (gzip), reparse mode, adaptive Tor timing
+- **Full 310K NPC scrape**: 240 Tor workers, IDs 1-310000, ~315K/hr. Zero errors
+- **Critical finding**: v1 parser only captured name for 97.6% of pages — g_mapperData and g_npcs completely missed
+- Wago commit: `c6d7734`
+
 ### Session 73 — Transmog Corrective Pass (Mar 5 2026)
 - **6 surgical fixes** to `fillOutfitData` in Player.cpp — retail behavioral model alignment
   - Added `isStored` parameter to distinguish stored TransmogOutfits from live ViewedOutfit

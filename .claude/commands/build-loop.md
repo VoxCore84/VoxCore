@@ -8,17 +8,17 @@ Bash(ninja, cd), Read, Edit, Grep, Glob
 
 ## Instructions
 
-Run an iterative build-fix cycle on the RoleplayCore project.
+Run an iterative build-fix cycle on the VoxCore project.
 
 ### Build preset selection
 Parse the user's argument (if any) to pick the build directory:
 - `debug`, `d`, or no argument → `out/build/x64-Debug/`
 - `rel`, `r`, `relwithdebinfo` → `out/build/x64-RelWithDebInfo/`
-- `scripts`, `s` → same as debug but use `ninja -j4 scripts` (scripts-only)
+- `scripts`, `s` → same as debug but use `ninja -j20 scripts` (scripts-only)
 
 ### Loop procedure
 
-1. **Build**: Run `cd /c/Dev/RoleplayCore/<build-dir> && ninja -j4 2>&1` (or `ninja -j4 scripts` for scripts-only)
+1. **Build**: Run `cd /c/Dev/RoleplayCore/<build-dir> && ninja -j20 2>&1` (or `ninja -j20 scripts` for scripts-only)
 2. **Parse**: Extract compiler errors from the output. Ignore warnings unless the user asked to fix them.
 3. **Fix**: For each error:
    - Read the source file at the reported line

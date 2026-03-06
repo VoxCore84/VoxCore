@@ -18289,13 +18289,13 @@ void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
             // IllusionDisplayType:
             //   Weapon option 0 with IMAID + enchant: 1
             //   Weapon option 0 with IMAID, no enchant: 0
-            //   Armor with IMAID (not hidden): 2
-            //   Viewed empty (passthrough): 2
+            //   Assigned armor (any context): 0
+            //   Viewed empty passthrough: 2
             //   Hidden or stored empty: 0
             bool isWeaponOption0 = (mapping.equipSlot == EQUIPMENT_SLOT_MAINHAND || mapping.equipSlot == EQUIPMENT_SLOT_OFFHAND);
             uint8 illusionDT = 0;
             if (imaID > 0 && !isHidden)
-                illusionDT = isWeaponOption0 ? (enchant ? uint8(1) : uint8(0)) : uint8(2);
+                illusionDT = isWeaponOption0 ? (enchant ? uint8(1) : uint8(0)) : uint8(0);
             else if (imaID == 0 && !isStored)
                 illusionDT = uint8(2); // Viewed empty passthrough: IDT=2
             slotSetter.ModifyValue(&UF::TransmogOutfitSlotData::IllusionDisplayType).SetValue(illusionDT);
