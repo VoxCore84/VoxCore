@@ -51,6 +51,13 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 - High: spells with effects that may need custom handlers
 - Needs C++ script implementation to function correctly
 
+### Midnight Data Processing (NEW — scraped, ready for SQL import)
+- **13,491 NPC pages** scraped → vendor items, teaches, quests started/ended, gossip
+- **555 object pages** → quest starts/ends, loot tables
+- **1,022 trainer pages** → spell teach lists (server-wide)
+- **27 quest pages** → start/end NPCs/GOs, reward text
+- **Next**: Parse into SQL for creature_queststarter, npc_vendor, creature_trainer, gameobject_queststarter, quest_offer_reward
+
 ## MEDIUM Priority
 
 ### Midnight Vendor Items (blocked on ExtendedCost)
@@ -154,6 +161,7 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 ---
 
 ## Recently Completed
+- ~~Stormwind NPC Scripting (session 69)~~: 37 SmartAI entries, ~426 spawns, phase cleanup (139 ghosts gated), 19 combat NPCs equipped
 - ~~Stormwind Retail Sniff + Hero's Call Board Dedup (session 67)~~: 152 creature spawns, 21 GO spawns, 9 equipment templates, 161 enrichment updates from retail ground truth. Old GO 206111 removed (Hero's Call Board dedup)
 - ~~Midnight Scrape R2 + BtWQuests Enrichment (session 66)~~: 226 queststarters, 181 questenders, 174 vendor items, 11 GO quest links, 228 CT fills, 252 vendor items, 426 exclusive groups
 - ~~Transmog Hidden Appearance + DT=4 (session 67)~~: Hidden appearance detection, paired weapon display type, PacketScope improvements, addon QA fixes
@@ -187,5 +195,5 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ---
 
-*Updated March 5, 2026 (session 67)*
+*Updated March 5, 2026 (session 72)*
 

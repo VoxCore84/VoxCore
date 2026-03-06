@@ -2,6 +2,36 @@ RoleplayCore â€” Session Changelog (WoW 12.x private server)
 
 
 
+### Session 72 — Universal Scraper + Midnight Data Harvest (Mar 5 2026)
+- **Scraper v2**: Upgraded to 5 entity types (quest, npc, trainer, vendor, object), 120 Tor workers, per-batch logging
+  - Added NPC page parser (vendor items, teaches, quests, gossip) and object page parser (quest starts/ends, loot)
+  - Smoke test + full batch: 15,044 pages in 797s (68K/hr), zero failures
+- **Midnight NPC scrape**: 13,491 NPC pages (entry range 235K-300K) — complete Midnight expansion NPC data
+- **Midnight objects**: 555 gameobject pages with quest links and loot tables
+- **Trainer gap fill**: 1,022 trainer NPC pages for server-wide broken trainer fix
+- **Gap quests**: 27 remaining quest pages scraped (merged gap + midnight quest IDs)
+- Wago commit: `ca37060`
+
+### Session 71 — Claude Desktop Cowork Integration (Mar 5 2026)
+- **Cowork bridge**: sync_bridge.py snapshots 389 source files into ~/cowork/bridge/ for Claude Desktop
+- **Project bible**: Comprehensive project reference for Cowork (bridge paths, repos, gists, tools, schema)
+- **ttyd web terminal**: Full system access for Cowork via localhost:7681
+- **CLAUDE.md**: Added transmog UI/Midnight 12.x authoritative rules section
+- Commit: `3cc2d58c70`
+
+### Session 70 — Transmog Audit Pass 2 + Hidden DT Fix (Mar 5 2026)
+- **Transmog audit pass 2**: 585-line QA report (client events, TRANSMOG_COLLECTION_UPDATED over-firing, DisplayType)
+- **Hidden appearance detection**: ItemID-based detection for 10 hidden items, DT=3 for hidden slots
+- **Paired weapon DT=4**: Options 6-8 on MH/OH emit ADT=4+IDT=4
+- Commits: `8d36580ac4`, `053e01fed2`
+
+### Session 69 — Stormwind Retail Accuracy (Mar 5 2026)
+- **Ambient NPC scripts**: 37 SmartAI entries for ~426 spawns (guards, citizens, workers, refugees, dracthyr)
+- **Phase cleanup**: 139 Day of the Dead ghosts event-gated, 2 broken Darkmoon spawns removed
+- **Combat NPC equipment**: 19 entries (sentinels, captains, officers, marshals)
+- **Hero's Call Board dedup**: Removed old GO 206111 overlapping newer 281339
+- Commits: `152178ffcc`, `295d04f890`, `e710f5a709`, `9e728c9139`, `9e53777d55`
+
 ### Session 67 — Stormwind Retail Sniff + Hero's Call Board Dedup (Mar 5 2026)
 - **Retail sniff import**: 152 creature spawns, 21 GO spawns, 9 equipment templates from Stormwind retail ground truth
 - **Sniff enrichment**: 161 updates — creature type/family/Classification/unit_class, HP/Mana modifiers, portal deduplication
@@ -337,8 +367,8 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 
 | Repo | Latest Commit | Purpose |
 |------|--------------|---------|
-| VoxCore84/RoleplayCore | `8d36580ac4` | Main server |
-| VoxCore84/wago-tooling | `966e0eb` | Wago/LW/hotfix tools |
+| VoxCore84/RoleplayCore | `152178ffcc` | Main server |
+| VoxCore84/wago-tooling | `ca37060` | Wago/LW/hotfix tools |
 | VoxCore84/tc-packet-tools | `821e74f` | WPP + packet analysis |
 | VoxCore84/code-intel | â€” | C++ MCP server |
 | VoxCore84/trinitycore-claude-skills | `25967f7` | Claude Code skills |

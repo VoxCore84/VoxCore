@@ -91,6 +91,11 @@ All figures are **net** â€” accounting for subsequent cleanup and deduplica
 - **Scraper v2 built**: shared priority queue, adaptive delay, 100+ workers, auto-parse
 - **Running totals**: creature_queststarter 34,647 | creature_questender 37,026 | gameobject_queststarter 2,066 | gameobject_questender 1,625 | npc_vendor 176,853
 
+### Universal Scraper v2 + Midnight Data Harvest (Session 72)
+- **Universal scraper v2**: Upgraded to 5 entity types (quest, npc, trainer, vendor, object), 120 Tor workers, per-batch logging
+- **Latest scrape (session 72)**: 15,044 Wowhead pages &mdash; 13,491 Midnight NPCs, 555 objects, 1,022 trainers, 27 gap quests. Universal scraper v2 with 120 Tor workers at 68K pages/hr
+- **Total scraped pages**: ~100K+ across all scrape runs (216K NPC tooltips + 6.4K gap pages + 80.9K mega-scrape + 15K universal scraper)
+
 ---
 
 <details>
@@ -897,7 +902,7 @@ LW import places old-framework quest boards (entries 206294/206116) at exact coo
 | **Mar 1** | 11-12 | Transmog confirmed working in-game, PR cleanup, cross-repo PR #760 |
 | **Mar 3** | 13-30 | Wowhead mega-audit (54,571 ops), Raidbots/Wago pipeline (locales + quests), LW import #2 (665K rows), post-import cleanup (47K rows), hotfix repair build 66220, MySQL tuning, build diff audit (5 builds), hotfix pipeline crash fix, transmog multi-bug fixes |
 | **Mar 4** | 31-38 | Hotfix redundancy audit rounds 1-3 (10.8M â†’ 244K content rows), WTL DBC pipeline, world DB cleanup (NPC/portal fixes, SmartAI orphans), transmog client wiki, auth key update |
-| **Mar 5** | 39-67 | Report updates, transmog diagnostics + 5-agent audit (phases 1-4) + hidden appearance/DT=4, TACT pipeline, ATT parser, website, Wowhead gap scraper (5,653 pages, 10K+ rows applied), Midnight data import (2 rounds), BtWQuests parse + CT enrichment, vendor scrape R2, auth 66263, NPC mega-scrape (80,943 pages, 120 Tor workers), Stormwind retail sniff (152 creatures, 21 GOs), Hero's Call Board dedup |
+| **Mar 5** | 39-72 | Report updates, transmog diagnostics + 5-agent audit (phases 1-4) + hidden appearance/DT=4, TACT pipeline, ATT parser, website, Wowhead gap scraper (5,653 pages, 10K+ rows applied), Midnight data import (2 rounds), BtWQuests parse + CT enrichment, vendor scrape R2, auth 66263, NPC mega-scrape (80,943 pages, 120 Tor workers), Stormwind retail sniff (152 creatures, 21 GOs), Hero's Call Board dedup, Stormwind NPC scripting, Cowork integration, universal scraper v2 (15,044 pages) |
 
 </details>
 
@@ -1084,7 +1089,7 @@ Specialized agents defined in `.claude/agents/`:
 | **Wago.tools DB2 CSVs** | 1,097 client DB2 tables, 5 builds | ~5.5K CSV files |
 | **wow.tools.local** | DB2 baselines from client CASC (build 66263) | ~1,097 DB2 tables |
 | **Raidbots** | Item names (171K x 7 locales), talents | 168 MB JSON |
-| **Wowhead** | 216K NPC tooltips + gap scraper (vendor/quest data) | 218K JSON files + 6.4K scraped pages |
+| **Wowhead** | 216K NPC tooltips + gap scraper + universal scraper v2 (vendor/quest/trainer/object data) | 218K JSON files + 21K+ scraped pages |
 | **AllTheThings** | Quest starters, chains, vendor items | 60 SQLite tables from 1,635 Lua files |
 | **BtWQuests** | Quest starter/ender NPC + GO links | Addon data parse |
 | **TrinityCore upstream** | Periodic merge + SQL updates | Git merge |
