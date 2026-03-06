@@ -64,6 +64,8 @@ struct EquipmentSetInfo
         std::array<ObjectGuid, EQUIPMENT_SET_SLOTS> Pieces = {};
         std::array<int32, EQUIPMENT_SET_SLOTS> Appearances = {};///< ItemModifiedAppearanceID
         std::array<int32, 2> Enchants = {};                     ///< SpellItemEnchantmentID
+        uint8 MainHandOption = 0;                               ///< Weapon option enum selected for main hand
+        uint8 OffHandOption = 0;                                ///< Weapon option enum selected for off hand
         int32 SecondaryShoulderApparanceID = 0;                 ///< Secondary shoulder appearance
         int32 SecondaryShoulderSlot = 0;                        ///< Always 2 if secondary shoulder apperance is used
         int32 SecondaryWeaponAppearanceID = 0;                  ///< For legion artifacts: linked child item appearance

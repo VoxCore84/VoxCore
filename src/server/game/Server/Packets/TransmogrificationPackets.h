@@ -77,6 +77,18 @@ namespace WorldPackets
             uint8 RawBytes[16] = {};
         };
 
+
+        struct TransmogOutfitSlotVisualData
+        {
+            uint8 Slot = 0;
+            uint8 SlotOption = 0;
+            uint32 ItemModifiedAppearanceID = 0;
+            uint8 AppearanceDisplayType = 0;
+            uint32 SpellItemEnchantmentID = 0;
+            uint8 IllusionDisplayType = 0;
+            uint32 Flags = 0;
+        };
+
         class TransmogOutfitNew final : public ClientPacket
         {
         public:
@@ -189,8 +201,8 @@ namespace WorldPackets
 
             WorldPacket const* Write() override;
 
-            uint64 Guid = 0;
             uint32 SetID = 0;
+            std::vector<TransmogOutfitSlotVisualData> Slots;
         };
 
         class AccountTransmogUpdate final : public ServerPacket
