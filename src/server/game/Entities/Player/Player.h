@@ -2536,6 +2536,19 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         uint32 GetActiveTransmogOutfitID() const;
         void SetActiveTransmogOutfitID(uint32 setID) { _activeTransmogOutfitID = setID; }
 
+        // Slot echo for SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED (retail 488-byte full slot echo)
+        struct OutfitSlotEcho
+        {
+            int8 Slot = 0;
+            uint8 SlotOption = 0;
+            uint32 ItemModifiedAppearanceID = 0;
+            uint8 AppearanceDisplayType = 0;
+            uint32 SpellItemEnchantmentID = 0;
+            uint8 IllusionDisplayType = 0;
+            uint32 Flags = 0;
+        };
+        std::vector<OutfitSlotEcho> const& GetLastOutfitSlotEcho() const { return _lastOutfitSlotEcho; }
+
         void SendInitWorldStates(uint32 zoneId, uint32 areaId);
         void SendUpdateWorldState(uint32 variable, uint32 value, bool hidden = false) const;
         void SendDirectMessage(WorldPacket const* data) const;
@@ -3323,6 +3336,7 @@ class TC_GAME_API Player final : public Unit, public GridObject<Player>
         std::unique_ptr<Runes> m_runes;
         EquipmentSetContainer _equipmentSets;
         uint32 _activeTransmogOutfitID = 0; // SetID of last-applied transmog outfit (0 = use lowest SetID fallback)
+        std::vector<OutfitSlotEcho> _lastOutfitSlotEcho;
 
         bool CanNeverSee(WorldObject const* obj, bool ignorePhaseShift = false) const override;
         bool CanAlwaysSee(WorldObject const* obj) const override;

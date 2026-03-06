@@ -1128,9 +1128,14 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
 
     WorldPackets::Transmogrification::TransmogOutfitSlotsUpdated response;
     response.SetID = pending.Outfit.SetID;
-    response.Guid = pending.Outfit.Guid;
-    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED [{}]: setId={} guid={} (finalized{})",
-        GetPlayerInfo(), response.SetID, response.Guid,
+    // Populate full 30-entry slot echo from the data fillOutfitData just wrote
+    auto const& echo = GetPlayer()->GetLastOutfitSlotEcho();
+    response.SlotEntries.reserve(echo.size());
+    for (auto const& e : echo)
+        response.SlotEntries.push_back({ e.Slot, e.SlotOption, e.ItemModifiedAppearanceID,
+            e.AppearanceDisplayType, e.SpellItemEnchantmentID, e.IllusionDisplayType, e.Flags });
+    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED [{}]: setId={} slotCount={} (finalized{})",
+        GetPlayerInfo(), response.SetID, response.SlotEntries.size(),
         mergedOverrides ? " with bridge overrides" : "");
     SendPacket(response.Write());
 

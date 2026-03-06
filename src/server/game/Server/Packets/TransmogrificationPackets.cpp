@@ -109,6 +109,7 @@ uint8 DisplayTypeToEquipSlot(uint16 displayType)
         case 11: return EQUIPMENT_SLOT_MAINHAND;
         case 12: return EQUIPMENT_SLOT_MAINHAND;    // Ranged (Bow, Crossbow, Gun)
         case 13: return EQUIPMENT_SLOT_OFFHAND;    // Shield
+        case 14: return EQUIPMENT_SLOT_OFFHAND;    // Off-hand fist weapon / misc OH
         case 15: return EQUIPMENT_SLOT_OFFHAND;    // Off-hand weapon
         default: return EQUIPMENT_SLOT_END;
     }
@@ -668,7 +669,17 @@ WorldPacket const* TransmogOutfitSituationsUpdated::Write()
 WorldPacket const* TransmogOutfitSlotsUpdated::Write()
 {
     _worldPacket << uint32(SetID);
-    _worldPacket << uint64(Guid);
+    _worldPacket << uint32(SlotEntries.size());
+    for (auto const& entry : SlotEntries)
+    {
+        _worldPacket << int8(entry.Slot);
+        _worldPacket << uint8(entry.SlotOption);
+        _worldPacket << uint32(entry.ItemModifiedAppearanceID);
+        _worldPacket << uint8(entry.AppearanceDisplayType);
+        _worldPacket << uint32(entry.SpellItemEnchantmentID);
+        _worldPacket << uint8(entry.IllusionDisplayType);
+        _worldPacket << uint32(entry.Flags);
+    }
     return &_worldPacket;
 }
 

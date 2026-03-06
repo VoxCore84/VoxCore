@@ -200,13 +200,14 @@ There must be NO fake weapon option-0 rows.
 
 | State | ADT | IDT | Notes |
 |-------|-----|-----|-------|
-| Empty/equipped passthrough | 2 | 2 | Use currently equipped appearance |
-| Assigned normal | 1 | 0 | Apply this IMAID |
+| Empty/equipped passthrough | 2 | 2 | Slot has no outfit appearance — show equipped item or nothing |
+| Assigned normal | 1 | 0 | Apply this IMAID (SAME as stored — NOT ADT=2) |
 | Hidden appearance | 3 | 0 | Apply hidden visual IMA |
 | Enchanted weapon (selected) | 1 | 1 | Real enchant + IDT=1 |
 | Paired placeholder (opts 8-11) | 4 | 4 | Not applicable |
 
-**Key difference**: Stored empty = `0/0`, Viewed empty/passthrough = `2/2`.
+**Key difference**: Only EMPTY rows differ — Stored empty = `0/0`, Viewed empty = `2/2`.
+Assigned rows use ADT=1 in BOTH contexts. ADT=2 is NEVER used for assigned rows.
 
 ### Hidden Appearance IMA IDs (confirmed retail)
 
@@ -226,8 +227,8 @@ Do NOT rely on `ItemDisplayInfoID==0` (cloak has `ItemDisplayInfoID=146518`).
 ### Confidence Levels
 
 - ADT 0/1 for stored: HIGH (audit pass 2 + retail packets)
+- ADT 1 for viewed assigned: HIGH (packet capture confirmed — non-empty ViewedOutfit rows show ADT=1)
+- ADT 2/2 for viewed empty: HIGH (packet capture confirmed — empty ViewedOutfit rows show ADT=2/IDT=2)
 - ADT 3 for hidden: HIGH (session 70 fix, retail confirmed)
 - ADT 4 for paired placeholders: HIGH (session 70 fix, retail confirmed)
-- ADT 2/2 for viewed passthrough: MEDIUM (ChatGPT analysis of retail packets — needs
-  independent verification against raw packet captures before implementing)
-- IDT 1 for enchanted weapons: MEDIUM (ChatGPT analysis — verify against Ymir dump)
+- IDT 1 for enchanted weapons: HIGH (packet capture shows SpellItemEnchantmentID + IDT=1)

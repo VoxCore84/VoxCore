@@ -182,15 +182,30 @@ namespace WorldPackets
             uint32 SetID = 0;
         };
 
+        // SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED — full 30-row slot echo (retail = 488 bytes).
+        // Wire format: SetID(4) + SlotCount(uint32=4) + N × 16-byte entries.
+        // Each entry mirrors UpdateField TransmogOutfitSlotData: Slot(int8) + SlotOption(uint8) +
+        // IMAID(uint32) + ADT(uint8) + Enchant(uint32) + IDT(uint8) + Flags(uint32).
+        struct TransmogOutfitSlotEchoEntry
+        {
+            int8 Slot = 0;
+            uint8 SlotOption = 0;
+            uint32 ItemModifiedAppearanceID = 0;
+            uint8 AppearanceDisplayType = 0;
+            uint32 SpellItemEnchantmentID = 0;
+            uint8 IllusionDisplayType = 0;
+            uint32 Flags = 0;
+        };
+
         class TransmogOutfitSlotsUpdated final : public ServerPacket
         {
         public:
-            explicit TransmogOutfitSlotsUpdated() : ServerPacket(SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED, 0) { }
+            explicit TransmogOutfitSlotsUpdated() : ServerPacket(SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED, 4 + 4 + 30 * 16) { }
 
             WorldPacket const* Write() override;
 
-            uint64 Guid = 0;
             uint32 SetID = 0;
+            std::vector<TransmogOutfitSlotEchoEntry> SlotEntries;
         };
 
         class AccountTransmogUpdate final : public ServerPacket
