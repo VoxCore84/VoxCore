@@ -189,8 +189,8 @@ namespace WorldPackets
 
             WorldPacket const* Write() override;
 
-            uint64 Guid = 0;
             uint32 SetID = 0;
+            std::vector<TransmogOutfitSlotEntry> Slots;
         };
 
         class AccountTransmogUpdate final : public ServerPacket

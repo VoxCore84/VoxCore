@@ -833,6 +833,11 @@ void WorldSession::HandleTransmogOutfitUpdateSlots(WorldPackets::Transmogrificat
             }
         }
 
+        if (transmogOutfitUpdateSlots.Set.MainHandOption > 0)
+            updatedSet.MainHandOption = transmogOutfitUpdateSlots.Set.MainHandOption;
+        if (transmogOutfitUpdateSlots.Set.OffHandOption > 0)
+            updatedSet.OffHandOption = transmogOutfitUpdateSlots.Set.OffHandOption;
+
         // Update secondary shoulder and enchants from incoming packet
         if (transmogOutfitUpdateSlots.Set.SecondaryShoulderApparanceID)
         {
@@ -1128,9 +1133,38 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
 
     WorldPackets::Transmogrification::TransmogOutfitSlotsUpdated response;
     response.SetID = pending.Outfit.SetID;
-    response.Guid = pending.Outfit.Guid;
-    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED [{}]: setId={} guid={} (finalized{})",
-        GetPlayerInfo(), response.SetID, response.Guid,
+
+    auto appendSlot = [&](uint8 slot, uint8 option, uint32 appearance, uint16 displayType)
+    {
+        WorldPackets::Transmogrification::TransmogOutfitSlotEntry entry;
+        entry.SlotIndex = slot;
+        entry.Option = option;
+        entry.AppearanceID = appearance;
+        entry.WireDisplayType = displayType;
+        response.Slots.push_back(entry);
+    };
+
+    appendSlot(0, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_HEAD] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_HEAD]) : 0, 0);
+    appendSlot(1, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_SHOULDERS] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_SHOULDERS]) : 0, 1);
+    appendSlot(2, 0, pending.Outfit.SecondaryShoulderApparanceID > 0 ? uint32(pending.Outfit.SecondaryShoulderApparanceID) : 0, 1);
+    appendSlot(6, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_WAIST] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_WAIST]) : 0, 4);
+    appendSlot(4, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_CHEST] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_CHEST]) : 0, 3);
+    appendSlot(9, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_WRISTS] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_WRISTS]) : 0, 7);
+    appendSlot(10, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_HANDS] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_HANDS]) : 0, 8);
+    appendSlot(11, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_FEET] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_FEET]) : 0, 6);
+    appendSlot(7, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_LEGS] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_LEGS]) : 0, 5);
+    appendSlot(8, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_TABARD] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_TABARD]) : 0, 10);
+    appendSlot(3, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_BACK] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_BACK]) : 0, 9);
+    appendSlot(5, 0, pending.Outfit.Appearances[EQUIPMENT_SLOT_BODY] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_BODY]) : 0, 2);
+
+    for (uint8 option : { uint8(1), uint8(6), uint8(2), uint8(3), uint8(7), uint8(8), uint8(9), uint8(10), uint8(11) })
+        appendSlot(12, option, pending.Outfit.MainHandOption == option && pending.Outfit.Appearances[EQUIPMENT_SLOT_MAINHAND] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_MAINHAND]) : 0, 11);
+
+    for (uint8 option : { uint8(1), uint8(6), uint8(7), uint8(5), uint8(4), uint8(8), uint8(9), uint8(10), uint8(11) })
+        appendSlot(13, option, pending.Outfit.OffHandOption == option && pending.Outfit.Appearances[EQUIPMENT_SLOT_OFFHAND] > 0 ? uint32(pending.Outfit.Appearances[EQUIPMENT_SLOT_OFFHAND]) : 0, 15);
+
+    TC_LOG_DEBUG("network.opcode.transmog", "SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED [{}]: setId={} slots={} (finalized{})",
+        GetPlayerInfo(), response.SetID, response.Slots.size(),
         mergedOverrides ? " with bridge overrides" : "");
     SendPacket(response.Write());
 
