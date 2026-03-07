@@ -20,7 +20,7 @@ TrinityCore-based WoW private server targeting the 12.x/Midnight retail client, 
 | `C:\WoW\_retail_\` | 12.x WoW client (build 66263) |
 
 ## Build Environment
-- OS: Windows 11, MSVC (VS 2022), C++20, Ninja, CMake
+- OS: Windows 11, MSVC (VS 2026), C++20, Ninja, CMake
 - Database: MySQL 8.0 (UniServerZ portable), root/admin
 - 5 DBs: auth, characters, world, hotfixes, roleplay (custom 5th DB)
 - Hardware: Ryzen 9 9950X3D 12C/24T, 128GB DDR5, RTX 5090, 2TB NVMe

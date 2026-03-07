@@ -197,7 +197,7 @@ If the client uses the `ItemID` field to look up the item's `InventoryType` and 
 - **ItemDisplayInfo**: model/texture data (client-side only)
 - **Item**: ID, ClassID, SubclassID, SoundOverrideSubclassID, Material, IconFileDataID, ...
 
-Wago DB2 CSVs are at `C:/Users/atayl/source/wago/wago_csv/major_12/12.0.1.66066/enUS/`
+Wago DB2 CSVs are at `C:/Users/atayl/VoxCore/wago/wago_csv/major_12/12.0.1.66066/enUS/`
 
 ## Acceptance Criteria
 

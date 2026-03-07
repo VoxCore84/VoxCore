@@ -2390,7 +2390,7 @@ PRIORITY ACTION ITEMS
 
 3. FLAG REMOVAL CANDIDATES (VENDOR): 14
    NPCs that should NOT have the vendor flag.
-   SQL generated at: C:/Dev/RoleplayCore/sql/exports/cleanup/npc_empty_service_fixes.sql
+   SQL generated at: C:/Users/atayl/VoxCore/sql/exports/cleanup/npc_empty_service_fixes.sql
 
 4. FLAG REMOVAL CANDIDATES (TRAINER): 7
    NPCs that should NOT have the trainer flag.

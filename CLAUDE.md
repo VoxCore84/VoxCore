@@ -111,9 +111,9 @@ sql/
 
 - **MCP servers**: `wago-db2` (DB2 CSV queries), `mysql` (direct DB access), `codeintel` (C++ symbol lookup)
 - **LSP plugins**: `clangd-lsp` (C++), `lua-lsp` (Lua), `github` (PRs/issues)
-- **17 slash commands**: `/build-loop`, `/check-logs`, `/parse-errors`, `/apply-sql`, `/soap`, `/lookup-spell`, `/lookup-item`, `/lookup-creature`, `/lookup-area`, `/lookup-faction`, `/lookup-emote`, `/lookup-sound`, `/decode-pkt`, `/parse-packet`, `/new-script`, `/new-sql-update`, `/smartai-check`
+- **19 slash commands**: `/build-loop`, `/check-logs`, `/parse-errors`, `/apply-sql`, `/soap`, `/lookup-spell`, `/lookup-item`, `/lookup-creature`, `/lookup-area`, `/lookup-faction`, `/lookup-emote`, `/lookup-sound`, `/decode-pkt`, `/parse-packet`, `/new-script`, `/new-sql-update`, `/smartai-check`, `/transmog-correct`, `/wrap-up`
 - **External repos**: wago tooling (`wago/`), tc-packet-tools (`tools-dev/tc-packet-tools/`), code-intel (`tools-dev/code-intel/`), claude-skills (`tools-dev/claude-skills/`)
-- **External tools**: `ExtTools/` (WowPacketParser, wow.tools.local, DBC2CSV, Arctium, etc. — was C:\Tools)
+- **External tools**: `ExtTools/` (WowPacketParser, wow.tools.local, DBC2CSV, Arctium, etc.)
 - **GitHub**: `VoxCore84/RoleplayCore` (private), `gh` CLI authenticated
 - Full inventory: auto-memory `tooling-inventory.md`
 

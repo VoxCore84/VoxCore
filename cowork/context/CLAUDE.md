@@ -10,11 +10,11 @@ TrinityCore-based WoW private server targeting the **12.x / Midnight** client, s
 | `x64-Debug` | `out/build/x64-Debug/` | Compilation, debugging |
 | **`x64-RelWithDebInfo`** | `out/build/x64-RelWithDebInfo/` | **Primary runtime** (17s startup vs 60s Debug) |
 
-- **Build**: `cd /c/Users/atayl/VoxCore/out/build/x64-Debug && ninja -j16 2>&1`
-- **Scripts only**: `cd /c/Users/atayl/VoxCore/out/build/x64-Debug && ninja -j16 scripts 2>&1`
+- **Build**: `cd ~/VoxCore/out/build/x64-Debug && ninja -j20 2>&1`
+- **Scripts only**: `cd ~/VoxCore/out/build/x64-Debug && ninja -j20 scripts 2>&1`
 - **CMake reconfigure**: `cmake -B out/build/x64-Debug -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`
 - **Key CMake options**: `SCRIPTS=static`, `ELUNA=ON`, `TOOLS=ON`
-- **Compiler**: MSVC (VS 2022), Generator: Ninja, C++20
+- **Compiler**: MSVC (VS 2026), Generator: Ninja, C++20
 - **MySQL**: `C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe` — root/admin
 
 ## Databases (5 total)
@@ -85,7 +85,7 @@ sql/
 2. Define `void AddSC_<name>()` at the bottom
 3. Add the declaration + call in `custom_script_loader.cpp`
 4. If it needs new RBAC perms, add to `RBAC.h` and `sql/RoleplayCore/1. auth db.sql`
-5. Build with `ninja -j16 scripts`
+5. Build with `ninja -j20 scripts`
 
 ## Key Files
 
@@ -111,8 +111,9 @@ sql/
 
 - **MCP servers**: `wago-db2` (DB2 CSV queries), `mysql` (direct DB access), `codeintel` (C++ symbol lookup)
 - **LSP plugins**: `clangd-lsp` (C++), `lua-lsp` (Lua), `github` (PRs/issues)
-- **17 slash commands**: `/build-loop`, `/check-logs`, `/parse-errors`, `/apply-sql`, `/soap`, `/lookup-spell`, `/lookup-item`, `/lookup-creature`, `/lookup-area`, `/lookup-faction`, `/lookup-emote`, `/lookup-sound`, `/decode-pkt`, `/parse-packet`, `/new-script`, `/new-sql-update`, `/smartai-check`
-- **External repos**: wago tooling (`C:/Users/atayl/VoxCore/wago/`), tc-packet-tools, code-intel, trinitycore-claude-skills
+- **19 slash commands**: `/build-loop`, `/check-logs`, `/parse-errors`, `/apply-sql`, `/soap`, `/lookup-spell`, `/lookup-item`, `/lookup-creature`, `/lookup-area`, `/lookup-faction`, `/lookup-emote`, `/lookup-sound`, `/decode-pkt`, `/parse-packet`, `/new-script`, `/new-sql-update`, `/smartai-check`, `/transmog-correct`, `/wrap-up`
+- **External repos**: wago tooling (`wago/`), tc-packet-tools (`tools-dev/tc-packet-tools/`), code-intel (`tools-dev/code-intel/`), claude-skills (`tools-dev/claude-skills/`)
+- **External tools**: `ExtTools/` (WowPacketParser, wow.tools.local, DBC2CSV, Arctium, etc.)
 - **GitHub**: `VoxCore84/RoleplayCore` (private), `gh` CLI authenticated
 - Full inventory: auto-memory `tooling-inventory.md`
 
@@ -145,3 +146,90 @@ Full recipes, data source tables, and anti-patterns: auto-memory `debugging-meth
 3. **Code + build → run builds in background immediately**
 4. **Multiple errors → one agent per error category**
 5. **Builds, long queries, server restarts → always background**
+
+## Transmog UI / Midnight 12.x — Authoritative Rules
+
+These rules are derived from retail 66263 packet captures and audit pass 2 findings.
+When in conflict with earlier summaries or assumptions, these rules win.
+
+### Two Separate DisplayType Concepts — Never Confuse Them
+
+1. **DB2 `ItemAppearance.DisplayType`** (range 0-15): Per-IMAID classification for slot routing.
+   Used in `DisplayTypeToEquipSlot()`. This is the *routing* DT.
+2. **`TransmogOutfitSlotData::AppearanceDisplayType`** (range 0-4): Per-slot behavioral flag
+   in ViewedOutfit/TransmogOutfits UpdateFields. This is the *behavioral* ADT.
+
+Never use routing DT values where behavioral ADT values belong, or vice versa.
+
+### Non-Negotiable Transmog Rules
+
+- Do NOT use fake weapon option-0 rows. The real weapon appearance belongs on its
+  selected option row from the retail wire-order arrays.
+- Keep stored `TransmogOutfits` semantics separate from live `ViewedOutfit` semantics.
+  They use different ADT values for the same logical state.
+- Do NOT remove bridge defer/baseline behavior for slots 2 / 12 / 13 unless direct
+  packet evidence proves it wrong.
+- Prefer small surgical patches over broad rewrites.
+- Always show an actual unified diff for code-changing tasks.
+- Always run the local working build command after patching and report the real result.
+- Do NOT claim success based only on compile if the behavioral model is wrong.
+
+### Retail-Backed Target Model — 30-Row Slot Layout
+
+30 total rows per outfit: 12 armor (SlotOption=0) + 9 MH options + 9 OH options.
+
+**Armor rows** (slot, option=0):
+Head(0,0), Shoulder-Primary(1,0), Shoulder-Secondary(2,0), Waist(6,0), Chest(4,0),
+Wrist(9,0), Hands(10,0), Feet(11,0), Legs(7,0), Tabard(8,0), Back(3,0), Shirt(5,0)
+
+**MH weapon option wire order**: 1, 6, 2, 3, 7, 8, 9, 10, 11
+**OH weapon option wire order**: 1, 6, 7, 5, 4, 8, 9, 10, 11
+
+There must be NO fake weapon option-0 rows.
+
+### Stored `TransmogOutfits` Behavioral Semantics
+
+| State | ADT | IDT | Notes |
+|-------|-----|-----|-------|
+| Empty row | 0 | 0 | Unassigned, skip |
+| Assigned normal | 1 | 0 | Apply this IMAID |
+| Hidden appearance | 3 | 0 | Apply hidden visual IMA (real hidden IMA ID, NOT zero) |
+| Enchanted weapon (selected) | 1 | 1 | Real SpellItemEnchantmentID + IDT=1 |
+| Paired placeholder (opts 8-11) | 4 | 4 | Not applicable — bookkeeping only |
+
+### Live `ViewedOutfit` Behavioral Semantics
+
+| State | ADT | IDT | Notes |
+|-------|-----|-----|-------|
+| Empty/equipped passthrough | 2 | 2 | Slot has no outfit appearance — show equipped item or nothing |
+| Assigned normal | 1 | 0 | Apply this IMAID (SAME as stored — NOT ADT=2) |
+| Hidden appearance | 3 | 0 | Apply hidden visual IMA |
+| Enchanted weapon (selected) | 1 | 1 | Real enchant + IDT=1 |
+| Paired placeholder (opts 8-11) | 4 | 4 | Not applicable |
+
+**Key difference**: Only EMPTY rows differ — Stored empty = `0/0`, Viewed empty = `2/2`.
+Assigned rows use ADT=1 in BOTH contexts. ADT=2 is NEVER used for assigned rows.
+
+### Hidden Appearance IMA IDs (confirmed retail)
+
+77343=shoulder, 77344=head, 77345=cloak, 83202=shirt, 83203=tabard,
+84223=belt, 94331=gloves, 104602=chest, 104603=boots, 104604=bracers, 198608=pants
+
+Detection: Use ItemID-based matching (10 known hidden items from CollectionMgr).
+Do NOT rely on `ItemDisplayInfoID==0` (cloak has `ItemDisplayInfoID=146518`).
+
+### Required Preservation
+
+- `MainHandOption` / `OffHandOption` are real selected option enums, not booleans.
+- `SMSG_TRANSMOG_OUTFIT_SLOTS_UPDATED` must remain a full 30-row behavioral slot echo.
+- `DisplayTypeToEquipSlot()` must include `case 14: return EQUIPMENT_SLOT_OFFHAND`.
+- Bridge defer behavior for slots 2 / 12 / 13 must be preserved.
+
+### Confidence Levels
+
+- ADT 0/1 for stored: HIGH (audit pass 2 + retail packets)
+- ADT 1 for viewed assigned: HIGH (packet capture confirmed — non-empty ViewedOutfit rows show ADT=1)
+- ADT 2/2 for viewed empty: HIGH (packet capture confirmed — empty ViewedOutfit rows show ADT=2/IDT=2)
+- ADT 3 for hidden: HIGH (session 70 fix, retail confirmed)
+- ADT 4 for paired placeholders: HIGH (session 70 fix, retail confirmed)
+- IDT 1 for enchanted weapons: HIGH (packet capture shows SpellItemEnchantmentID + IDT=1)
