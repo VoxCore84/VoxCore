@@ -3,6 +3,7 @@
 #include "Chat.h"
 #include "ChatCommand.h"
 #include "Common.h"
+#include "StringConvert.h"
 
 namespace RoleplayCore
 {
@@ -17,20 +18,20 @@ namespace RoleplayCore
         {
             static ChatCommandTable displayCommandTable =
             {
-                { "head",      rbac::RBAC_PERM_COMMAND_DISP_HEAD,       false, Display<DISPLAY_TYPE_HEAD>,            "" },
-                { "shoulders", rbac::RBAC_PERM_COMMAND_DISP_SHOULDERS,  false, Display<DISPLAY_TYPE_SHOULDERS>,       "" },
-                { "lshoulder", rbac::RBAC_PERM_COMMAND_DISP_SHOULDERS,  false, Display<DISPLAY_TYPE_SHOULDERS, true>, "" },
-                { "shirt",     rbac::RBAC_PERM_COMMAND_DISP_SHIRT,      false, Display<DISPLAY_TYPE_SHIRT>,           "" },
-                { "chest",     rbac::RBAC_PERM_COMMAND_DISP_CHEST,      false, Display<DISPLAY_TYPE_CHEST>,           "" },
-                { "waist",     rbac::RBAC_PERM_COMMAND_DISP_WAIST,      false, Display<DISPLAY_TYPE_WAIST>,           "" },
-                { "legs",      rbac::RBAC_PERM_COMMAND_DISP_LEGS,       false, Display<DISPLAY_TYPE_PANTS>,           "" },
-                { "feet",      rbac::RBAC_PERM_COMMAND_DISP_FEET,       false, Display<DISPLAY_TYPE_BOOTS>,           "" },
-                { "wrists",    rbac::RBAC_PERM_COMMAND_DISP_WRISTS,     false, Display<DISPLAY_TYPE_WRISTS>,          "" },
-                { "hands",     rbac::RBAC_PERM_COMMAND_DISP_HANDS,      false, Display<DISPLAY_TYPE_HANDS>,           "" },
-                { "back",      rbac::RBAC_PERM_COMMAND_DISP_BACK,       false, Display<DISPLAY_TYPE_BACK>,            "" },
-                { "tabard",    rbac::RBAC_PERM_COMMAND_DISP_TABARD,     false, Display<DISPLAY_TYPE_TABARD>,          "" },
-                { "mainhand",  rbac::RBAC_PERM_COMMAND_DISP_MAINHAND,   false, Display<DISPLAY_TYPE_MAIN>,            "" },
-                { "offhand",   rbac::RBAC_PERM_COMMAND_DISP_OFFHAND,    false, Display<DISPLAY_TYPE_OFF>,             "" },
+                { "head",      rbac::RBAC_PERM_COMMAND_DISP_HEAD,       false, Display<DISPLAY_TYPE_HEAD>,            "Syntax: .display head <itemId> [bonusId]\nOverrides head appearance." },
+                { "shoulders", rbac::RBAC_PERM_COMMAND_DISP_SHOULDERS,  false, Display<DISPLAY_TYPE_SHOULDERS>,       "Syntax: .display shoulders <itemId> [bonusId]\nOverrides shoulder appearance." },
+                { "lshoulder", rbac::RBAC_PERM_COMMAND_DISP_SHOULDERS,  false, Display<DISPLAY_TYPE_SHOULDERS, true>, "Syntax: .display lshoulder <itemId> [bonusId]\nOverrides secondary shoulder." },
+                { "shirt",     rbac::RBAC_PERM_COMMAND_DISP_SHIRT,      false, Display<DISPLAY_TYPE_SHIRT>,           "Syntax: .display shirt <itemId> [bonusId]\nOverrides shirt appearance." },
+                { "chest",     rbac::RBAC_PERM_COMMAND_DISP_CHEST,      false, Display<DISPLAY_TYPE_CHEST>,           "Syntax: .display chest <itemId> [bonusId]\nOverrides chest appearance." },
+                { "waist",     rbac::RBAC_PERM_COMMAND_DISP_WAIST,      false, Display<DISPLAY_TYPE_WAIST>,           "Syntax: .display waist <itemId> [bonusId]\nOverrides belt appearance." },
+                { "legs",      rbac::RBAC_PERM_COMMAND_DISP_LEGS,       false, Display<DISPLAY_TYPE_PANTS>,           "Syntax: .display legs <itemId> [bonusId]\nOverrides leg appearance." },
+                { "feet",      rbac::RBAC_PERM_COMMAND_DISP_FEET,       false, Display<DISPLAY_TYPE_BOOTS>,           "Syntax: .display feet <itemId> [bonusId]\nOverrides boot appearance." },
+                { "wrists",    rbac::RBAC_PERM_COMMAND_DISP_WRISTS,     false, Display<DISPLAY_TYPE_WRISTS>,          "Syntax: .display wrists <itemId> [bonusId]\nOverrides bracer appearance." },
+                { "hands",     rbac::RBAC_PERM_COMMAND_DISP_HANDS,      false, Display<DISPLAY_TYPE_HANDS>,           "Syntax: .display hands <itemId> [bonusId]\nOverrides glove appearance." },
+                { "back",      rbac::RBAC_PERM_COMMAND_DISP_BACK,       false, Display<DISPLAY_TYPE_BACK>,            "Syntax: .display back <itemId> [bonusId]\nOverrides cloak appearance." },
+                { "tabard",    rbac::RBAC_PERM_COMMAND_DISP_TABARD,     false, Display<DISPLAY_TYPE_TABARD>,          "Syntax: .display tabard <itemId> [bonusId]\nOverrides tabard appearance." },
+                { "mainhand",  rbac::RBAC_PERM_COMMAND_DISP_MAINHAND,   false, Display<DISPLAY_TYPE_MAIN>,            "Syntax: .display mainhand <itemId> [bonusId]\nOverrides main-hand weapon appearance." },
+                { "offhand",   rbac::RBAC_PERM_COMMAND_DISP_OFFHAND,    false, Display<DISPLAY_TYPE_OFF>,             "Syntax: .display offhand <itemId> [bonusId]\nOverrides off-hand weapon appearance." },
             };
 
             static ChatCommandTable commandTable =
@@ -48,18 +49,21 @@ namespace RoleplayCore
             if (!handler || !args)
                 return false;
 
-            char const* id = handler->extractKeyFromLink((char*)args, "Hitem");
+            char* id = handler->extractKeyFromLink((char*)args, "Hitem");
             if (!id)
                 return false;
 
-            // Retrieve item ID
-            uint32 itemId = static_cast<uint32>(strtoul(id, nullptr, 10));
+            // Retrieve item ID using safe parsing
+            auto itemIdOpt = Trinity::StringTo<uint32>(id);
+            if (!itemIdOpt)
+                return false;
+            uint32 itemId = *itemIdOpt;
 
             // Retrieve the bonus, if specified
             uint32 bonus = 0;
-            char* bonusStr = strtok(NULL, " ");
+            char* bonusStr = strtok(nullptr, " ");
             if (bonusStr)
-                bonus = strtol(bonusStr, NULL, 10);
+                bonus = Trinity::StringTo<uint32>(bonusStr).value_or(0);
 
             // Call the display handler
             DisplayHandler::GetInstance().Display(handler, T, itemId, bonus, secondary);

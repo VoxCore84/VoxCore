@@ -24,6 +24,8 @@
 #include "MiscPackets.h"
 #include "MovementGenerator.h"
 #include "ScriptMgr.h"
+#include "StringConvert.h"
+#include "Util.h"
 #include "WorldSession.h"
 #include "RBAC.h"
 #include "MotionMaster.h"
@@ -97,12 +99,12 @@ public:
 
             if (settingName == "static_hour")
             {
-                m_staticHour = std::stoi(settingValue);
+                m_staticHour = Trinity::StringTo<int>(settingValue).value_or(0);
                 hourSet = true;
             }
             else if (settingName == "static_minute")
             {
-                m_staticMinute = std::stoi(settingValue);
+                m_staticMinute = Trinity::StringTo<int>(settingValue).value_or(0);
                 minuteSet = true;
             }
             else if (settingName == "time_freezed")
@@ -231,34 +233,37 @@ public:
 
     std::vector<ChatCommand> GetCommands() const override
     {
-        static std::vector<ChatCommand> typimgCommandTable =
+        static std::vector<ChatCommand> typingCommandTable =
         {
-            { "on",              rbac::RBAC_PERM_COMMAND_TYPING_ON,     false,      &HandleTipingOnCommand,     ""},
-            { "off",             rbac::RBAC_PERM_COMMAND_TYPING_OFF,    false,      &HandleTipingOffCommand,    ""},
+            { "on",              rbac::RBAC_PERM_COMMAND_TYPING_ON,     false,      &HandleTypingOnCommand,     "Enables typing animation."},
+            { "off",             rbac::RBAC_PERM_COMMAND_TYPING_OFF,    false,      &HandleTypingOffCommand,    "Disables typing animation."},
         };
 
         static std::vector<ChatCommand> commandTable =
         {
-            { "barbershop",      rbac::RBAC_PERM_COMMAND_BARBER,        false,      &HandleBarberCommand,       ""},
-            { "castgroup",       rbac::RBAC_PERM_COMMAND_CAST_GROUP,    false,      &HandleCastGroupCommand,    ""},
-            { "castgroupscene",  rbac::RBAC_PERM_COMMAND_CAST_SCENE,    false,      &HandleCastSceneCommand,    ""},
-            { "npcmoveto",       rbac::RBAC_PERM_COMMAND_NPC_MOVE,      false,      &HandleNpcMoveTo,           ""},
-            { "npcguidsay",      rbac::RBAC_PERM_COMMAND_NPC_SAY,       false,      &HandleNpcGuidSay,          ""},
-            { "npcguidyell",     rbac::RBAC_PERM_COMMAND_NPC_YELL,      false,      &HandleNpcGuidYell,         ""},
+            { "barbershop",      rbac::RBAC_PERM_COMMAND_BARBER,        false,      &HandleBarberCommand,       "Opens the barbershop interface."},
+            { "castgroup",       rbac::RBAC_PERM_COMMAND_CAST_GROUP,    false,      &HandleCastGroupCommand,    "Syntax: .castgroup <spellId>\nCasts a spell on your entire group."},
+            { "castgroupscene",  rbac::RBAC_PERM_COMMAND_CAST_SCENE,    false,      &HandleCastSceneCommand,    "Syntax: .castscene <scenePackageId> [flags]\nPlays a scene."},
+            { "npcmoveto",       rbac::RBAC_PERM_COMMAND_NPC_MOVE,      false,      &HandleNpcMoveTo,           "Syntax: .npcmoveto <guid> <x> <y> <z>\nMoves an NPC to coordinates."},
+            { "npcguidsay",      rbac::RBAC_PERM_COMMAND_NPC_SAY,       false,      &HandleNpcGuidSay,          "Syntax: .npcguidsay <guid> <text>\nMakes an NPC say text."},
+            { "npcguidyell",     rbac::RBAC_PERM_COMMAND_NPC_YELL,      false,      &HandleNpcGuidYell,         "Syntax: .npcguidyell <guid> <text>\nMakes an NPC yell text."},
             { "settime",         rbac::RBAC_PERM_COMMAND_SETTIME,       false,      &HandleSetTimeCommand,      "<hour> <minute> [instant|smooth] <ms shift>"},
-            { "typing",          typimgCommandTable },
+            { "typing",          typingCommandTable },
         };
 
         return commandTable;
     }
 
     // custom command .typing on
-    static bool HandleTipingOnCommand(ChatHandler* handler)
+    static bool HandleTypingOnCommand(ChatHandler* handler)
     {
         Player* plr = handler->GetSession()->GetPlayer();
 
         if (!plr)
+        {
+            handler->SendSysMessage("You must be in-game to use this command.");
             return false;
+        }
 
         plr->CastSpell(plr, 156354, false);
 
@@ -266,12 +271,15 @@ public:
     }
 
     // custom command .typing off
-    static bool HandleTipingOffCommand(ChatHandler* handler)
+    static bool HandleTypingOffCommand(ChatHandler* handler)
     {
         Player* plr = handler->GetSession()->GetPlayer();
 
         if (!plr)
+        {
+            handler->SendSysMessage("You must be in-game to use this command.");
             return false;
+        }
 
         if (plr->HasAura(156354))
             plr->RemoveAura(156354);
@@ -294,10 +302,16 @@ public:
         uint32 spellId = spellInfo->Id;
 
         if (!spellId)
+        {
+            handler->SendSysMessage("Invalid spell ID.");
             return false;
+        }
 
         if (!handler->GetSession()->GetPlayer()->GetGroup())
+        {
+            handler->SendSysMessage("You must be in a group to use this command.");
             return false;
+        }
 
         for (GroupReference const& itr : handler->GetSession()->GetPlayer()->GetGroup()->GetMembers())
         {
@@ -314,18 +328,27 @@ public:
     // custom command .castscene
     static bool HandleCastSceneCommand(ChatHandler* handler, char const* args)
     {
-
         if (!*args)
+        {
+            handler->SendSysMessage("Usage: .castscene <scenePackageId> [flags]");
             return false;
+        }
 
-        char const* scenePackageIdStr = strtok((char*)args, " ");
-        char const* flagsStr = strtok(NULL, "");
-
-        if (!scenePackageIdStr)
+        std::vector<std::string_view> tokens = Trinity::Tokenize(args, ' ', false);
+        if (tokens.empty())
+        {
+            handler->SendSysMessage("Usage: .castscene <scenePackageId> [flags]");
             return false;
+        }
 
-        uint32 scenePackageId = atoi(scenePackageIdStr);
-        uint32 flags = flagsStr ? atoi(flagsStr) : 0;
+        uint32 scenePackageId = Trinity::StringTo<uint32>(tokens[0]).value_or(0);
+        uint32 flags = tokens.size() > 1 ? Trinity::StringTo<uint32>(tokens[1]).value_or(0) : 0;
+
+        if (!sSceneScriptPackageStore.HasRecord(scenePackageId))
+        {
+            handler->SendSysMessage("Scene package not found.");
+            return false;
+        }
 
         if (!handler->GetSession()->GetPlayer()->GetGroup())
             return false;
@@ -335,9 +358,6 @@ public:
             Player* plr = itr.GetSource();
             if (!plr || !plr->GetSession())
                 continue;
-
-            if (!sSceneScriptPackageStore.HasRecord(scenePackageId))
-                return false;
 
             plr->GetSceneMgr().PlaySceneByPackageId(scenePackageId, SceneFlag(flags));
         }
@@ -349,52 +369,44 @@ public:
     static bool HandleNpcMoveTo(ChatHandler* handler, char const* args)
     {
         if (!*args)
+        {
+            handler->SendSysMessage("Usage: .npcmoveto <guid> <x> <y> <z>");
             return false;
+        }
 
         Player* player = handler->GetSession()->GetPlayer();
 
-        char* guid = strtok((char*)args, " ");
-
-        if (!guid)
+        std::vector<std::string_view> tokens = Trinity::Tokenize(args, ' ', false);
+        if (tokens.size() < 4)
+        {
+            handler->SendSysMessage("Usage: .npcmoveto <guid> <x> <y> <z>");
             return false;
+        }
 
-        char* x = strtok(nullptr, " ");
-        char* y = strtok(nullptr, " ");
-        char* z = strtok(nullptr, " ");
+        std::string guidStr(tokens[0]);
+        float x2 = Trinity::StringTo<float>(tokens[1]).value_or(0.0f);
+        float y2 = Trinity::StringTo<float>(tokens[2]).value_or(0.0f);
+        float z2 = Trinity::StringTo<float>(tokens[3]).value_or(0.0f);
 
-        if (!x || !y || !z)
-            return false;
-
-        float x2, y2, z2;
-        x2 = (float)atof(x);
-        y2 = (float)atof(y);
-        z2 = (float)atof(z);
-
-        Creature* creature = nullptr;
-
-        char* cId = handler->extractKeyFromLink((char*)guid, "Hcreature");
+        char* cId = handler->extractKeyFromLink(guidStr.data(), "Hcreature");
 
         ObjectGuid::LowType lowguid = Trinity::StringTo<ObjectGuid::LowType>(cId).value_or(UI64LIT(0));
 
-        creature = handler->GetCreatureFromPlayerMapByDbGuid(lowguid);
+        Creature* creature = handler->GetCreatureFromPlayerMapByDbGuid(lowguid);
 
         if (!creature)
         {
+            handler->SendSysMessage("Creature not found with that GUID.");
             return false;
         }
 
-        uint32 MapIdPlayer = player->GetMapId();
-
-        uint32 MapIdCreature = creature->GetMapId();
-
-        if (MapIdPlayer != MapIdCreature)
+        if (player->GetMapId() != creature->GetMapId())
         {
+            handler->SendSysMessage("Creature is not on your current map.");
             return false;
         }
-        else
-        {
-            creature->GetMotionMaster()->MovePoint(0, x2, y2, z2);
-        }
+
+        creature->GetMotionMaster()->MovePoint(0, x2, y2, z2);
 
         return true;
     }
@@ -402,49 +414,51 @@ public:
     // custom command .npcguidsay
     static bool HandleNpcGuidSay(ChatHandler* handler, char const* args)
     {
-
-        char* guid = strtok((char*)args, " ");
-
-        if (!guid)
+        std::string_view argsView(args);
+        auto spacePos = argsView.find(' ');
+        if (spacePos == std::string_view::npos)
+        {
+            handler->SendSysMessage("Usage: .npcguidsay <guid> <text>");
             return false;
+        }
 
-        char* say = strtok(nullptr, "");
+        std::string guidStr(argsView.substr(0, spacePos));
+        std::string text(argsView.substr(spacePos + 1));
 
-        if (!say)
+        if (text.empty())
+        {
+            handler->SendSysMessage("Usage: .npcguidsay <guid> <text>");
             return false;
+        }
 
-        Creature* creature = nullptr;
-
-        char* cId = handler->extractKeyFromLink((char*)guid, "Hcreature");
+        char* cId = handler->extractKeyFromLink(guidStr.data(), "Hcreature");
 
         ObjectGuid::LowType lowguid = Trinity::StringTo<ObjectGuid::LowType>(cId).value_or(UI64LIT(0));
 
-        creature = handler->GetCreatureFromPlayerMapByDbGuid(lowguid);
+        Creature* creature = handler->GetCreatureFromPlayerMapByDbGuid(lowguid);
 
         if (!creature)
         {
+            handler->SendSysMessage("Creature not found with that GUID.");
             return false;
         }
 
         Player* player = handler->GetSession()->GetPlayer();
-        uint32 MapIdPlayer = player->GetMapId();
-        uint32 MapIdCreature = creature->GetMapId();
 
-        if (MapIdPlayer != MapIdCreature)
+        if (player->GetMapId() != creature->GetMapId())
         {
+            handler->SendSysMessage("Creature is not on your current map.");
             return false;
         }
-        else
-        {
-            creature->Say(say, LANG_UNIVERSAL);
 
-            char lastchar = args[strlen(args) - 1];
-            switch (lastchar)
-            {
-            case '?':   creature->HandleEmoteCommand(EMOTE_ONESHOT_QUESTION);      break;
-            case '!':   creature->HandleEmoteCommand(EMOTE_ONESHOT_EXCLAMATION);   break;
-            default:    creature->HandleEmoteCommand(EMOTE_ONESHOT_TALK);          break;
-            }
+        creature->Say(text, LANG_UNIVERSAL);
+
+        char lastchar = text.back();
+        switch (lastchar)
+        {
+        case '?':   creature->HandleEmoteCommand(EMOTE_ONESHOT_QUESTION);      break;
+        case '!':   creature->HandleEmoteCommand(EMOTE_ONESHOT_EXCLAMATION);   break;
+        default:    creature->HandleEmoteCommand(EMOTE_ONESHOT_TALK);          break;
         }
 
         return true;
@@ -453,43 +467,45 @@ public:
     // custom command .npcguidyell
     static bool HandleNpcGuidYell(ChatHandler* handler, char const* args)
     {
-        char* guid = strtok((char*)args, " ");
-
-        if (!guid)
+        std::string_view argsView(args);
+        auto spacePos = argsView.find(' ');
+        if (spacePos == std::string_view::npos)
+        {
+            handler->SendSysMessage("Usage: .npcguidyell <guid> <text>");
             return false;
+        }
 
-        char* yell = strtok(nullptr, "");
+        std::string guidStr(argsView.substr(0, spacePos));
+        std::string text(argsView.substr(spacePos + 1));
 
-        if (!yell)
+        if (text.empty())
+        {
+            handler->SendSysMessage("Usage: .npcguidyell <guid> <text>");
             return false;
+        }
 
-        Creature* creature = nullptr;
-
-        char* cId = handler->extractKeyFromLink((char*)guid, "Hcreature");
+        char* cId = handler->extractKeyFromLink(guidStr.data(), "Hcreature");
 
         ObjectGuid::LowType lowguid = Trinity::StringTo<ObjectGuid::LowType>(cId).value_or(UI64LIT(0));
 
-        creature = handler->GetCreatureFromPlayerMapByDbGuid(lowguid);
+        Creature* creature = handler->GetCreatureFromPlayerMapByDbGuid(lowguid);
 
         if (!creature)
         {
+            handler->SendSysMessage("Creature not found with that GUID.");
             return false;
         }
 
         Player* player = handler->GetSession()->GetPlayer();
-        uint32 MapIdPlayer = player->GetMapId();
-        uint32 MapIdCreature = creature->GetMapId();
 
-        if (MapIdPlayer != MapIdCreature)
+        if (player->GetMapId() != creature->GetMapId())
         {
+            handler->SendSysMessage("Creature is not on your current map.");
             return false;
         }
-        else
-        {
-            creature->Yell(yell, LANG_UNIVERSAL);
 
-            creature->HandleEmoteCommand(EMOTE_ONESHOT_SHOUT);
-        }
+        creature->Yell(text, LANG_UNIVERSAL);
+        creature->HandleEmoteCommand(EMOTE_ONESHOT_SHOUT);
 
         return true;
     }

@@ -176,16 +176,10 @@ Unit* CompanionAI::SelectHealTarget()
 // ---------------------------------------------------------------------------
 // Per-role combat behaviors
 // ---------------------------------------------------------------------------
-void CompanionAI::UpdateTankBehavior(Unit* target)
+void CompanionAI::UpdateTankBehavior(Unit* target, Companion::RosterEntry const* roster)
 {
     if (!me->HasUnitState(UNIT_STATE_CASTING))
     {
-        Companion::PlayerSquadState* state = sCompanionMgr->GetPlayerState(GetOwner()->GetGUID().GetCounter());
-        Companion::RosterEntry const* roster = nullptr;
-        if (state)
-            for (auto const& ac : state->active)
-                if (ac.creatureGuid == me->GetGUID()) { roster = ac.rosterEntry; break; }
-
         if (roster && roster->spell1 && _spell1Cooldown == 0)
         {
             me->CastSpell(target, roster->spell1, false);
@@ -197,16 +191,10 @@ void CompanionAI::UpdateTankBehavior(Unit* target)
     AttackStart(target);
 }
 
-void CompanionAI::UpdateMeleeBehavior(Unit* target)
+void CompanionAI::UpdateMeleeBehavior(Unit* target, Companion::RosterEntry const* roster)
 {
     if (!me->HasUnitState(UNIT_STATE_CASTING))
     {
-        Companion::PlayerSquadState* state = sCompanionMgr->GetPlayerState(GetOwner()->GetGUID().GetCounter());
-        Companion::RosterEntry const* roster = nullptr;
-        if (state)
-            for (auto const& ac : state->active)
-                if (ac.creatureGuid == me->GetGUID()) { roster = ac.rosterEntry; break; }
-
         if (roster && roster->spell1 && _spell1Cooldown == 0)
         {
             me->CastSpell(target, roster->spell1, false);
@@ -218,16 +206,10 @@ void CompanionAI::UpdateMeleeBehavior(Unit* target)
     AttackStart(target);
 }
 
-void CompanionAI::UpdateRangedBehavior(Unit* target)
+void CompanionAI::UpdateRangedBehavior(Unit* target, Companion::RosterEntry const* roster)
 {
     if (!me->HasUnitState(UNIT_STATE_CASTING))
     {
-        Companion::PlayerSquadState* state = sCompanionMgr->GetPlayerState(GetOwner()->GetGUID().GetCounter());
-        Companion::RosterEntry const* roster = nullptr;
-        if (state)
-            for (auto const& ac : state->active)
-                if (ac.creatureGuid == me->GetGUID()) { roster = ac.rosterEntry; break; }
-
         if (roster && roster->spell1 && _spell1Cooldown == 0)
         {
             me->CastSpell(target, roster->spell1, false);
@@ -247,16 +229,10 @@ void CompanionAI::UpdateRangedBehavior(Unit* target)
         AttackStart(target);
 }
 
-void CompanionAI::UpdateCasterBehavior(Unit* target)
+void CompanionAI::UpdateCasterBehavior(Unit* target, Companion::RosterEntry const* roster)
 {
     if (!me->HasUnitState(UNIT_STATE_CASTING))
     {
-        Companion::PlayerSquadState* state = sCompanionMgr->GetPlayerState(GetOwner()->GetGUID().GetCounter());
-        Companion::RosterEntry const* roster = nullptr;
-        if (state)
-            for (auto const& ac : state->active)
-                if (ac.creatureGuid == me->GetGUID()) { roster = ac.rosterEntry; break; }
-
         if (roster && roster->spell1 && _spell1Cooldown == 0)
         {
             me->CastSpell(target, roster->spell1, false);
@@ -276,7 +252,7 @@ void CompanionAI::UpdateCasterBehavior(Unit* target)
         AttackStart(target);
 }
 
-void CompanionAI::UpdateHealerAI()
+void CompanionAI::UpdateHealerAI(Companion::RosterEntry const* roster)
 {
     Unit* healTarget = SelectHealTarget();
     if (!healTarget)
@@ -284,16 +260,6 @@ void CompanionAI::UpdateHealerAI()
 
     if (me->HasUnitState(UNIT_STATE_CASTING))
         return;
-
-    Player* owner = GetOwner();
-    if (!owner)
-        return;
-
-    Companion::PlayerSquadState* state = sCompanionMgr->GetPlayerState(owner->GetGUID().GetCounter());
-    Companion::RosterEntry const* roster = nullptr;
-    if (state)
-        for (auto const& ac : state->active)
-            if (ac.creatureGuid == me->GetGUID()) { roster = ac.rosterEntry; break; }
 
     if (!roster)
         return;
@@ -397,7 +363,7 @@ void CompanionAI::UpdateAI(uint32 diff)
 
     if (myRoster && myRoster->role == Companion::ROLE_HEALER)
     {
-        UpdateHealerAI();
+        UpdateHealerAI(myRoster);
         // Healers don't initiate melee — if attacked, kite
         if (me->IsInCombat() && me->GetVictim())
         {
@@ -438,10 +404,10 @@ void CompanionAI::UpdateAI(uint32 diff)
             {
                 switch (myRoster->role)
                 {
-                    case Companion::ROLE_TANK:   UpdateTankBehavior(target);   break;
-                    case Companion::ROLE_MELEE:  UpdateMeleeBehavior(target);  break;
-                    case Companion::ROLE_RANGED: UpdateRangedBehavior(target); break;
-                    case Companion::ROLE_CASTER: UpdateCasterBehavior(target); break;
+                    case Companion::ROLE_TANK:   UpdateTankBehavior(target, myRoster);   break;
+                    case Companion::ROLE_MELEE:  UpdateMeleeBehavior(target, myRoster);  break;
+                    case Companion::ROLE_RANGED: UpdateRangedBehavior(target, myRoster); break;
+                    case Companion::ROLE_CASTER: UpdateCasterBehavior(target, myRoster); break;
                     default: break;
                 }
             }
@@ -468,10 +434,10 @@ void CompanionAI::UpdateAI(uint32 diff)
             {
                 switch (myRoster->role)
                 {
-                    case Companion::ROLE_TANK:   UpdateTankBehavior(target);   break;
-                    case Companion::ROLE_MELEE:  UpdateMeleeBehavior(target);  break;
-                    case Companion::ROLE_RANGED: UpdateRangedBehavior(target); break;
-                    case Companion::ROLE_CASTER: UpdateCasterBehavior(target); break;
+                    case Companion::ROLE_TANK:   UpdateTankBehavior(target, myRoster);   break;
+                    case Companion::ROLE_MELEE:  UpdateMeleeBehavior(target, myRoster);  break;
+                    case Companion::ROLE_RANGED: UpdateRangedBehavior(target, myRoster); break;
+                    case Companion::ROLE_CASTER: UpdateCasterBehavior(target, myRoster); break;
                     default: break;
                 }
             }

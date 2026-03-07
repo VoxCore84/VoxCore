@@ -241,7 +241,8 @@ void Roleplay::CreatureSetModel(Creature* creature, uint32 displayId) {
 
 bool Roleplay::CreatureCanSwim(Creature const* creature)
 {
-    return _creatureExtraStore[creature->GetSpawnId()].swim;
+    auto it = _creatureExtraStore.find(creature->GetSpawnId());
+    return it != _creatureExtraStore.end() ? it->second.swim : true;
 }
 
 bool Roleplay::CreatureCanWalk(Creature const* creature)
@@ -255,12 +256,9 @@ bool Roleplay::CreatureCanFly(Creature const* creature)
 {
     auto it = _creatureExtraStore.find(creature->GetSpawnId());
     if (it == _creatureExtraStore.end())
-    {
-        // Todo: Check this. Based off Creature::UpdateMovementFlags since InhabitType seems to no longer exist.
-        _creatureExtraStore[creature->GetSpawnId()].fly = creature->CanFly();
-    }
+        return false;
 
-    return _creatureExtraStore[creature->GetSpawnId()].fly;
+    return it->second.fly;
 }
 
 void Roleplay::SetCreatureTemplateExtraDisabledFlag(uint32 entryId, bool disabled)
@@ -608,7 +606,8 @@ void Roleplay::SetCreatureSelectionForPlayer(ObjectGuid::LowType playerId, Objec
 
 ObjectGuid::LowType Roleplay::GetSelectedCreatureGuidFromPlayer(ObjectGuid::LowType playerId)
 {
-    return _playerExtraDataStore[playerId].selectedCreatureGuid;
+    auto it = _playerExtraDataStore.find(playerId);
+    return it != _playerExtraDataStore.end() ? it->second.selectedCreatureGuid : 0;
 }
 #pragma endregion
 
@@ -755,12 +754,17 @@ void Roleplay::CreateCustomNpcFromPlayer(Player* player, std::string const& key)
 
     auto* maleModel = sDB2Manager.GetChrModel(co->race, GENDER_MALE);
     auto* femaleModel = sDB2Manager.GetChrModel(co->race, GENDER_FEMALE);
+    if (!maleModel || !femaleModel)
+        return;
 
     co->gender = player->GetGender();
     switch (co->gender)
     {
     case GENDER_FEMALE: co->displayId = femaleModel->DisplayID; break;
     case GENDER_MALE:   co->displayId = maleModel->DisplayID; break;
+    default:
+        TC_LOG_ERROR("misc", "Invalid gender value {} for custom NPC", co->gender);
+        return;
     }
 
     co->SpellVisualKitID = 0;
@@ -883,8 +887,13 @@ void Roleplay::CreateCustomNpcFromPlayer(Player* player, std::string const& key)
 
 void Roleplay::SetCustomNpcOutfitEquipmentSlot(std::string const& key, uint8 variationId, EquipmentSlots slot, int32 displayId)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     EnsureNpcOutfitExists(templateId, variationId);
+    if (variationId == 0 || variationId > sObjectMgr->_creatureTemplateStore[templateId].Models.size())
+        return;
     uint32 outfitId = sObjectMgr->_creatureTemplateStore[templateId].Models[variationId - 1].CreatureDisplayID;
     TC_LOG_DEBUG("roleplay", "ROLEPLAY: Setting equipmentslot '%u' for custom npc '%s' with outfitId '%u' to '%u'", slot, key, outfitId, displayId);
     std::shared_ptr<CreatureOutfit> co = sObjectMgr->_creatureOutfitStore[outfitId];
@@ -896,8 +905,13 @@ void Roleplay::SetCustomNpcOutfitEquipmentSlot(std::string const& key, uint8 var
 
 void Roleplay::SetCustomNpcOutfitRace(std::string const& key, uint8 variationId, Races race)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     EnsureNpcOutfitExists(templateId, variationId);
+    if (variationId == 0 || variationId > sObjectMgr->_creatureTemplateStore[templateId].Models.size())
+        return;
     uint32 outfitId = sObjectMgr->_creatureTemplateStore[templateId].Models[variationId - 1].CreatureDisplayID;
     TC_LOG_DEBUG("roleplay", "ROLEPLAY: Setting race for custom npc '%s' with outfitId '%u'", key, outfitId);
     std::shared_ptr<CreatureOutfit> co = sObjectMgr->_creatureOutfitStore[outfitId];
@@ -905,10 +919,15 @@ void Roleplay::SetCustomNpcOutfitRace(std::string const& key, uint8 variationId,
 
     auto* maleModel = sDB2Manager.GetChrModel(co->race, GENDER_MALE);
     auto* femaleModel = sDB2Manager.GetChrModel(co->race, GENDER_FEMALE);
+    if (!maleModel || !femaleModel)
+        return;
     switch (co->gender)
     {
     case GENDER_FEMALE: co->displayId = femaleModel->DisplayID; break;
     case GENDER_MALE:   co->displayId = maleModel->DisplayID; break;
+    default:
+        TC_LOG_ERROR("misc", "Invalid gender value {} for custom NPC", co->gender);
+        return;
     }
     sObjectMgr->_creatureOutfitStore[outfitId] = std::move(co);
     SaveNpcOutfitToDb(templateId, variationId);
@@ -917,8 +936,13 @@ void Roleplay::SetCustomNpcOutfitRace(std::string const& key, uint8 variationId,
 
 void Roleplay::SetCustomNpcOutfitGender(std::string const& key, uint8 variationId, Gender gender)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     EnsureNpcOutfitExists(templateId, variationId);
+    if (variationId == 0 || variationId > sObjectMgr->_creatureTemplateStore[templateId].Models.size())
+        return;
     uint32 outfitId = sObjectMgr->_creatureTemplateStore[templateId].Models[variationId - 1].CreatureDisplayID;
     TC_LOG_DEBUG("roleplay", "ROLEPLAY: Setting gender for custom npc '%s' with outfitId '%u'", key, outfitId);
     std::shared_ptr<CreatureOutfit> co = sObjectMgr->_creatureOutfitStore[outfitId];
@@ -926,10 +950,15 @@ void Roleplay::SetCustomNpcOutfitGender(std::string const& key, uint8 variationI
     co->gender = gender;
     auto* maleModel = sDB2Manager.GetChrModel(co->race, GENDER_MALE);
     auto* femaleModel = sDB2Manager.GetChrModel(co->race, GENDER_FEMALE);
+    if (!maleModel || !femaleModel)
+        return;
     switch (co->gender)
     {
     case GENDER_FEMALE: co->displayId = femaleModel->DisplayID; break;
     case GENDER_MALE:   co->displayId = maleModel->DisplayID; break;
+    default:
+        TC_LOG_ERROR("misc", "Invalid gender value {} for custom NPC", co->gender);
+        return;
     }
     sObjectMgr->_creatureOutfitStore[outfitId] = std::move(co);
     SaveNpcOutfitToDb(templateId, variationId);
@@ -938,7 +967,10 @@ void Roleplay::SetCustomNpcOutfitGender(std::string const& key, uint8 variationI
 
 void Roleplay::SetCustomNpcLeftHand(std::string const& key, uint8 variationId, int32 itemId, int32 appearanceModId)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     SetNpcLeftHand(templateId, variationId, itemId, appearanceModId);
     ReloadSpawnedCustomNpcs(key);
 }
@@ -955,7 +987,10 @@ void Roleplay::SetNpcLeftHand(uint32 templateId, uint8 variationId, int32 itemId
 
 void Roleplay::SetCustomNpcRightHand(std::string const& key, uint8 variationId, int32 itemId, int32 appearanceModId)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     SetNpcRightHand(templateId, variationId, itemId, appearanceModId);
     ReloadSpawnedCustomNpcs(key);
 }
@@ -972,7 +1007,10 @@ void Roleplay::SetNpcRightHand(uint32 templateId, uint8 variationId, int32 itemI
 
 void Roleplay::SetCustomNpcRanged(std::string const& key, uint8 variationId, int32 itemId, int32 appearanceModId)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     SetNpcRanged(templateId, variationId, itemId, appearanceModId);
     ReloadSpawnedCustomNpcs(key);
 }
@@ -990,8 +1028,13 @@ void Roleplay::SetNpcRanged(uint32 templateId, uint8 variationId, int32 itemId, 
 
 void Roleplay::SetCustomNpcDisplayId(std::string const& key, uint8 variationId, uint32 displayId)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     EnsureNpcModelExists(templateId, variationId);
+    if (variationId == 0 || variationId > sObjectMgr->_creatureTemplateStore[templateId].Models.size())
+        return;
     TC_LOG_DEBUG("roleplay", "ROLEPLAY: Setting model display id for custom npc '%s' variation '%u' to '%u'", key.c_str(), variationId, displayId);
     CreatureTemplate& cTemplate = sObjectMgr->_creatureTemplateStore[templateId];
     CreatureModel model = cTemplate.Models[variationId - 1];
@@ -1003,8 +1046,13 @@ void Roleplay::SetCustomNpcDisplayId(std::string const& key, uint8 variationId, 
 
 void Roleplay::SetCustomNpcModelScale(std::string const& key, uint8 variationId, float displayScale)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     EnsureNpcModelExists(templateId, variationId);
+    if (variationId == 0 || variationId > sObjectMgr->_creatureTemplateStore[templateId].Models.size())
+        return;
     TC_LOG_DEBUG("roleplay", "ROLEPLAY: Setting model scale for custom npc '%s' variation '%u' to '%f'", key.c_str(), variationId, displayScale);
     CreatureTemplate& cTemplate = sObjectMgr->_creatureTemplateStore[templateId];
     CreatureModel model = cTemplate.Models[variationId - 1];
@@ -1016,8 +1064,13 @@ void Roleplay::SetCustomNpcModelScale(std::string const& key, uint8 variationId,
 
 void Roleplay::SetCustomNpcGuild(std::string const& key, uint8 variationId, uint64 guild)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     EnsureNpcOutfitExists(templateId, variationId);
+    if (variationId == 0 || variationId > sObjectMgr->_creatureTemplateStore[templateId].Models.size())
+        return;
     uint32 outfitId = sObjectMgr->_creatureTemplateStore[templateId].Models[variationId - 1].CreatureDisplayID;
     TC_LOG_DEBUG("roleplay", "ROLEPLAY: Setting guild for custom npc '%s' with outfitId '%u'", key.c_str(), outfitId);
 
@@ -1064,8 +1117,13 @@ void Roleplay::SetCustomNpcSubName(std::string const& key, std::string const& su
 
 void Roleplay::SetCustomNpcCustomizations(std::string const& key, uint8 variationId, Player* player)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     EnsureNpcOutfitExists(templateId, variationId);
+    if (variationId == 0 || variationId > sObjectMgr->_creatureTemplateStore[templateId].Models.size())
+        return;
     uint32 outfitId = sObjectMgr->_creatureTemplateStore[templateId].Models[variationId - 1].CreatureDisplayID;
     std::shared_ptr<CreatureOutfit> co = sObjectMgr->_creatureOutfitStore[outfitId];
 
@@ -1082,9 +1140,14 @@ void Roleplay::SetCustomNpcCustomizations(std::string const& key, uint8 variatio
 
 void Roleplay::RemoveCustomNpcVariation(std::string const& key, uint8 variationId)
 {
-    uint32 templateId = _customNpcStore[key].templateId;
+    if (variationId == 0)
+        return;
+    auto it = _customNpcStore.find(key);
+    if (it == _customNpcStore.end())
+        return;
+    uint32 templateId = it->second.templateId;
     CreatureTemplate& cTemplate = sObjectMgr->_creatureTemplateStore[templateId];
-    uint8 currentModel = variationId;
+    size_t currentModel = variationId;
     while (currentModel != cTemplate.Models.size()) {
         // Shift models lower
         cTemplate.Models[currentModel - 1] = cTemplate.Models[currentModel];
@@ -1318,7 +1381,7 @@ void Roleplay::DeleteCustomNpc(std::string const& key)
     stmt->setUInt32(0, data.templateId);
     trans->Append(stmt);
 
-    for (uint8 modelId = 0; modelId < sObjectMgr->_creatureTemplateStore[data.templateId].Models.size(); modelId++)
+    for (size_t modelId = 0; modelId < sObjectMgr->_creatureTemplateStore[data.templateId].Models.size(); modelId++)
     {
         uint32 outfitId = sObjectMgr->_creatureTemplateStore[data.templateId].Models[modelId].CreatureDisplayID;
         stmt = WorldDatabase.GetPreparedStatement(WORLD_DEL_DRESSNPC_OUTFIT);
@@ -1330,10 +1393,10 @@ void Roleplay::DeleteCustomNpc(std::string const& key)
 
     RoleplayDatabasePreparedStatement* fStmt = RoleplayDatabase.GetPreparedStatement(Roleplay_DEL_CUSTOMNPC);
     fStmt->setString(0, key);
-    RoleplayDatabase.Execute(fStmt);
+    RoleplayDatabase.DirectExecute(fStmt);
 
     _customNpcStore.erase(key);
-    for (uint8 modelId = 0; modelId < sObjectMgr->_creatureTemplateStore[data.templateId].Models.size(); modelId++)
+    for (size_t modelId = 0; modelId < sObjectMgr->_creatureTemplateStore[data.templateId].Models.size(); modelId++)
     {
         uint32 outfitId = sObjectMgr->_creatureTemplateStore[data.templateId].Models[modelId].CreatureDisplayID;
         sObjectMgr->_creatureOutfitStore.erase(outfitId);
@@ -1362,9 +1425,17 @@ void Roleplay::EnsureNpcOutfitExists(uint32 templateId, uint8 variationId, float
 
     if (!toCreate.empty())
     {
-        using pairtype = std::pair<uint32, std::shared_ptr<CreatureOutfit>>;
-        uint32 maxOutfitId = std::max_element(sObjectMgr->_creatureOutfitStore.begin(), sObjectMgr->_creatureOutfitStore.end(),
-            [](pairtype a, pairtype b) { return a.second->id < b.second->id; })->second->id;
+        uint32 maxOutfitId;
+        if (sObjectMgr->_creatureOutfitStore.empty())
+        {
+            maxOutfitId = sConfigMgr->GetIntDefault("Roleplay.CustomNpc.OutfitIdStart", 200001) - 1;
+        }
+        else
+        {
+            using pairtype = std::pair<uint32, std::shared_ptr<CreatureOutfit>>;
+            maxOutfitId = std::max_element(sObjectMgr->_creatureOutfitStore.begin(), sObjectMgr->_creatureOutfitStore.end(),
+                [](pairtype a, pairtype b) { return a.second->id < b.second->id; })->second->id;
+        }
         std::shared_ptr<CreatureOutfit> lastOutfit;
         bool setOutfit = false;
         for (uint8 i = 1; i <= modelsSize; i++) {
@@ -1377,6 +1448,11 @@ void Roleplay::EnsureNpcOutfitExists(uint32 templateId, uint8 variationId, float
         }
         if (!setOutfit) {
             TC_LOG_DEBUG("roleplay", "ROLEPLAY: Custom NPC template '%u' has no outfits, selecting first option in store for variation '%u'.", templateId, variationId);
+            if (sObjectMgr->_creatureOutfitStore.empty())
+            {
+                TC_LOG_ERROR("roleplay", "ROLEPLAY: No creature outfits exist in store, cannot create variation '%u' for template '%u'.", variationId, templateId);
+                return;
+            }
             // Custom NPC has only used displayids, in this case we'll just take the first creatureoutfit available.
             lastOutfit = sObjectMgr->_creatureOutfitStore.begin()->second;
         }
@@ -1435,6 +1511,16 @@ void Roleplay::EnsureNpcModelExists(uint32 templateId, uint8 variationId)
 {
     CreatureTemplate& cTemplate = sObjectMgr->_creatureTemplateStore[templateId];
     uint32 modelsSize = cTemplate.Models.size();
+    if (modelsSize == 0)
+    {
+        // No existing models - create a default one
+        CreatureModel model;
+        model.CreatureDisplayID = 0;
+        model.DisplayScale = 1.0f;
+        model.Probability = 1.0f;
+        cTemplate.Models.push_back(model);
+        modelsSize = 1;
+    }
     if (modelsSize < variationId) {
         for (uint8 i = modelsSize; i < variationId; i++) {
             uint32 prevDisplayId = cTemplate.Models[modelsSize - 1].CreatureDisplayID;

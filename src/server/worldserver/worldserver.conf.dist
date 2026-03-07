@@ -4483,6 +4483,16 @@ Roleplay.CustomNpc.OutfitIdStart = 200001
 Roleplay.CustomNpc.CreatureTemplateIdStart = 400000
 
 #
+#    Roleplay.Creature.MaxScale
+#    Roleplay.Creature.MinScale
+#        Description: Scale limits for creature morphing (.cnpc set scale, .wscale).
+#        Default:     MaxScale = 15.0
+#                     MinScale = 0.0
+
+Roleplay.Creature.MaxScale = 15.0
+Roleplay.Creature.MinScale = 0.0
+
+#
 #####################################################################################################
 
 ###################################################################################################

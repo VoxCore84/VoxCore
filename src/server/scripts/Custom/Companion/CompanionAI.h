@@ -21,11 +21,11 @@ private:
     bool  IsFriendlyTarget(Unit* target) const;
 
     // Role behaviors
-    void UpdateTankBehavior(Unit* target);
-    void UpdateMeleeBehavior(Unit* target);
-    void UpdateRangedBehavior(Unit* target);
-    void UpdateCasterBehavior(Unit* target);
-    void UpdateHealerAI();
+    void UpdateTankBehavior(Unit* target, Companion::RosterEntry const* roster);
+    void UpdateMeleeBehavior(Unit* target, Companion::RosterEntry const* roster);
+    void UpdateRangedBehavior(Unit* target, Companion::RosterEntry const* roster);
+    void UpdateCasterBehavior(Unit* target, Companion::RosterEntry const* roster);
+    void UpdateHealerAI(Companion::RosterEntry const* roster);
 
     // Formation
     void ReturnToFormation();

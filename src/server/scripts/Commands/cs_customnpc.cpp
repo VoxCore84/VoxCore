@@ -1,6 +1,8 @@
 #include "Chat.h"
 #include "ChatCommand.h"
+#include "Config.h"
 #include "ScriptMgr.h"
+#include "Log.h"
 #include "RBAC.h"
 #include "ObjectMgr.h" // sObjectManager
 #include "RolePlay.h"
@@ -79,10 +81,12 @@ public:
         if (sRoleplay->CustomNpcNameExists(name)) {
             handler->PSendSysMessage("There is already a Custom NPC with the name: %s", name);
             handler->SetSentErrorMessage(true);
-            return false;;
+            return false;
         }
         sRoleplay->CreateCustomNpcFromPlayer(handler->GetPlayer(), name);
         handler->PSendSysMessage("Custom NPC %s created!", name);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) created custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -132,7 +136,7 @@ public:
         creature = Creature::CreateCreatureFromDB(db_guid, map, true, true);
         if (!creature)
         {
-            handler->PSendSysMessage("Could spawn customnpc '%s', this can happen when an unknown displayid is set.", id);
+            handler->PSendSysMessage("Could not spawn customnpc '%s', this can happen when an unknown displayid is set.", name);
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -144,6 +148,8 @@ public:
 
         sRoleplay->LoadCustomNpcSpawn(id, db_guid);
         handler->PSendSysMessage("Custom NPC %s spawned!", name);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) spawned custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -158,6 +164,8 @@ public:
         Player* chr = handler->GetSession()->GetPlayer();
         chr->SummonCreature(sRoleplay->GetEntryIdForNpc(key), chr->GetPosition(), TEMPSUMMON_CORPSE_DESPAWN, 30s);
         handler->PSendSysMessage("Custom NPC %s spawned!", key);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) temp-spawned custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), key);
         return true;
     }
 
@@ -183,6 +191,8 @@ public:
 
         sRoleplay->SetCustomNpcOutfitRace(name, variation, race);
         handler->PSendSysMessage("Race for NPC %s, model variation '%u' set to %u!", name, variation, race);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set race {} on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), uint32(race), name);
         return true;
     }
 
@@ -208,6 +218,8 @@ public:
 
         sRoleplay->SetCustomNpcOutfitGender(name, variation, gender == 0 ? GENDER_MALE : GENDER_FEMALE);
         handler->PSendSysMessage("Gender for NPC %s, model variation '%u' set to %u!", name, variation, gender);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set gender {} on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), gender, name);
         return true;
     }
 
@@ -227,6 +239,8 @@ public:
 
         sRoleplay->SetCustomNpcName(name, displayName.data());
         handler->PSendSysMessage("Name for NPC %s set to %s!", name, displayName.data());
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set display name '{}' on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), std::string_view(displayName), name);
         return true;
     }
 
@@ -246,6 +260,8 @@ public:
 
         sRoleplay->SetCustomNpcSubName(name, subName.data());
         handler->PSendSysMessage("Subname for NPC %s set to %s!", name, subName.data());
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set sub-name '{}' on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), std::string_view(subName), name);
         return true;
     }
 
@@ -318,6 +334,8 @@ public:
         uint32 displayId = sDB2Manager.GetItemDisplayId(item->GetId(), modAppearanceId.value_or(0));
         sRoleplay->SetCustomNpcOutfitEquipmentSlot(name, variation, slot, displayId);
         handler->PSendSysMessage("Armor equipped to custom NPC %s, model variation '%u'!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) equipped armor (item {}) on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), item->GetId(), name);
         return true;
     }
 
@@ -356,6 +374,8 @@ public:
 
         sRoleplay->SetCustomNpcLeftHand(name, variation, item->GetId(), modAppearanceId.value_or(0));
         handler->PSendSysMessage("Weapon equipped to custom NPC %s, equipment variation '%u'!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) equipped left-hand (item {}) on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), item->GetId(), name);
         return true;
     }
 
@@ -394,6 +414,8 @@ public:
 
         sRoleplay->SetCustomNpcRightHand(name, variationId.value_or(1), item->GetId(), modAppearanceId.value_or(0));
         handler->PSendSysMessage("Weapon equipped to custom NPC %s, equipment variation '%u'!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) equipped right-hand (item {}) on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), item->GetId(), name);
         return true;
     }
 
@@ -432,6 +454,8 @@ public:
 
         sRoleplay->SetCustomNpcRanged(name, variationId.value_or(1), item->GetId(), modAppearanceId.value_or(0));
         handler->PSendSysMessage("Ranged weapon equipped to custom NPC %s, equipment variation '%u'!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) equipped ranged (item {}) on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), item->GetId(), name);
         return true;
     }
 
@@ -457,6 +481,8 @@ public:
 
         sRoleplay->SetCustomNpcCustomizations(name, variation, handler->GetPlayer());
         handler->PSendSysMessage("Custom NPC %s, model variation %u has copied your face!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set face on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -470,6 +496,8 @@ public:
 
         sRoleplay->DeleteCustomNpc(name);
         handler->PSendSysMessage("Custom NPC %s has been deleted!", name);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) deleted custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -537,6 +565,8 @@ public:
 
         sRoleplay->SetCustomNpcOutfitEquipmentSlot(name, variation, slot, 0);
         handler->PSendSysMessage("Armorslot '%s' unequipped from custom NPC %s, model variation '%u'!", slotName, name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) unequipped armor slot on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -562,6 +592,8 @@ public:
 
         sRoleplay->SetCustomNpcLeftHand(name, variation, 0, 0);
         handler->PSendSysMessage("Left hand unequipped from custom NPC %s, equipment variation '%u'!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) unequipped left-hand on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -587,6 +619,8 @@ public:
 
         sRoleplay->SetCustomNpcRightHand(name, variation, 0, 0);
         handler->PSendSysMessage("Right hand unequipped from custom NPC %s, equipment variation '%u'!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) unequipped right-hand on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -612,6 +646,8 @@ public:
 
         sRoleplay->SetCustomNpcRanged(name, variation, 0, 0);
         handler->PSendSysMessage("Ranged weapon unequipped from custom NPC %s, equipment variation '%u'!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) unequipped ranged on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -637,6 +673,8 @@ public:
 
         sRoleplay->SetCustomNpcDisplayId(name, variation, displayId);
         handler->PSendSysMessage("Custom NPC %s, model variation %u now has displayId %u!", name, variation, displayId);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set display ID {} on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), displayId, name);
         return true;
     }
 
@@ -662,6 +700,8 @@ public:
 
         sRoleplay->SetCustomNpcGuild(name, variation, handler->GetPlayer()->GetGuildId());
         handler->PSendSysMessage("Custom NPC %s, model variation %u has copied your guild!", name, variation);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set guild on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -685,8 +725,18 @@ public:
             return false;
         }
 
+        float maxScale = sConfigMgr->GetFloatDefault("Roleplay.Creature.MaxScale", 15.0f);
+        float minScale = sConfigMgr->GetFloatDefault("Roleplay.Creature.MinScale", 0.0f);
+        if (scale < minScale || scale > maxScale)
+        {
+            handler->PSendSysMessage("Scale must be between %.1f and %.1f.", minScale, maxScale);
+            return false;
+        }
+
         sRoleplay->SetCustomNpcModelScale(name, variation, scale);
         handler->PSendSysMessage("Custom NPC %s, model variation %u has been set to scale %f!", name, variation, scale);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set scale {} on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), scale, name);
         return true;
     }
 
@@ -706,6 +756,8 @@ public:
             sRoleplay->SetCustomNpcTameable(name, false);
             handler->PSendSysMessage("Custom NPC %s has been made untameable.", name);
         }
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) set tameable on custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
         return true;
     }
 
@@ -737,6 +789,8 @@ public:
 
         sRoleplay->RemoveCustomNpcVariation(name, variationId);
         handler->PSendSysMessage("Custom NPC variation %u for template %s has been removed.", variationId, name);
+        TC_LOG_INFO("misc", "[CustomNpc] Player {} (GUID: {}) removed variation from custom NPC '{}'",
+            handler->GetPlayer()->GetName(), handler->GetPlayer()->GetGUID().ToString(), name);
 
         return true;
     }

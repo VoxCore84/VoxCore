@@ -5,34 +5,10 @@
 #ifndef HOFF_H
 #define HOFF_H
 
-#include "Chat.h"
-#include "ChatCommand.h"
 #include "Common.h"
-#include "Containers.h"
-#include "Conversation.h"
-#include "Creature.h"
-#include "DisableMgr.h"
-#include "DB2Stores.h"
-#include "GossipDef.h"
-#include "Item.h"
-#include "InstanceLockMgr.h"
-#include "LFG.h"
-#include "LFGPackets.h"
-#include "Group.h"
-#include "LFGMgr.h"
-#include "Mail.h"
 #include "Map.h"
-#include "ObjectAccessor.h"
-#include "ObjectMgr.h"
 #include "Player.h"
 #include "Position.h"
-#include "QuestDef.h"
-#include "QuestPackets.h"
-#include "RBAC.h"
-#include "ReputationMgr.h"
-#include "SpellInfo.h"
-#include "UpdateFields.h"
-#include "WorldSession.h"
 
 enum EDungeonCategories
 {
@@ -106,38 +82,6 @@ enum EFollowAngle
 class TC_GAME_API Hoff
 {
 public:
-
-    /**
-    * Since HashMapHolder is only used for players, we use this instead
-    * @param InMap - Map creature is in
-    * @param guid - Creature GUID
-    * @return Creature*
-    */
-    static Creature* FindMapCreature(Map* InMap, ObjectGuid const& guid);
-
-    /**
-    * Returns all quest objectives of a creature, including starts and ends
-    * @param CreatureEntry
-    * @return QuestObjectives
-    */
-    static QuestObjectives GetCreatureQuestObjectives(int32 CreatureEntry);
-
-    /**
-    * Returns all quest objectives of a specific type from a creature, including starts and ends
-    * @param CreatureEntry
-    * @param ObjectiveType
-    * @return QuestObjectives
-    */
-    static QuestObjectives GetCreatureQuestObjectivesFromType(int32 CreatureEntry, QuestObjectiveType ObjectiveType);
-
-    /**
-    * How long (in seconds) to reach from StartPos to EndPos going a certain speed
-    * @param StartPos
-    * @param EndPos
-    * @param MovementSpeed
-    * @return float Time (seconds)
-    */
-    static float CalculateMovementTimeSeconds(Position StartPos, Position EndPos, float MovementSpeed);
 
     /**
     * Get a valid position for a follower/pet to walk on at the given angle

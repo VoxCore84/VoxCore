@@ -1,6 +1,8 @@
 #include "Chat.h"
 #include "custom_effects_handler.h"
 #include "GameTime.h"
+#include "Player.h"
+#include "ScriptMgr.h"
 
 namespace Noblegarden
 {
@@ -19,6 +21,9 @@ namespace Noblegarden
 
     void EffectsHandler::Add(Unit* unit, uint32 id, uint8 mode, ChatHandler* handler)
     {
+        if (id == 0)
+            return;
+
         if (mode == 0 || mode == 3)
         {
             Oneshot(unit, id, mode);
@@ -55,12 +60,18 @@ namespace Noblegarden
 
     void EffectsHandler::Toggle(Unit* unit, uint32 id, uint8 mode, ChatHandler* /*handler*/)
     {
+        if (id == 0)
+            return;
+
         if (HasEffect(unit, id)) Remove(unit, id); else Add(unit, id, mode);
     }
 
 
     void EffectsHandler::Oneshot(Unit* unit, uint32 id, uint8 mode, ChatHandler* /*handler*/)
     {
+        if (id == 0)
+            return;
+
         unit->SendCancelSpellVisualKit(id);
         unit->SendPlaySpellVisualKit(id, mode, 0);
     }
@@ -68,6 +79,9 @@ namespace Noblegarden
 
     void EffectsHandler::Remove(Unit* unit, uint32 id, ChatHandler* /*handler*/)
     {
+        if (id == 0)
+            return;
+
         if (auto targetInfo = GetUnitInfo(unit))
         {
             if (targetInfo->Store->HasEffect(id))
@@ -112,6 +126,9 @@ namespace Noblegarden
 
     void EffectsHandler::Cast(Unit* unit, Unit* target, uint32 id, float duration, ChatHandler* handler)
     {
+        if (id == 0)
+            return;
+
         auto minDuration    = 0.0f;
         auto maxDuration    = 5.0f;
         auto cooldownTime   = 200;
@@ -243,6 +260,7 @@ namespace Noblegarden
         }
 
         delete m_unit_info;
+        m_unit_info = nullptr;
         return true;
     }
 
@@ -276,7 +294,21 @@ namespace Noblegarden
     }
 }
 
+class EffectsPlayerScript : public PlayerScript
+{
+public:
+    EffectsPlayerScript() : PlayerScript("EffectsPlayerScript") { }
+
+    void OnLogout(Player* player) override
+    {
+        if (!player)
+            return;
+        Noblegarden::EffectsHandler::GetInstance().Reset(player, nullptr);
+    }
+};
+
 void AddSC_CustomEffectHandler()
 {
     Noblegarden::EffectsHandler::GetInstance();
+    new EffectsPlayerScript();
 }

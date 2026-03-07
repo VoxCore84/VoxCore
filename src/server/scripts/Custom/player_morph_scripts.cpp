@@ -49,9 +49,9 @@ namespace
         {
             static ChatCommandTable commandTable =
             {
-                { "wmorph",  rbac::RBAC_PERM_COMMAND_WMORPH,  false, HandleWMorphCommand,  "" },
-                { "wscale",  rbac::RBAC_PERM_COMMAND_WSCALE,  false, HandleWScaleCommand,  "" },
-                { "remorph", rbac::RBAC_PERM_COMMAND_REMORPH, false, HandleReMorphCommand, "" },
+                { "wmorph",  rbac::RBAC_PERM_COMMAND_WMORPH,  false, HandleWMorphCommand,  "Syntax: .wmorph <displayId>\nMorphs your character to a display ID." },
+                { "wscale",  rbac::RBAC_PERM_COMMAND_WSCALE,  false, HandleWScaleCommand,  "Syntax: .wscale <scale>\nScales your character model." },
+                { "remorph", rbac::RBAC_PERM_COMMAND_REMORPH, false, HandleReMorphCommand, "Reapplies your current morph after a model reset." },
             };
             return commandTable;
         }

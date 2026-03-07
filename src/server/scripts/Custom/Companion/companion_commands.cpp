@@ -5,6 +5,8 @@
 #include "Player.h"
 #include "RBAC.h"
 
+#include <stdexcept>
+
 using namespace Trinity::ChatCommands;
 
 class CompanionCommands : public CommandScript
@@ -75,7 +77,7 @@ public:
 
         // Try numeric entry first
         uint32 rosterEntry = 0;
-        try { rosterEntry = std::stoul(arg); } catch (...) { rosterEntry = 0; }
+        try { rosterEntry = std::stoul(arg); } catch (std::exception const&) { rosterEntry = 0; }
 
         if (rosterEntry == 0)
         {
@@ -144,7 +146,7 @@ public:
         }
 
         uint32 slot = 0;
-        try { slot = std::stoul(str); } catch (...) { slot = 0; }
+        try { slot = std::stoul(str); } catch (std::exception const&) { slot = 0; }
 
         if (slot < 1 || slot > Companion::MAX_SQUAD_SLOTS)
         {

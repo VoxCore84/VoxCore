@@ -19,6 +19,8 @@ CreatureOutfit::CreatureOutfit(uint8 race, Gender gender) : race(race), gender(g
 
 CreatureOutfit& CreatureOutfit::SetItemEntry(EquipmentSlots slot, uint32 item_entry, uint32 appearancemodid)
 {
+    if (slot >= EQUIPMENT_SLOT_END)
+        return *this;
     if (uint32 display = sDB2Manager.GetItemDisplayId(item_entry, appearancemodid))
         outfitdisplays[slot] = display;
     else

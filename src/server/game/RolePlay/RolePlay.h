@@ -1,5 +1,4 @@
-#ifndef _Roleplay_H
-#define _Roleplay_H
+#pragma once
 
 #include "ObjectMgr.h"
 #include "GameObject.h"
@@ -173,5 +172,3 @@ private:
 };
 
 #define sRoleplay Roleplay::instance()
-
-#endif

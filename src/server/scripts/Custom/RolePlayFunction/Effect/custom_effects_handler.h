@@ -22,6 +22,13 @@ namespace Noblegarden
             std::map<uint32, EffectData*> Effects;
             uint32 LastEffectCastTimer = 0;
 
+            ~EffectStore()
+            {
+                for (auto& [key, data] : Effects)
+                    delete data;
+                Effects.clear();
+            }
+
             bool HasEffect(uint32 id);
             void AddEffect(uint32 id, EffectData* data);
             void RemoveEffect(uint32 id);
@@ -48,6 +55,12 @@ namespace Noblegarden
                 m_observer(observer),
                 m_unit_info(unitInfo) { };
 
+            ~SyncEvent()
+            {
+                delete m_unit_info;
+                m_unit_info = nullptr;
+            }
+
             bool Execute(uint64, uint32) override;
         };
 
@@ -56,6 +69,16 @@ namespace Noblegarden
         EffectsHandler()
         {
             Init();
+        }
+
+        ~EffectsHandler()
+        {
+            for (auto& [key, store] : m_player_stores)
+                delete store;
+            m_player_stores.clear();
+            for (auto& [key, store] : m_creature_stores)
+                delete store;
+            m_creature_stores.clear();
         }
 
         static EffectsHandler& GetInstance() 

@@ -54,6 +54,8 @@ public:
     CreatureOutfit& SetItemEntry(EquipmentSlots slot, uint32 item_entry, uint32 appearancemodid = 0);
     CreatureOutfit& SetItemDisplay(EquipmentSlots slot, uint32 displayid)
     {
+        if (slot >= EQUIPMENT_SLOT_END)
+            return *this;
         outfitdisplays[slot] = displayid;
         return *this;
     }

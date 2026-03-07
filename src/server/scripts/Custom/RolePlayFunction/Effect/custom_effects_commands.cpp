@@ -48,6 +48,8 @@ namespace Noblegarden
         static bool HandleSelfAdd(ChatHandler* handler, uint32 id, Optional<uint32> mode)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             EffectsHandler::GetInstance().Add(player, id, mode.value_or(2), handler);
 
@@ -58,6 +60,8 @@ namespace Noblegarden
         static bool HandleSelfCast(ChatHandler* handler, uint32 id, float duration)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
             auto select = player->GetSelectedUnit();
             auto target = select ? select : player;
 
@@ -70,6 +74,8 @@ namespace Noblegarden
         static bool HandleSelfChannel(ChatHandler* handler, uint32 id)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             if (auto target = player->GetSelectedUnit())
             {
@@ -83,6 +89,8 @@ namespace Noblegarden
         static bool HandleSelfToggle(ChatHandler* handler, uint32 id, Optional<uint32> mode)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             EffectsHandler::GetInstance().Toggle(player, id, mode.value_or(2), handler);
 
@@ -93,6 +101,8 @@ namespace Noblegarden
         static bool HandleSelfRemove(ChatHandler* handler, uint32 id)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             EffectsHandler::GetInstance().Remove(player, id, handler);
 
@@ -103,6 +113,8 @@ namespace Noblegarden
         static bool HandleSelfReset(ChatHandler* handler)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             EffectsHandler::GetInstance().Reset(player, handler);
 
@@ -113,6 +125,8 @@ namespace Noblegarden
         static bool HandleTargetAdd(ChatHandler* handler, uint32 id, Optional<uint32> mode)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             if (auto target = player->GetSelectedUnit())
             {
@@ -126,6 +140,8 @@ namespace Noblegarden
         static bool HandleTargetToggle(ChatHandler* handler, uint32 id, Optional<uint32> mode)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             if (auto target = player->GetSelectedUnit())
             {
@@ -139,6 +155,8 @@ namespace Noblegarden
         static bool HandleTargetRemove(ChatHandler* handler, uint32 id)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             if (auto target = player->GetSelectedUnit())
             {
@@ -152,6 +170,8 @@ namespace Noblegarden
         static bool HandleTargetReset(ChatHandler* handler)
         {
             auto player = handler->GetPlayer();
+            if (!player)
+                return false;
 
             if (auto target = player->GetSelectedUnit())
             {

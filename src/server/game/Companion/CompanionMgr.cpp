@@ -3,7 +3,6 @@
 #include "Creature.h"
 #include "DatabaseEnv.h"
 #include "Log.h"
-#include "Map.h"
 #include "MovementDefines.h"
 #include "MotionMaster.h"
 #include "ObjectAccessor.h"

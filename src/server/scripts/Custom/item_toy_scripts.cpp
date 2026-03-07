@@ -113,7 +113,8 @@ class spell_bowl_of_glowing_pufferfish : public SpellScript
     void HandleOnCast()
     {
         Unit* caster = GetCaster();
-        assert(caster);
+        if (!caster)
+            return;
 
         if (Player* player = caster->ToPlayer())
         {
