@@ -31,21 +31,7 @@ void AddSC_CompanionScripts();
 void AddSC_PlayerMorphScripts();
 void AddSC_wormhole_generators();
 void AddSC_clear_transmog_scripts();
-
-// Spell Audit — auto-generated per-class spell scripts
-void AddSC_dk_spell_audit();
-void AddSC_dh_spell_audit();
-void AddSC_druid_spell_audit();
-void AddSC_evoker_spell_audit();
-void AddSC_hunter_spell_audit();
-void AddSC_mage_spell_audit();
-void AddSC_monk_spell_audit();
-void AddSC_paladin_spell_audit();
-void AddSC_priest_spell_audit();
-void AddSC_rogue_spell_audit();
-void AddSC_shaman_spell_audit();
-void AddSC_warlock_spell_audit();
-void AddSC_warrior_spell_audit();
+void AddSC_maxrep_command();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -65,19 +51,6 @@ void AddCustomScripts()
     AddSC_PlayerMorphScripts();
     AddSC_wormhole_generators();
     AddSC_clear_transmog_scripts();
+    AddSC_maxrep_command();
 
-    // Spell Audit — auto-generated per-class spell scripts
-    AddSC_dk_spell_audit();
-    AddSC_dh_spell_audit();
-    AddSC_druid_spell_audit();
-    AddSC_evoker_spell_audit();
-    AddSC_hunter_spell_audit();
-    AddSC_mage_spell_audit();
-    AddSC_monk_spell_audit();
-    AddSC_paladin_spell_audit();
-    AddSC_priest_spell_audit();
-    AddSC_rogue_spell_audit();
-    AddSC_shaman_spell_audit();
-    AddSC_warlock_spell_audit();
-    AddSC_warrior_spell_audit();
 }

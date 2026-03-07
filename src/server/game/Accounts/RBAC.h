@@ -824,6 +824,7 @@ enum RBACPermissions
 
     RBAC_PERM_COMMAND_OUTFIT                                = 3007,
     RBAC_PERM_COMMAND_COMP                                  = 3008,
+    RBAC_PERM_COMMAND_MAXREP                                = 3009,
     RBAC_PERM_MAX
 };
 
