@@ -3,8 +3,22 @@
   "permissions": {
     "allow": [
       "Bash(*)",
-      "Read(C:/Dev/RoleplayCore/**)",
+      "Read(*)",
       "Edit(C:/Dev/RoleplayCore/**)",
+      "Write(C:/Dev/RoleplayCore/**)",
+      "Glob(*)",
+      "Grep(*)",
+      "Agent(*)",
+      "LSP",
+      "NotebookEdit(*)",
+      "TaskCreate(*)",
+      "TaskGet(*)",
+      "TaskList(*)",
+      "TaskOutput(*)",
+      "TaskStop(*)",
+      "TaskUpdate(*)",
+      "TeamCreate(*)",
+      "TeamDelete(*)",
       "mcp__mysql__*",
       "mcp__wago-db2__*",
       "mcp__codeintel__*"
