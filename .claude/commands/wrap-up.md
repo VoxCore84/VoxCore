@@ -88,11 +88,30 @@ Format:
 
 If a `## Next Session` section already exists, **replace it entirely** with fresh suggestions. Stale next-session items are worse than none.
 
-### Step 7: Final report
+### Step 7: Session summary
 
-Output a summary:
+Write a **"What We Did"** section that gives the user (and future sessions) a clear picture of everything accomplished. This is the most valuable part of the wrap-up — it prevents re-analysis in future sessions.
+
+Structure it as a numbered list of major accomplishments. For each item:
+- **Bold title** — what category of work (e.g., "Server Log Audit", "Transmog Infrastructure")
+- 2-3 sentences of what was done, key findings, and artifacts produced
+- Reference specific files created/modified, commit hashes, or metrics where relevant
+
+Guidelines:
+- Group related work together (don't list every file edit separately)
+- Include quantitative results where available (rows fixed, bugs catalogued, files changed)
+- Mention any agents launched and what they found
+- Note anything deployed-but-unverified or left for next session
+- Keep each item to 3-4 lines max — this is a summary, not a narrative
+
+Then output the operational summary:
 ```
 ## Session Wrap-Up
+
+### What We Did
+1. **Category** — description of work, key outputs, metrics
+2. **Category** — description of work, key outputs, metrics
+...
 
 ### Committed
 - [commit hash] message (or "nothing to commit")
