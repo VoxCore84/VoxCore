@@ -41,6 +41,8 @@ WowPacketParser reads raw `.pkt` files (the recordings from Ymir) and converts t
 
 > **Important distinction:** You need the **.NET Runtime**, not the full .NET SDK. The Runtime is smaller and is all you need to *run* WPP. The SDK is only needed if you want to compile WPP from source code.
 
+> **Keep WPP updated:** After each WoW patch/build update, grab the latest WPP nightly build. Older versions may not be able to parse `.pkt` files captured from newer WoW builds.
+
 ---
 
 ## Step 1: Install .NET 9.0 Runtime
@@ -153,6 +155,30 @@ SQL statements ready for database import. Contains:
 | Vendor inventories | `INSERT INTO npc_vendor (entry, item, ...) VALUES (...)` |
 | Gameobject spawns | `INSERT INTO gameobject (guid, id, map, position_x, ...) VALUES (...)` |
 | And much more | Gossip menus, trainer data, loot tables, waypoints, etc. |
+
+---
+
+## Sanitize Your Sniff (Remove Personal Data)
+
+If you want to strip your personal information from a `.pkt` file before sharing it, WPP can create a clean copy with all account data, friends lists, and billing info removed. The cleaned file keeps all the game data (NPCs, quests, spells, etc.) intact.
+
+### How to Sanitize
+
+Run this command from your WPP folder:
+
+```
+WowPacketParser.exe --DumpFormat 2 --IgnoreFilters "AUTH,CONTACT,FRIEND,BATTLE_NET,ACCOUNT_INFO,ACCOUNT_PROFILE,WHO_IS,RAF_ACCOUNT,TWITTER,SOCIAL_CONTRACT,ACCOUNT_STORE" "C:\path\to\your\sniff.pkt"
+```
+
+**What this does:**
+- `DumpFormat 2` tells WPP to output a new `.pkt` file (instead of text/SQL)
+- `IgnoreFilters` tells it to skip all packets that contain personal data (login info, friends list, account details, etc.)
+- The output file (named something like `sniff_excerpt.pkt`) will appear next to your original
+- The new file has a **clean header** with zeroed-out session keys — no identifying info remains
+
+**The cleaned `.pkt` file is safe to share.** It contains all the game world data we need and none of your personal information.
+
+> **This is optional.** We strip personal data on our end during parsing anyway. But if you'd rather not send personal info at all, this gives you full control.
 
 ---
 

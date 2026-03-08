@@ -115,38 +115,40 @@ Quest data is especially valuable because it's complex — each quest has offer 
 
 ## What VoxCore Needs Most Right Now
 
-Not all sniff data is equally urgent. Here's what we need the most, from highest to lowest priority:
+Not all sniff data is equally urgent. Midnight just launched — here's what we need the most, from highest to lowest priority:
 
 ### Highest Priority
 
 | Content | Why |
 |---------|-----|
-| **New Midnight 12.x zones** | Brand new content with little to no existing coverage |
-| **Midnight story/campaign quests** | Quest chains are the hardest data to reconstruct without sniffs |
-| **New dungeons and raids** | Boss encounters, trash mob data, loot tables |
+| **Silvermoon City** | The expansion's main hub — completely rebuilt and tripled in size. Hundreds of NPCs, vendors, trainers, quest givers. Walk through every building, talk to every NPC, browse every vendor |
+| **Eversong Woods** (revamped) | The first leveling zone — includes the old Ghostlands (now healed) and Isle of Quel'Danas, all merged into one zone |
+| **Midnight campaign/story quests** | Quest chains are the hardest data to reconstruct without sniffs — do every quest you can |
 
 ### High Priority
 
 | Content | Why |
 |---------|-----|
-| **Capital cities** (Dornogal, Stormwind, Orgrimmar, etc.) | Hundreds of NPCs, vendors, trainers, portals per city |
-| **Quest hubs and outposts** | Full quest chains from start to finish |
-| **Vendors and trainers** everywhere | Inventory data only comes from direct interaction |
+| **Zul'Aman** (zone) | The Amani troll territory — second leveling zone with Loa temples and the rebuilt Atal'Aman |
+| **Harandar** | Bioluminescent fungal jungle zone — Haranir homeland |
+| **Voidstorm** | Final zone — Xal'atath's stronghold, void energy, endgame content |
+| **Midnight dungeons** | Windrunner Spire, Magisters' Terrace, Murder Row, Den of Nalorakk, Maisara Caverns, Blinding Vale, Nexus-Point Xenas, Voidscar Arena |
 
 ### Medium Priority
 
 | Content | Why |
 |---------|-----|
+| **Vendors and trainers** everywhere in Quel'Thalas | Inventory data only comes from direct interaction — browse full lists |
 | **Profession trainers and crafting** | Recipe data, crafting UI interactions |
 | **Following patrolling NPCs** | Waypoint paths require tracking the full route |
-| **Battlegrounds and arenas** | PvP environment data |
+| **Delves** (11 in Midnight) | Shadow Enclave, Collegiate Calamity, The Darkway, Twilight Crypts, and more |
 
 ### Lower Priority (Still Useful!)
 
 | Content | Why |
 |---------|-----|
-| **Old expansion zones** | We have some data already, but sniffs help verify accuracy |
-| **Sitting AFK in a city** | Only captures what's in immediate view, but still picks up some data |
+| **Other capital cities** (Stormwind, Orgrimmar, Dornogal, etc.) | Updated NPCs, portals, vendors |
+| **Old expansion zones** | We have some data already, but sniffs help verify accuracy and catch updates |
 
 ---
 
@@ -219,14 +221,14 @@ Yes, and it's extremely valuable! PTR/Beta often has the newest content before i
 **Q: Do I need to be max level?**
 No. Low-level content is just as valuable. Starter zones, leveling quests, and early-game NPCs all need data.
 
-**Q: Can I sniff Classic/TBC/MoP Classic too?**
-Yes. Ymir has releases for Classic Era (1.15.x), TBC Classic (2.5.x), Titan Classic (3.80.x), and MoP Classic (5.5.x). Grab the matching release from the [Ymir releases page](https://github.com/TrinityCore/ymir/releases).
-
 **Q: I found a bug or weird behavior in retail — should I still submit that sniff?**
 Absolutely. Bugs in retail are still real data points. Submit everything and let us sort it out during parsing.
 
 **Q: How big are the `.pkt` files?**
 A typical 1-2 hour session produces 50-500 MB. They compress very well — expect 80-90% reduction with 7z or zip, so a 300 MB `.pkt` might compress down to 30-60 MB.
+
+**Q: Ymir stopped working after a WoW patch — what happened?**
+Every time WoW gets a build update, you need to download the latest Ymir release to match. Check the [Ymir Releases page](https://github.com/TrinityCore/ymir/releases) for an updated version. This usually drops within a few days of a WoW patch.
 
 **Q: My `.pkt` file seems really small — did something go wrong?**
 If it's under ~1 MB after several minutes of play, something may be off. Check the [Ymir Setup troubleshooting section](https://gist.github.com/VoxCore84/14a47790f63a6f97042a6301210579ea#troubleshooting). Common causes: forgot to clear cache, or Ymir started after WoW.
