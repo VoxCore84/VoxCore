@@ -111,7 +111,7 @@ sql/
 
 - **MCP servers**: `wago-db2` (DB2 CSV queries), `mysql` (direct DB access), `codeintel` (C++ symbol lookup)
 - **LSP plugins**: `clangd-lsp` (C++), `lua-lsp` (Lua), `github` (PRs/issues)
-- **19 slash commands**: `/build-loop`, `/check-logs`, `/parse-errors`, `/apply-sql`, `/soap`, `/lookup-spell`, `/lookup-item`, `/lookup-creature`, `/lookup-area`, `/lookup-faction`, `/lookup-emote`, `/lookup-sound`, `/decode-pkt`, `/parse-packet`, `/new-script`, `/new-sql-update`, `/smartai-check`, `/transmog-correct`, `/wrap-up`
+- **22 slash commands**: `/build-loop`, `/check-logs`, `/parse-errors`, `/apply-sql`, `/soap`, `/lookup-spell`, `/lookup-item`, `/lookup-creature`, `/lookup-area`, `/lookup-faction`, `/lookup-emote`, `/lookup-sound`, `/decode-pkt`, `/parse-packet`, `/new-script`, `/new-sql-update`, `/smartai-check`, `/transmog-correct`, `/transmog-implement`, `/transmog-status`, `/todo`, `/wrap-up`
 - **External repos**: wago tooling (`wago/`), tc-packet-tools (`tools-dev/tc-packet-tools/`), code-intel (`tools-dev/code-intel/`), claude-skills (`tools-dev/claude-skills/`)
 - **External tools**: `ExtTools/` (WowPacketParser, wow.tools.local, DBC2CSV, Arctium, etc.)
 - **GitHub**: `VoxCore84/RoleplayCore` (private), `gh` CLI authenticated
@@ -178,9 +178,9 @@ Never use routing DT values where behavioral ADT values belong, or vice versa.
 
 30 total rows per outfit: 12 armor (SlotOption=0) + 9 MH options + 9 OH options.
 
-**Armor rows** (slot, option=0):
-Head(0,0), Shoulder-Primary(1,0), Shoulder-Secondary(2,0), Waist(6,0), Chest(4,0),
-Wrist(9,0), Hands(10,0), Feet(11,0), Legs(7,0), Tabard(8,0), Back(3,0), Shirt(5,0)
+**Armor rows** (TransmogOutfitSlot enum, option=0):
+Head(0,0), Shoulder-Primary(1,0), Shoulder-Secondary(2,0), Back(3,0), Chest(4,0),
+Tabard(5,0), Shirt/Body(6,0), Wrist(7,0), Hands(8,0), Waist(9,0), Legs(10,0), Feet(11,0)
 
 **MH weapon option wire order**: 1, 6, 2, 3, 7, 8, 9, 10, 11
 **OH weapon option wire order**: 1, 6, 7, 5, 4, 8, 9, 10, 11

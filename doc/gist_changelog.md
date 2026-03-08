@@ -2,6 +2,51 @@ RoleplayCore â€” Session Changelog (WoW 12.x private server)
 
 
 
+## Mar 8 2026
+
+### Session 106 -- Meta Infrastructure + Gist Updates
+- **Transmog bug tracker**: Created `transmog-bugtracker.md` — single source of truth for all transmog bugs (3 CRITICAL, 6 HIGH, 4 MEDIUM, 4 LOW)
+- **New skills**: `/transmog-implement` (pick & fix next bug), `/transmog-status` (quick bug overview)
+- **Comprehensive transmog report**: `doc/transmog_implementation_report.md` — standalone reference for implementation sessions
+- **Gist updates**: All 3 gists synced to current state (DB sizes, session history)
+- **Server logs audit**: Clean — zero crashes/fatals, only unhandled opcodes + SmartAI warnings
+
+### Session 105b -- Transmog DeepDive Wiki
+- **1,500-line authoritative wiki** from 54 source Lua/XML files (`doc/transmog_deepdive_wiki.md`)
+- **4 new memory files**: transmog-enums, transmog-api-reference, transmog-ui-architecture, transmog-updatefields
+- **Critical correction**: DisplayType values in cheatsheet were wrong — fixed via DeepDive source analysis
+- **UpdateField structures**: Full WPP-derived struct layouts for TransmogOutfitSlotData
+
+### Session 105 -- Transmog Cheatsheet Update
+- Updated `doc/transmog_cheatsheet.md` with corrected DisplayType values and opcodes
+
+### Session 104 -- Draconic Diff Tool + Stormwind Cleanup
+- **`tools/diff_draconic.py`**: Zone-by-zone world DB diff vs Draconic-WOW (build 66263, named pipe)
+- **Stormwind findings**: 7 missing `phase_area` entries (root cause of invisible NPCs), portal fixes, board dedup
+- **`.npc copy` command**: Code complete in `npc_copy_command.cpp`
+- **Comprehensive cleanup plan**: `doc/world_db_cleanup_plan.md` — 9 zones remaining
+- Commit `e90f4da5bc`
+
+### Session 103 -- NPC Tooling
+- `.npc copy` command implementation
+- Crash investigation (MoveSplineInit)
+
+### Session 102 -- Collection Unlock Commands
+- **New commands**: `.maxrep`, `.maxachieve`, `.maxtitles` — unlock all reputations/achievements/titles
+- **Arcane Waygate**: Custom spell 1900028, gossip menu, teleport destinations
+- **RBAC QA**: Permission audit and cleanup
+- Commit `c1d17d983b`
+
+### Session 101 -- SpellAudit Stub Cleanup
+- Removed 1,842 broken C++ spell script stubs (empty handlers causing load failures)
+- Registered Sweeping Strikes + Beacon of Light (real implementations)
+- Commit `5eb5883fb4`
+
+### Session 100 -- CC Lighthouse + PWA
+- Command Center Lighthouse score 93/100
+- PWA support, WebP icons, auto-start in `start_all.bat`
+- Commit `da14bd911e`
+
 ## Mar 7 2026
 
 ### Session 99 -- Shortcut & Command Center QA Mega-Pass
@@ -520,26 +565,26 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 
 ---
 
-## Database State (March 7, 2026)
+## Database State (March 8, 2026)
 
 | Database | Size | Key Metric |
 |----------|------|------------|
-| world | 1,054 MB | 611K creatures, 226K templates, 286K SmartAI, 5.5K spell scripts |
-| hotfixes | 273 MB | 400K spell_name, 234K broadcast_text, 176K item_sparse (full 66263 restore) |
+| world | 1,086 MB | 611K creatures, 226K templates, 286K SmartAI, 5.5K spell scripts |
+| hotfixes | 811 MB | 400K spell_name, 234K broadcast_text, 176K item_sparse (full 66263 restore) |
 | characters | 4 MB | 5 characters, transmog outfits table ready |
-| auth | 1.2 MB | 2 accounts |
+| auth | 2.8 MB | 2 accounts |
 | roleplay | 0.1 MB | 4 tables (creature_extra, template_extra, custom_npcs, server_settings) |
 
 ## Repositories
 
 | Repo | Latest Commit | Purpose |
 |------|--------------|---------|
-| VoxCore84/RoleplayCore | `01aaf028e9` | Main server (154 commits this week) |
+| VoxCore84/RoleplayCore | `e90f4da5bc` | Main server |
 | VoxCore84/wago-tooling | `2351879` | Wago/LW/hotfix tools |
 | VoxCore84/tc-packet-tools | `821e74f` | WPP + packet analysis |
 | VoxCore84/code-intel | -- | C++ MCP server (416K symbols) |
 | VoxCore84/trinitycore-claude-skills | `25967f7` | Claude Code skills |
 | VoxCore84/roleplaycore-report | `9ead780` | GitHub Pages documentation site |
 
-*Updated March 7, 2026*
+*Updated March 8, 2026*
 

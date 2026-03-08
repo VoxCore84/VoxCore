@@ -1976,15 +1976,18 @@ function TransmogWardrobeItemsMixin:SetEquipped()
     C_TransmogOutfitInfo.SetPendingTransmog(
         slot, type, option,
         Constants.Transmog.NoTransmogID,           -- transmogID = 0
-        Enum.TransmogOutfitDisplayType.Equipped)    -- displayType = 3
+        Enum.TransmogOutfitDisplayType.Equipped)    -- displayType = 2
 end
 ```
 
 > **NOTE (Server)**: The `Unassigned` vs `Equipped` distinction is important:
 > - **Unassigned** (0): The outfit has NO opinion about this slot. When the outfit is applied, this slot is skipped — whatever transmog was there before remains.
-> - **Equipped** (3): The outfit explicitly says "show the real equipped item". When applied, any existing transmog on this slot is REMOVED.
 > - **Assigned** (1): The outfit specifies a particular appearance for this slot.
-> - **Hidden** (2): The outfit says "hide this slot" using the hidden appearance.
+> - **Equipped** (2): The outfit explicitly says "show the real equipped item". When applied, any existing transmog on this slot is REMOVED.
+> - **Hidden** (3): The outfit says "hide this slot" using the hidden appearance.
+> - **Disabled** (4): Paired placeholder slot, skip.
+>
+> *CORRECTED Session 105b: Previously had Hidden=2, Equipped=3. Source: TransmogOutfitConstantsDocumentation.lua*
 
 ---
 
@@ -2303,16 +2306,20 @@ Enum.TransmogSlot = {
 Enum.TransmogOutfitDisplayType = {
     Unassigned = 0,  -- No appearance set for this slot in the outfit
     Assigned   = 1,  -- A specific appearance is assigned
-    Hidden     = 2,  -- Slot is hidden (invisible)
-    Equipped   = 3,  -- Use the equipped item's real appearance
+    Equipped   = 2,  -- Use the equipped item's real appearance (CORRECTED: was 3)
+    Hidden     = 3,  -- Slot is hidden (invisible) (CORRECTED: was 2)
+    Disabled   = 4,  -- Paired placeholder / disabled slot
 }
 ```
 
 > **NOTE (Server)**: This enum is CRITICAL for outfit handling. When building outfit data:
 > - `Unassigned` (0) = slot has no entry in outfit → skip this slot during apply
 > - `Assigned` (1) = slot has a specific transmogID → apply that transmog
-> - `Hidden` (2) = slot should show hidden appearance → apply the hidden item transmog
-> - `Equipped` (3) = slot should show real gear → REMOVE any existing transmog
+> - `Equipped` (2) = slot should show real gear → REMOVE any existing transmog
+> - `Hidden` (3) = slot should show hidden appearance → apply the hidden item transmog
+> - `Disabled` (4) = paired placeholder → skip
+>
+> *CORRECTED Session 105b: Hidden=3 and Equipped=2 per TransmogOutfitConstantsDocumentation.lua*
 
 ### 9.3 TransmogPendingType (Enum, 0-3)
 
@@ -3054,7 +3061,7 @@ C_TransmogOutfitInfo.SetPendingTransmog(
     Enum.TransmogType.Appearance,             -- appearance, not illusion
     option,                                   -- weapon option
     hiddenAppearanceTransmogID,               -- the hidden visual's transmog ID
-    Enum.TransmogOutfitDisplayType.Hidden     -- displayType = 2
+    Enum.TransmogOutfitDisplayType.Hidden     -- displayType = 3 (CORRECTED: was 2)
 )
 ```
 
@@ -3106,7 +3113,7 @@ C_TransmogOutfitInfo.SetPendingTransmog(
     Enum.TransmogType.Appearance,
     option,
     Constants.Transmog.NoTransmogID,              -- transmogID = 0
-    Enum.TransmogOutfitDisplayType.Equipped        -- displayType = 3
+    Enum.TransmogOutfitDisplayType.Equipped        -- displayType = 2 (CORRECTED: was 3)
 )
 ```
 
@@ -3219,9 +3226,9 @@ Common debugging scenarios:
 
 2. **Hidden slot shows geometry**: The `isHideVisual` flag isn't set correctly in the visual info. Check `TransmogSlotVisualInfo.isHideVisual`.
 
-3. **Clear doesn't remove transmog**: The server is treating `Equipped` displayType as `Unassigned`. Verify the server processes `displayType = 3` as "remove transmog".
+3. **Clear doesn't remove transmog**: The server is treating `Equipped` displayType as `Unassigned`. Verify the server processes `displayType = 2` as "remove transmog". *(CORRECTED: was 3)*
 
-4. **Old transmog persists after outfit switch**: Outfit has `Unassigned` (0) for the slot. The server correctly skips it. If the player wants the slot cleared, the outfit needs `Equipped` (3) for that slot.
+4. **Old transmog persists after outfit switch**: Outfit has `Unassigned` (0) for the slot. The server correctly skips it. If the player wants the slot cleared, the outfit needs `Equipped` (2) for that slot. *(CORRECTED: was 3)*
 
 5. **Paperdoll shows wrong icon for hidden slot**: The server should return `displayType = Hidden` in `ViewedTransmogOutfitSlotInfo` so the client uses the hidden atlas.
 

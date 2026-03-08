@@ -16,7 +16,7 @@
 4. [C_Transmog API](#4-c_transmog-api)
 5. [C_TransmogCollection API](#5-c_transmogcollection-api)
 6. [C_TransmogOutfitInfo API](#6-c_transmogoutfitinfo-api)
-7. [C_TransmogSets API](#7-c_transmogsetsapi)
+7. [C_TransmogSets API](#7-c_transmogsetsapi)  <!-- note: anchor auto-generated -->
 8. [Data Structures](#8-data-structures)
 9. [Slot Architecture](#9-slot-architecture)
 10. [Outfit System: Lifecycle & Flow](#10-outfit-system-lifecycle--flow)
@@ -27,10 +27,13 @@
 15. [DressUp / Model Preview](#15-dressup--model-preview)
 16. [Custom Sets System](#16-custom-sets-system)
 17. [Hidden Appearances](#17-hidden-appearances)
-18. [Secondary Slots (Shoulders / Mainhand)](#18-secondary-slots)
+18. [Secondary Slots](#18-secondary-slots)
 19. [DisplayType: Stored vs Viewed Semantics](#19-displaytype-stored-vs-viewed-semantics)
 20. [Debug Tools & Lost Addons](#20-debug-tools--lost-addons)
 21. [Corrections to Previous Documentation](#21-corrections-to-previous-documentation)
+22. [Server-Side UpdateField Structures](#22-server-side-updatefield-structures-from-wowpacketparser--trinitycore)
+23. [Opcodes](#23-opcodes-build-66263)
+24. [External References](#24-external-references)
 
 ---
 
@@ -228,7 +231,7 @@ Bottom = 2    -- Weapons (MH, OH)
 ```
 CannotBeHidden   = 1    -- Weapons — cannot apply hidden appearance
 CanHaveIllusions = 2    -- Weapons — can have enchant visuals
-IsSecondarySlot  = 4    -- Left shoulder, off-hand
+IsSecondarySlot  = 4    -- Left shoulder only (NOT off-hand; OH has Flags=3)
 ```
 
 ### 3.7 TransmogOutfitSlotOptionFlags
@@ -490,13 +493,13 @@ MainHandTransmogIsPairedWeapon = 0
 | `GetItemIDForSource(imaID)` | number | ItemID from IMA ID |
 | `GetSlotForInventoryType(invType)` | luaIndex | Inventory type → transmog slot |
 | `GetSlotVisualInfo(transmogLocation)` | TransmogSlotVisualInfo | Base/applied/pending visual data |
-| `IsAtTransmogNPC()` | bool | Player at transmogifier? |
+| `IsAtTransmogNPC()` | bool | Player at transmogrifier? |
 
 ---
 
 ## 5. C_TransmogCollection API
 
-83 functions for appearance collection management.
+83 functions for appearance collection management. Key subset listed below; see `TransmogItemsDocumentation.lua` for the complete list.
 
 ### Core Appearance Queries
 
@@ -581,7 +584,7 @@ MainHandTransmogIsPairedWeapon = 0
 
 ## 6. C_TransmogOutfitInfo API
 
-69 functions — the **primary API for the 12.x outfit system**. This is the new API that replaces legacy transmog functions.
+59 functions + 8 events — the **primary API for the 12.x outfit system**. This is the new API that replaces legacy transmog functions.
 
 ### Outfit Management
 
@@ -694,7 +697,7 @@ MainHandTransmogIsPairedWeapon = 0
 
 ## 7. C_TransmogSets API
 
-40 functions for transmog set management.
+40 functions for transmog set management. Key subset listed below; see `TransmogSetsDocumentation.lua` for the complete list.
 
 | Function | Returns | Description |
 |---|---|---|
@@ -1322,7 +1325,20 @@ Custom set selection stored per specialization:
 
 This is the **most critical section for server implementation**.
 
-### Enum Values (Client-Side)
+### WARNING: Two Separate DisplayType Concepts
+
+There are **two completely different DisplayType systems** — never confuse them:
+
+1. **DB2 `ItemAppearance.DisplayType`** (range 0-15): Per-IMAID classification for **slot routing**.
+   Used in `DisplayTypeToEquipSlot()` to determine which equipment slot an appearance belongs to.
+   Values: 0=Head, 1=Shoulder, 2=Shirt, 3=Chest, 4=Waist, 5=Legs, 6=Feet, 7=Wrist, 8=Hands, 9=Back, 10=Tabard, 11=MH, 13=Shield→OH, 14=OH, 15=OH-alt.
+
+2. **`TransmogOutfitSlotData::AppearanceDisplayType`** (range 0-4): Per-slot **behavioral flag**
+   in ViewedOutfit/TransmogOutfits UpdateFields. This is the behavioral ADT documented below.
+
+**Never use routing DT values (0-15) where behavioral ADT values (0-4) belong, or vice versa.**
+
+### Behavioral ADT Enum Values (Client-Side)
 
 ```
 TransmogOutfitDisplayType:
@@ -1335,23 +1351,25 @@ TransmogOutfitDisplayType:
 
 ### Stored `TransmogOutfits` Context (Persistent DB Data)
 
-| State | ADT | IDT | transmogID | Notes |
-|-------|-----|-----|------------|-------|
-| Empty/unassigned | 0 | 0 | 0 | Row not populated |
-| Normal appearance | 1 | 0 | IMA ID | Standard transmog |
-| Hidden appearance | 3 | 0 | Hidden IMA ID | Must be real hidden IMA (see §17) |
-| Enchanted weapon (selected) | 1 | 1 | SpellItemEnchantmentID | Real enchant |
-| Paired placeholder (opts 8-11) | 4 | 4 | 0 | Artifact bookkeeping |
+| State | ADT | IDT | IMAID field | Enchant field | Notes |
+|-------|-----|-----|-------------|---------------|-------|
+| Empty/unassigned | 0 | 0 | 0 | 0 | Row not populated |
+| Normal appearance | 1 | 0 | IMA ID | 0 | Standard transmog |
+| Hidden appearance | 3 | 0 | Hidden IMA ID | 0 | Must be real hidden IMA (see §17) |
+| Enchanted weapon (selected) | 1 | 1 | IMA ID | SpellItemEnchantmentID | Weapon + enchant glow |
+| Paired placeholder (opts 8-11) | 4 | 4 | 0 | 0 | Artifact bookkeeping |
+
+> **Note**: The enchant ID goes in the `SpellItemEnchantmentID` field (UpdateField [4]), NOT in the `ItemModifiedAppearanceID` field (UpdateField [2]). An enchanted weapon row has BOTH an IMA ID for the weapon appearance AND a SpellItemEnchantmentID for the glow.
 
 ### Viewed `ViewedOutfit` Context (Live UpdateField)
 
-| State | ADT | IDT | transmogID | Notes |
-|-------|-----|-----|------------|-------|
-| Empty (show equipped) | 2 | 2 | 0 | Passthrough to equipped gear |
-| Normal appearance | 1 | 0 | IMA ID | Same as stored |
-| Hidden appearance | 3 | 0 | Hidden IMA ID | Same as stored |
-| Enchanted weapon (selected) | 1 | 1 | SpellItemEnchantmentID | Same as stored |
-| Paired placeholder (opts 8-11) | 4 | 4 | 0 | Same as stored |
+| State | ADT | IDT | IMAID field | Enchant field | Notes |
+|-------|-----|-----|-------------|---------------|-------|
+| Empty (show equipped) | 2 | 2 | 0 | 0 | Passthrough to equipped gear |
+| Normal appearance | 1 | 0 | IMA ID | 0 | Same as stored |
+| Hidden appearance | 3 | 0 | Hidden IMA ID | 0 | Same as stored |
+| Enchanted weapon (selected) | 1 | 1 | IMA ID | SpellItemEnchantmentID | Same as stored |
+| Paired placeholder (opts 8-11) | 4 | 4 | 0 | 0 | Same as stored |
 
 ### Key Difference
 

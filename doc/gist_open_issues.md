@@ -45,11 +45,12 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ---
 
-### Talent Spell Audit -- PIPELINE COMPLETE, STUBS APPLIED
-- **1,842 C++ spell script stubs** generated across 13 per-class files (session 88)
-- **SQL applied**: 114 serverside_spell stubs, 18 spell_proc entries, 1,888 spell_script_names (session 98)
-- **DB state**: 5,467 spell_script_names, 4,503 serverside_spells
-- **Next**: Implement actual spell logic in the generated stub files
+### Talent Spell Audit -- PIPELINE COMPLETE, STUBS REMOVED
+- **1,842 C++ stubs generated** (session 88), then **removed** (session 101) — empty handlers caused load failures
+- **SQL still applied**: 114 serverside_spell stubs, 18 spell_proc entries, 1,888 spell_script_names
+- **DB state**: 5,470 spell_script_names, 4,503 serverside_spells
+- **13 RED / 84 YELLOW remaining** — need real C++ implementations
+- **Next**: Implement actual spell logic using SimC references (991 spells have behavioral refs)
 
 ### Companion Squad -- `companion_roster` Table Missing
 - `characters.companion_roster` table does NOT exist yet
@@ -76,6 +77,13 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 - Orgrimmar portal room still uses BC-era GO 323854 / spell 121855 â†’ old Silvermoon (Map 530)
 - Needs GO 613810 with Midnight-era teleport spell pointing to new coords (Map 0)
 - Other Silvermoon portals already fixed (session 58)
+
+### Draconic Diff -- 9 Zones Remaining
+- `tools/diff_draconic.py` — zone-by-zone world DB diff vs Draconic-WOW (build 66263)
+- **Stormwind DONE** (session 104): 7 missing phase_area, portal fixes, board dedup
+- **Next**: Orgrimmar (zone 1637, map 1), then 8 more cities
+- **Global phase_area audit** needed after zone diffs complete
+- Plan: `doc/world_db_cleanup_plan.md`
 
 ### Dead HandleTransmogrifyItems Handler
 - `TransmogrificationHandler.cpp` lines 172-567 â€” 400 lines of dead code
@@ -207,5 +215,5 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ---
 
-*Updated March 7, 2026 (session 99)*
+*Updated March 8, 2026 (session 106)*
 

@@ -1,7 +1,7 @@
 # RoleplayCore Database Report
 ## Data Quality & Optimization Summary
 **Prepared for CaptainCore (LoreWalkerTDB)**
-**March 7, 2026 | VoxCore Project — WoW 12.x / Midnight**
+**March 8, 2026 | VoxCore Project — WoW 12.x / Midnight**
 
 > **TL;DR** — Imported ~1M rows from LoreWalkerTDB, repaired 103K hotfix entries, removed 10.6M redundant rows (97.8%), fixed 78K NPCs, added 1.6M item locale translations, and cut server startup from 3m24s → 17s. All tooling is open and reproducible.
 
