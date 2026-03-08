@@ -110,7 +110,7 @@ These values come from retail 66263 packet captures and are HIGH confidence.
 ### 30-Row Slot Layout
 
 Every outfit has exactly 30 rows:
-- 12 armor rows (slot, option=0): Head(0), Shoulder-Primary(1), Shoulder-Secondary(2), Waist(6), Chest(4), Wrist(9), Hands(10), Feet(11), Legs(7), Tabard(8), Back(3), Shirt(5)
+- 12 armor rows (slot, option=0): Head(0), Shoulder-Primary(1), Shoulder-Secondary(2), Back(3), Chest(4), Tabard(5), Shirt/Body(6), Wrist(7), Hands(8), Waist(9), Legs(10), Feet(11)
 - 9 MH weapon options: wire order 1, 6, 2, 3, 7, 8, 9, 10, 11
 - 9 OH weapon options: wire order 1, 6, 7, 5, 4, 8, 9, 10, 11
 
