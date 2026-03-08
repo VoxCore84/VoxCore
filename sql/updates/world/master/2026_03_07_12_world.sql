@@ -1,15 +1,15 @@
 -- ============================================================
--- Arcane Waygate -- invisible NPC + serverside spell
+-- Arcane Waygate — floating book NPC + hotfix spell
 -- Spell 1900028: cast to open teleport gossip menu
--- NPC 400100: invisible waygate creature (summoned by spell)
+-- NPC 400100: floating book creature (summoned by spell)
 -- ============================================================
 
--- Creature template: invisible, passive, gossip-enabled
+-- Creature template: passive, gossip-enabled, floating book
 DELETE FROM `creature_template` WHERE `entry` = 400100;
 INSERT INTO `creature_template` (`entry`, `name`, `subname`, `faction`, `npcflag`, `speed_walk`, `speed_run`, `scale`, `Classification`, `unit_class`, `unit_flags`, `unit_flags2`, `type`, `AIName`, `flags_extra`, `ScriptName`) VALUES
 (400100, 'Arcane Waygate', 'Teleporter', 35, 1, 1, 1, 1, 0, 1, 0x02000000, 0, 10, '', 0x80, 'npc_arcane_waygate');
 
--- Display model: invisible stalker (same as wormhole NPC 35646)
+-- Display model: invisible stalker (proven working, display 29886)
 DELETE FROM `creature_template_model` WHERE `CreatureID` = 400100;
 INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`, `VerifiedBuild`) VALUES
 (400100, 0, 29886, 1, 1, 66263);
