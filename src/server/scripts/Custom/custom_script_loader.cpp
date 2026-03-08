@@ -32,6 +32,9 @@ void AddSC_PlayerMorphScripts();
 void AddSC_wormhole_generators();
 void AddSC_clear_transmog_scripts();
 void AddSC_maxrep_command();
+void AddSC_maxtitles_command();
+void AddSC_maxachieve_command();
+void AddSC_arcane_waygate();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -52,5 +55,8 @@ void AddCustomScripts()
     AddSC_wormhole_generators();
     AddSC_clear_transmog_scripts();
     AddSC_maxrep_command();
+    AddSC_maxtitles_command();
+    AddSC_maxachieve_command();
+    AddSC_arcane_waygate();
 
 }

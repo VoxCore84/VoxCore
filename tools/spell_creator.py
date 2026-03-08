@@ -685,7 +685,7 @@ def template_passive_aura(spell_id: int, name: str, aura_type: int,
     """Simple passive aura spell."""
     s = SpellData(
         spell_id=spell_id, name=name,
-        attributes=[0x10000400] + [0]*16,
+        attributes=[0x10000040] + [0]*16,  # SPELL_ATTR0_PASSIVE (0x40) | NOT_SHAPESHIFT (0x10000000)
         duration_index=21,   # Infinite
         range_index=1,       # Self
         school_mask=1,

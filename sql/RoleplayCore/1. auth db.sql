@@ -88,6 +88,35 @@ INSERT IGNORE INTO `rbac_linked_permissions` VALUES (199, 1019);
 INSERT IGNORE INTO `rbac_linked_permissions` VALUES (199, 1020);
 INSERT IGNORE INTO `rbac_linked_permissions` VALUES (199, 1021);
 
+INSERT IGNORE INTO `rbac_permissions` VALUES (1007, 'Command: .typing');
+INSERT IGNORE INTO `rbac_permissions` VALUES (2004, 'Command: .blackmarket');
+INSERT IGNORE INTO `rbac_permissions` VALUES (2005, 'Command: .blackmarket set duration');
+INSERT IGNORE INTO `rbac_permissions` VALUES (2113, 'Command: .customnpc unequip armor');
+INSERT IGNORE INTO `rbac_permissions` VALUES (2114, 'Command: .customnpc unequip left');
+INSERT IGNORE INTO `rbac_permissions` VALUES (2115, 'Command: .customnpc unequip ranged');
+INSERT IGNORE INTO `rbac_permissions` VALUES (2116, 'Command: .customnpc unequip right');
+INSERT IGNORE INTO `rbac_permissions` VALUES (3005, 'Command: .scenario all');
+INSERT IGNORE INTO `rbac_permissions` VALUES (3006, 'Command: .npc set aura');
+INSERT IGNORE INTO `rbac_permissions` VALUES (3007, 'Command: .outfit');
+INSERT IGNORE INTO `rbac_permissions` VALUES (3008, 'Command: .comp');
+INSERT IGNORE INTO `rbac_permissions` VALUES (3009, 'Command: .maxrep');
+INSERT IGNORE INTO `rbac_permissions` VALUES (3010, 'Command: .maxtitles');
+INSERT IGNORE INTO `rbac_permissions` VALUES (3011, 'Command: .maxachieve');
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (199, 1007);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 2004);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 2005);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 2113);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 2114);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 2115);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 2116);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 3005);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 3006);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 3007);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 3008);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 3009);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 3010);
+INSERT IGNORE INTO `rbac_linked_permissions` VALUES (193, 3011);
+
 CREATE TABLE IF NOT EXISTS `account_warband_groups` (
   `id` bigint(20) unsigned NOT NULL,
   `accountId` int(10) unsigned NOT NULL,
