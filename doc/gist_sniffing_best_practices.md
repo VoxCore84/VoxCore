@@ -10,7 +10,7 @@
 2. [Maximizing NPC Data](#maximizing-npc-data)
 3. [Maximizing Quest Data](#maximizing-quest-data)
 4. [Maximizing Spell & Visual Data](#maximizing-spell--visual-data)
-5. [What VoxCore Needs Most Right Now](#what-voxcore-needs-most-right-now)
+5. [What the Community Needs Most Right Now](#what-the-community-needs-most-right-now)
 6. [Session Planning Tips](#session-planning-tips)
 7. [Common Mistakes to Avoid](#common-mistakes-to-avoid)
 8. [FAQ](#faq)
@@ -113,9 +113,9 @@ Quest data is especially valuable because it's complex — each quest has offer 
 
 ---
 
-## What VoxCore Needs Most Right Now
+## What the Community Needs Most Right Now
 
-Not all sniff data is equally urgent. Midnight just launched — here's what we need the most, from highest to lowest priority:
+Not all sniff data is equally urgent. Midnight just launched — here's what the emulation community needs the most, from highest to lowest priority:
 
 ### Highest Priority
 
@@ -203,34 +203,64 @@ If you have alts, sniffing on them produces different and valuable data.
 
 ## FAQ
 
+---
+
 **Q: Does sniffing slow down my game?**
+
 No. Ymir captures packets at the network driver level with negligible performance impact. You won't notice any difference in FPS or latency.
 
+---
+
 **Q: Can I sniff while using addons?**
+
 Yes. Addons don't interfere with packet capture at all. Keep your UI setup exactly as you normally would.
 
+---
+
 **Q: How often should I sniff?**
+
 As often as you're willing! Even a single session covering one zone is valuable. Regular contributors who sniff weekly across different content are especially helpful, but there's no minimum commitment.
 
+---
+
 **Q: What if someone else already sniffed the same zone?**
+
 Multiple sniffs of the same area are actually useful — different characters may trigger different NPC interactions, quests, or phased content. Overlapping coverage is totally fine. Don't worry about duplicates.
 
+---
+
 **Q: Can I sniff on PTR/Beta servers?**
+
 Yes, and it's extremely valuable! PTR/Beta often has the newest content before it goes live. Use the `ymir_ptr.exe` binary included in the Ymir release.
 
+---
+
 **Q: Do I need to be max level?**
+
 No. Low-level content is just as valuable. Starter zones, leveling quests, and early-game NPCs all need data.
 
+---
+
 **Q: I found a bug or weird behavior in retail — should I still submit that sniff?**
+
 Absolutely. Bugs in retail are still real data points. Submit everything and let us sort it out during parsing.
 
+---
+
 **Q: How big are the `.pkt` files?**
+
 A typical 1-2 hour session produces 50-500 MB. They compress very well — expect 80-90% reduction with 7z or zip, so a 300 MB `.pkt` might compress down to 30-60 MB.
 
+---
+
 **Q: Ymir stopped working after a WoW patch — what happened?**
+
 Every time WoW gets a build update, you need to download the latest Ymir release to match. Check the [Ymir Releases page](https://github.com/TrinityCore/ymir/releases) for an updated version. This usually drops within a few days of a WoW patch.
 
+---
+
 **Q: My `.pkt` file seems really small — did something go wrong?**
+
 If it's under ~1 MB after several minutes of play, something may be off. Check the [Ymir Setup troubleshooting section](https://gist.github.com/VoxCore84/14a47790f63a6f97042a6301210579ea#troubleshooting). Common causes: forgot to clear cache, or Ymir started after WoW.
 
 ---

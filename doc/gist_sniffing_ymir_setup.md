@@ -104,7 +104,7 @@ You don't need to do anything special to verify — if the installer completed w
 
 ## Step 3: Your First Sniff Session
 
-> **Reminder:** You're sniffing on **Blizzard's live retail servers** — just regular WoW with your normal Battle.net account. You are NOT connecting to VoxCore or any private server. The sniffer records data from Blizzard's servers so we can use it on ours.
+> **Reminder:** You're sniffing on **Blizzard's live retail servers** — just regular WoW with your normal Battle.net account. You are NOT connecting to any private server. The sniffer records data from Blizzard's servers so it can be recreated on private servers.
 
 Now let's do your first capture. Follow these steps in order:
 
@@ -238,9 +238,9 @@ If you plan to sniff regularly, you can create a batch file that handles the cac
 
 ```batch
 @echo off
-title VoxCore Sniffer Session
+title WoW Sniffer Session
 echo ==========================================
-echo    VoxCore Packet Sniffer Launcher
+echo    WoW Packet Sniffer Launcher
 echo ==========================================
 echo.
 
@@ -296,30 +296,46 @@ pause
 
 ## Troubleshooting
 
+---
+
 ### "Windows protected your PC" / SmartScreen warning
 
 This is normal for programs downloaded from the internet that aren't signed by a major publisher.
+
 - Click **"More info"**
 - Then click **"Run anyway"**
+
+---
 
 ### Antivirus blocks or quarantines Ymir
 
 Some antivirus software flags packet capture tools because they interact with network traffic. Ymir is safe — it's an open-source project from TrinityCore.
+
 - Open your antivirus settings
 - Add an **exception/exclusion** for `ymir_retail.exe` (and `ymir_ptr.exe` if applicable)
 - Restore the file from quarantine if it was removed
 
+---
+
 ### Ymir starts but no `.pkt` file appears
 
 - **Did you start Ymir BEFORE launching WoW?** Ymir needs to be running first to catch the WoW connection.
+
 - **Is WoW using a VPN or proxy?** If WoW's traffic goes through a VPN, Ymir might be listening on the wrong network adapter. Try temporarily disconnecting your VPN.
+
 - **Did the session last long enough?** Very short sessions (login → immediate logout) might not produce a file. Play for at least a few minutes.
+
+---
 
 ### Ymir crashes or shows errors immediately
 
 - **Npcap not installed properly**: Re-run the Npcap installer and make sure you check **"WinPcap API-compatible Mode"**.
-- **Wrong Ymir version**: Make sure you downloaded the Ymir release that matches your WoW version (retail vs. Classic).
+
+- **Wrong Ymir version**: Make sure you downloaded the Ymir release that matches your WoW version.
+
 - **Try running as Administrator**: Right-click `ymir_retail.exe` → "Run as administrator".
+
+---
 
 ### "Npcap not found" or similar error
 
@@ -327,9 +343,12 @@ Some antivirus software flags packet capture tools because they interact with ne
 - Make sure to check **"WinPcap API-compatible Mode"** during installation
 - Restart your computer after installing
 
+---
+
 ### Where is my WoW installation folder?
 
 If you're not sure where WoW is installed:
+
 1. Open the **Battle.net** launcher
 2. Click on **World of Warcraft** in the sidebar
 3. Click the **gear icon** (settings) next to the Play button

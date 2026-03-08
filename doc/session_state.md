@@ -3,7 +3,7 @@
 **Read this FIRST in any new Claude Code tab.**
 This is the single source of truth for what all tabs are doing, what's done, what's blocked, and what to pick up next. Updated by whichever tab finishes work.
 
-**Last updated**: March 8, 2026 — Session 108 (consolidation)
+**Last updated**: March 8, 2026 — Session 109 (ImageMagick + sniffing docs)
 
 ---
 
@@ -13,6 +13,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 |-----|-----------|--------|-------|
 | Main (session 107) | Meta infrastructure, gist updates, coordination | COMPLETE | Commit `8aa10362ad`. Created session_state, bug tracker, skills, report |
 | Main (session 108) | Consolidation — review all transmog docs, fix errors, update gists/memory | COMPLETE | Slot ordering fix, sniffing docs tracked |
+| Main (session 109) | ImageMagick install + sniffing guide updates | COMPLETE | `8150cf3dd5` |
 | Transmog Tab | Bug fixes from `memory/transmog-bugtracker.md` | NOT STARTED | Run `/transmog-implement` to begin |
 | — | — | — | Add rows as tabs are opened |
 
@@ -157,6 +158,8 @@ Each zone produces a SQL file in `sql/exports/` and findings for review.
 
 | Session | What | Key Output |
 |---------|------|-----------|
+| 109 | ImageMagick + sniffing docs | Installed IM, updated Midnight priorities + WPP sanitize |
+| 108 | Transmog consolidation | Slot ordering fix, sniffing docs tracked |
 | 107 | Meta infrastructure | This file, bug tracker, skills, gist updates |
 | 106 | Wrap-up | Committed sessions 104-105b work |
 | 105b | Transmog DeepDive | `doc/transmog_deepdive_wiki.md`, 4 memory files |

@@ -1,4 +1,4 @@
-# VoxCore Packet Sniffing Guide
+# WoW Packet Sniffing Guide — Midnight 12.x
 
 ## What Is This About?
 
@@ -6,13 +6,13 @@ When you play World of Warcraft on Blizzard's live (retail) servers, the game co
 
 **Packet sniffing** means running a small, silent tool in the background while you play that **records** all of those packets into a file. You don't play any differently — you just play the game like normal, and the tool quietly saves everything the server sends to your game.
 
-After your session, you share that recording (a `.pkt` file) with us. We run it through a second tool that reads all that data and converts it into database entries we can load directly into VoxCore. The more `.pkt` files we get from different people playing in different zones, the more complete and accurate the server becomes.
+After your session, you share that recording (a `.pkt` file) with your project team. A second tool reads all that data and converts it into database entries that can be loaded directly into any TrinityCore-based server. The more `.pkt` files collected from different people playing in different zones, the more complete and accurate the server becomes.
 
 **Think of it like this:** You're basically helping us take a photograph of the retail game world, one zone at a time. Every NPC position, every quest, every vendor inventory — captured exactly as Blizzard built it.
 
 ## Important: You Sniff on Retail, Not on Our Server
 
-> **You will be playing on Blizzard's official live retail servers** — the same WoW you already play with your regular Battle.net account and subscription. You are NOT connecting to VoxCore or any private server to do this. The whole point is to capture data from Blizzard's servers so we can recreate it on ours.
+> **You will be playing on Blizzard's official live retail servers** — the same WoW you already play with your regular Battle.net account and subscription. You are NOT connecting to any private server to do this. The whole point is to capture data from Blizzard's servers so it can be recreated on private servers.
 
 ## What You'll Actually Be Doing
 
@@ -95,7 +95,7 @@ Even casual play sessions are valuable. Just walking through a town captures doz
 
 ### Is This Safe for My Account?
 
-**Has anyone ever been banned for this?** No. Ymir has been used by the TrinityCore community since 2019 (WoW patch 8.1.5) — that's 7+ years of continuous use — with **zero documented bans**. Packet sniffing in general has been a standard practice in the WoW emulation community for even longer. While Blizzard's Terms of Service broadly cover third-party tools, the practical risk of packet sniffing has historically been effectively zero.
+**Has anyone ever been banned for this?** No. Ymir has been used by the WoW emulation community since 2019 (WoW patch 8.1.5) — that's 7+ years of continuous use — with **zero documented bans**. Packet sniffing in general has been a standard practice in the community for even longer. While Blizzard's Terms of Service broadly cover third-party tools, the practical risk of packet sniffing has historically been effectively zero.
 
 **Why Ymir is fundamentally different from cheats/bots:**
 - It captures network traffic at the operating system level using a standard network driver (Npcap) — the same kind of driver used by IT professionals and network admins worldwide
@@ -121,4 +121,4 @@ Even casual play sessions are valuable. Just walking through a town captures doz
 
 ---
 
-*This guide is maintained by the VoxCore team. Last updated: March 2026.*
+*Last updated: March 2026.*

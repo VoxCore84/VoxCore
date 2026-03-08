@@ -27,7 +27,7 @@ WowPacketParser reads raw `.pkt` files (the recordings from Ymir) and converts t
    ```
    It shows both the raw ID and the human-readable name, making it easy to browse.
 
-2. **A `_world.sql` file** — SQL database statements that can be imported directly into a TrinityCore/VoxCore database. This contains creature spawns, quest data, vendor inventories, and everything else the sniff captured, formatted as INSERT/UPDATE queries.
+2. **A `_world.sql` file** — SQL database statements that can be imported directly into a TrinityCore-based database. This contains creature spawns, quest data, vendor inventories, and everything else the sniff captured, formatted as INSERT/UPDATE queries.
 
 ---
 
