@@ -12,7 +12,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Tab | Assignment | Status | Notes |
 |-----|-----------|--------|-------|
 | Main (session 107) | Meta infrastructure, gist updates, coordination | COMPLETE | Commit `8aa10362ad`. Created session_state, bug tracker, skills, report |
-| Main (session 108) | Consolidation — review all transmog docs, fix errors, update gists/memory | ACTIVE | Pre-operation knowledge consolidation |
+| Main (session 108) | Consolidation — review all transmog docs, fix errors, update gists/memory | COMPLETE | Slot ordering fix, sniffing docs tracked |
 | Transmog Tab | Bug fixes from `memory/transmog-bugtracker.md` | NOT STARTED | Run `/transmog-implement` to begin |
 | — | — | — | Add rows as tabs are opened |
 
