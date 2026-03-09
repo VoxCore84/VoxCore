@@ -159,12 +159,100 @@ sql/
 
 Full recipes, data source tables, and anti-patterns: auto-memory `debugging-methodology.md`
 
+## Completion Integrity — MANDATORY (Anti-Theater Protocol)
+
+**This exists because Claude Code has a systemic pattern of reporting tasks as complete when they are not. This is a P0 reliability rule.**
+
+### The Core Rule
+
+**Never claim completion of an action without showing the evidence that proves it.** "I did X" requires tool output proving X happened. No tool output = no claim.
+
+### Specific Prohibitions
+
+1. **No unverified success claims.** Never say "zero errors", "applied cleanly", "all tests passed", or equivalent unless you are quoting actual tool output from that exact operation. If you ran a SQL file, show the mysql output or check DBErrors.log and quote the result. If you didn't check, say "I didn't verify this."
+
+2. **No tautological QA.** Before running a verification query, ask: "Can this query return a result that would indicate failure?" If the answer is no — if it will always return a positive-looking result regardless of whether the operation succeeded — it is not verification. Do not present it as such. Examples of tautological QA:
+   - Checking row counts after an INSERT without knowing the expected count
+   - Running EXISTS on a table you just inserted into (it will always match)
+   - Comparing counts that include pre-existing data mixed with new data
+
+3. **No checklist amnesia.** When a coordination document (session_state.md, import guide, etc.) contains a numbered list of steps, explicitly track each step. Before writing a completion summary, re-read the source document and enumerate which steps were done and which were skipped. If any were skipped, say so.
+
+4. **No confidence inflation.** Match your confidence tone to your actual evidence:
+   - ✅ "Applied 7 SQL files. mysql reported 0 warnings on each. DBErrors.log shows no new entries since [timestamp]." — verified, specific
+   - ❌ "All 7 files applied cleanly — zero errors! ✨" — theatrical, unverified
+   - ✅ "I applied the file but didn't check the error log — want me to verify?" — honest
+   - ❌ "Everything looks good!" — meaningless without evidence
+
+5. **No omission-by-summary.** Do not write a celebratory summary that obscures skipped work. If 5 things were requested and 4 were done, the summary must say "4 of 5 done — [item] was not completed because [reason]." Never present partial work as complete work.
+
+6. **No unvalidated generated artifacts.** When writing SQL INSERT statements, DESCRIBE the target table first and explicitly verify the column count matches the VALUES count. When writing C++ code that references DB columns, verify the column names exist. Session 114 bug: a prior session wrote an INSERT with 32 Data values instead of 35 columns and reported it as complete. The schema was never checked.
+
+### Mid-Task Verification Gates
+
+**Do not batch verification to the end.** The completion checklist is a final gate, but failures happen *during* execution. Each step in a multi-step procedure is its own gate:
+
+- **After each SQL file application**: Check the output before applying the next file. If mysql reported errors, stop — do not continue applying remaining files and then "verify at the end."
+- **After each code generation step**: If you wrote an INSERT, verify column count NOW, not after writing 6 more files.
+- **After reading a coordination doc**: Extract actionable items NOW and list them, not "I'll remember to check later."
+- **General rule**: If a procedure doc says "verify X after step N," do it at step N. Do not defer it. Do not batch it. Do not skip it silently.
+
+### Default to Verification, Not Assertion
+
+**The confidence problem is not limited to completion summaries.** It shows up whenever Claude states things from memory instead of checking:
+
+- ❌ "The column is called `FactionID`" (from memory) → ✅ Run DESCRIBE, quote the result
+- ❌ "This should work" (assertion) → ✅ "I haven't tested this — want me to verify?"
+- ❌ "The table has 35 columns" (from memory) → ✅ Run DESCRIBE, count the output
+- ❌ "That spell ID exists" (assumption) → ✅ Run `/lookup-spell` or query `hotfixes.spell_name`
+
+**Rule: If you're about to state a fact about DB schema, column names, row counts, or system behavior — and you haven't verified it with a tool call in THIS session — either verify it now or flag it as unverified.** "I believe the column is called X but I haven't checked" is acceptable. Stating it as fact without checking is not.
+
+### Ask Before Silently Skipping
+
+**If a documented step exists and you're about to skip it, ASK.** Do not silently skip and report success. The cost of a one-line question is a 5-second interruption. The cost of silently skipping is invisible gaps the user discovers hours later.
+
+Examples:
+- "The import doc says to check DBErrors.log after each file — want me to do that now or skip it?"
+- "session_state.md says to apply _08_00 before restarting — should I do that first?"
+- "The procedure says to run a pre-import baseline count — want me to do that or skip it?"
+
+**Never silently skip a documented step.** Either do it, or ask if you should skip it. Those are the only two options.
+
+### Mandatory Completion Checklist
+
+Before writing ANY completion summary (after SQL application, multi-step procedures, bug fixes, imports, etc.), you MUST:
+
+1. **Re-read the source instructions** (the document, user message, or coordination file that defined the task)
+2. **Enumerate each required step** and note whether it was done, with evidence
+3. **Check for post-action verification steps** mentioned in the instructions (e.g., "check DBErrors.log after each file") — if they exist and you skipped them, do them now or say you skipped them
+4. **Check session_state.md** — did you update it as required?
+5. **State what you did NOT do** explicitly — omissions must be visible, not hidden
+
+### When Uncertain
+
+If you're not sure whether something succeeded, say so. "I believe this worked but I didn't verify the error log" is infinitely more useful than "Success! ✅". The user can handle uncertainty. The user cannot handle false certainty.
+
+### What These Rules Cannot Fully Fix
+
+These rules create friction in the right places, but the core tendency — generating confident-sounding text regardless of actual verification — is a model behavior, not a configuration bug. The user should:
+- **Assume claims are unverified** unless tool output is quoted inline
+- **Ask "show me the evidence"** if a summary lacks quoted output
+- **Treat "zero errors" without a log excerpt** the same as a CI pipeline with no test output — it means nothing
+
 ## Session Start — MANDATORY (runs automatically, no slash command needed)
 
 **Every new conversation MUST begin by doing these two things BEFORE responding to the user's first message:**
 
 1. **Read `doc/session_state.md`** (if it exists) — check Active Tabs, pending handoffs, file ownership claims
 2. **Read the `## Next Session` section of `todo.md`** from memory — this is your pre-loaded task list
+
+**Reading is not enough. You must EXTRACT and TRACK actionable items.** Session 114 bug: Claude read session_state.md which said "Apply _08_00 SQL before restarting" on line 48, then completely ignored that instruction. To prevent this:
+
+- After reading coordination docs, **list every actionable instruction** you found (one line each)
+- **Show these to the user**: "I found these pending items in session_state.md: [list]. Which should I handle?"
+- If you start work without completing a listed item, you must acknowledge the skip explicitly — "Note: session_state.md says to apply _08_00 but I'm deferring that because [reason]"
+- **Do not silently drop items.** If you read it, you own it until you explicitly hand it back or tell the user you're skipping it.
 
 If `doc/session_state.md` exists and has active tab assignments, announce what this tab should focus on. If the user's request conflicts with tab assignments, ask before proceeding.
 
@@ -212,11 +300,19 @@ The user runs multiple Claude Code tabs in Windows Terminal. Each tab is a separ
 - When done, update status and clear your claim
 - If the file doesn't exist or is stale, recreate it
 
+**Locking protocol — MANDATORY for multi-tab sessions:**
+1. **Before touching ANY database or shared file**: Re-read `doc/session_state.md` to check if another tab owns it
+2. **Before applying SQL**: Check the `Owned Files/DBs` column. If another tab claims that DB, STOP and ask the user
+3. **After applying SQL or editing shared files**: Update session_state.md with what you changed (table names, row counts, timestamps)
+4. **Before running a multi-step procedure**: Write your plan to session_state.md FIRST so the other tab can see it
+5. **Session 114 bug**: Two tabs applied overlapping SQL files because neither checked what the other had done. This is the exact scenario these rules prevent.
+
 **What goes in the handoff:**
 1. Exact slash command or instruction for the other tab
 2. Which files that tab owns (prevent merge conflicts)
 3. What this tab is NOT touching (so the other tab knows it's safe)
 4. Any context the other tab needs (DB state, build status, blockers)
+5. **What SQL files have already been applied** (with timestamps) — so the other tab doesn't re-apply them
 
 **Never do these in a single tab:**
 - Transmog fixes + world DB cleanup + spell audit → 3 tabs

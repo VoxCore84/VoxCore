@@ -74,6 +74,10 @@ constexpr float RAD_TO_DEG = 180.0f / static_cast<float>(M_PI);
 // Spell visual kit for the golden glow indicator on creature previews.
 constexpr uint32 PREVIEW_VISUAL_KIT = 39872;
 
+// 50% transparency aura — makes preview creatures look ghostly.
+// Same spell used by .gm visible (proven working on units).
+constexpr uint32 PREVIEW_GHOST_AURA = 37800;
+
 /// Send the canonical position message after any move/rotate.
 static void SendPositionMessage(ChatHandler* handler, Position const& pos)
 {
@@ -245,6 +249,7 @@ public:
 
             // Golden glow indicator
             preview->SendPlaySpellVisualKit(PREVIEW_VISUAL_KIT, 0, 0);
+            preview->AddAura(PREVIEW_GHOST_AURA, preview);
 
             PlacementPreview pv;
             pv.previewGuid = preview->GetGUID();
@@ -355,6 +360,7 @@ public:
         preview->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
         preview->ReplaceAllNpcFlags(NPCFlags(UNIT_NPC_FLAG_NONE));
         preview->SendPlaySpellVisualKit(PREVIEW_VISUAL_KIT, 0, 0);
+        preview->AddAura(PREVIEW_GHOST_AURA, preview);
 
         PlacementPreview pv;
         pv.previewGuid  = preview->GetGUID();
@@ -893,6 +899,7 @@ public:
                     nextCr->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
                     nextCr->ReplaceAllNpcFlags(NPCFlags(UNIT_NPC_FLAG_NONE));
                     nextCr->SendPlaySpellVisualKit(PREVIEW_VISUAL_KIT, 0, 0);
+                    nextCr->AddAura(PREVIEW_GHOST_AURA, nextCr);
 
                     PlacementPreview next;
                     next.previewGuid  = nextCr->GetGUID();

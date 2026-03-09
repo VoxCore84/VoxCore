@@ -20,7 +20,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Tooling Tab (115b) | Phase 1 transmog tooling — DT maps, enriched CSVs, bridge annotation | COMPLETE | No commit (gitignored files). Created `transmog_common_maps.py`, fixed 3 tools, regenerated enriched CSVs for 66263 |
 | Main (116) | Sniffing pipeline + accumulated commit | COMPLETE | `7ecad9990d`, `1419293a01`, `0808414a7e` |
 | Commit Tab (117) | Commit coordination + transmog handoff | COMPLETE | No new commits. Recovered 3 reset commits from reflog. Generated transmog handoff prompt |
-| Import Tab (118) | LoreWalker TDB import — write & apply 7 SQL files + fix _00_ | COMPLETE | Wrote 01-07, applied all 8 files (00-07). Fixed _00_ gameobject_template column count bug (32→35 Data zeros). ~502K inserts + 7.7K updates landed. QA clean. |
+| Import Tab (118) | LoreWalker TDB import — write & apply 7 SQL files + fix _00_ | COMPLETE | `0997d17565`. Wrote 01-07, applied all 8 files (00-07). Fixed _00_ gameobject_template column count bug (32→35 Data zeros). ~502K inserts + 7.7K updates landed. QA clean. |
 | — | — | — | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.
