@@ -1,0 +1,999 @@
+-- CompanionSquad_TWW12_Control.lua (TrinityCore 12.x + Eluna)
+-- Squad control + anti-friendly-fire + hard regroup + HEALERS + healer SetInCombatWith
+--
+-- Commands (works in /say, /party, /guild, /channel):
+--   #comp assist | #comp defend | #comp passive
+--   #comp attack | #comp regroup
+--   #comp follow | #comp stay
+--   #comp status
+--   #comp list | #comp presets | #comp preset <name> | #comp show
+--   #comp set <entry|name> | #comp add <entry|name> | #comp remove <slot|entry|name>
+--   #comp summon | #comp force | #comp dismiss | #comp clear
+
+------------------------------------------------------------
+-- TABLES
+------------------------------------------------------------
+local SINGLE_TABLE  = "character_companion_roster"
+local SQUAD_TABLE   = "character_companion_squad"
+local CONTROL_TABLE = "character_companion_control"
+
+------------------------------------------------------------
+-- CONFIG
+------------------------------------------------------------
+local MAX_SQUAD    = 5
+local SEARCH_RANGE = 140
+local SNAP_DIST    = 180
+local TICK_MS      = 450
+
+local SPAWN_TYPE   = 8    -- TEMPSUMMON_MANUAL_DESPAWN
+local DESPAWN_MS   = 0
+
+local DEBUG        = false
+
+-- Angle convention can vary. If tank ends up behind you, swap FRONT/BACK.
+local FRONT_ANGLE  = math.pi
+local BACK_ANGLE   = 0
+
+------------------------------------------------------------
+-- MODES
+------------------------------------------------------------
+local MODE_PASSIVE = 0
+local MODE_DEFEND  = 1
+local MODE_ASSIST  = 2
+
+local function ModeName(m)
+  if m == MODE_PASSIVE then return "PASSIVE" end
+  if m == MODE_DEFEND  then return "DEFEND"  end
+  return "ASSIST"
+end
+
+------------------------------------------------------------
+-- ROSTER + ROLES
+------------------------------------------------------------
+local META = {
+  -- Original set
+  [80488] = { name="Alune Windmane",      spec="Balance Druid",        role="caster"  },
+  [80499] = { name="Avenger Turley",      spec="Protection Paladin",   role="tank"    },
+  [80495] = { name="Holdie Hackerguard",  spec="Assassination Rogue",  role="melee"   },
+  [85122] = { name="Malda Brewbelly",     spec="Marksmanship Hunter",  role="ranged"  },
+  [80485] = { name="Shani Freezewind",    spec="Frost Mage",           role="caster"  },
+  [80494] = { name="Tosan Galaxyfist",    spec="Windwalker Monk",      role="melee"   },
+  [85140] = { name="Anne Otther",         spec="Unholy Death Knight",  role="melee"   },
+  [85129] = { name="Chani Malflame",      spec="Destruction Warlock",  role="caster"  },
+  [80484] = { name="Jackson Bajheera",    spec="Arms Warrior",         role="melee"   },
+  [85137] = { name="Mathias Zunn",        spec="Shadow Priest",        role="caster"  },
+  [80500] = { name="Taylow Dewland",      spec="Elemental Shaman",     role="caster"  },
+
+  -- Horde mix
+  [79900] = { name="Captain Hoodrych",        spec="Arms Warrior",          role="melee"  },
+  [80493] = { name="Elliott Van Rook",        spec="Frost Mage",            role="caster" },
+  [87690] = { name="Kaz Endsky",              spec="Unholy Death Knight",   role="melee"  },
+  [80490] = { name="Mindbender Talbadar",     spec="Shadow Priest",         role="caster" },
+  [80486] = { name="Necrolord Azael",         spec="Destruction Warlock",   role="caster" },
+  [85138] = { name="Razor Guerra",            spec="Assassination Rogue",   role="melee"  },
+  [80492] = { name="Vanguard Samuelle",       spec="Protection Paladin",    role="tank"   },
+  [80491] = { name="Elementalist Novo",       spec="Elemental Shaman",      role="caster" },
+  [85131] = { name="Jared V. Hellstrike",     spec="Windwalker Monk",       role="melee"  },
+  [80497] = { name="Lord Mes",                spec="Unholy Death Knight",   role="melee"  },
+  [85133] = { name="Mor'riz",                 spec="Feral Druid",           role="melee"  },
+  [80489] = { name="Soulbrewer Nadagast",     spec="Destruction Warlock",   role="caster" },
+  [80496] = { name="Rifthunter Yoske",        spec="Marksmanship Hunter",   role="ranged" },
+
+  -- Custom HEALERS (SmartAI in world DB)
+  [990110] = { name="Elaria Rootwhisper", spec="Restoration Druid", role="healer" },
+  [990111] = { name="Mei Cloudveil",     spec="Mistweaver Monk",   role="healer" },
+  [990112] = { name="Aurelia Dawnward",  spec="Holy Paladin",      role="healer" },
+  [990113] = { name="Elowen Sanctum",    spec="Holy Priest",       role="healer" },
+}
+
+local ENTRY_LIST = {}
+do
+  for entry,_ in pairs(META) do table.insert(ENTRY_LIST, entry) end
+  table.sort(ENTRY_LIST)
+end
+
+------------------------------------------------------------
+-- PRESETS
+------------------------------------------------------------
+local PRESETS = {
+  caster5       = { 80499, 80488, 80485, 85129, 85137 },
+  ranged5       = { 80499, 85122, 80500, 80485, 85129 },
+  melee5        = { 80499, 80495, 80494, 80484, 85140 },
+  balanced5     = { 80499, 80488, 85122, 80495, 80485 },
+
+  horde_caster5 = { 80492, 80493, 80486, 80490, 80491 },
+  horde_melee5  = { 80492, 85138, 85131, 79900, 87690 },
+  horde_ranged5 = { 80492, 80496, 80493, 80486, 80491 },
+
+  -- healer presets (tank + healer + 3 dps)
+  heal_balanced = { 80499, 990112, 85122, 80495, 80485 },
+  heal_caster   = { 80499, 990113, 85129, 80485, 85137 },
+  heal_melee    = { 80499, 990111, 80495, 80494, 85140 },
+  heal_druid    = { 80499, 990110, 80488, 80500, 85122 },
+
+  -- Horde tanks + healers
+  horde_heal_caster = { 80492, 990113, 80493, 80486, 80491 },
+  horde_heal_melee  = { 80492, 990111, 85138, 85131, 87690 },
+}
+
+------------------------------------------------------------
+-- ROLE-BASED FORMATION (radians)
+------------------------------------------------------------
+local ROLE_POSITIONS = {
+  tank = {
+    { dist = 2.5, angle = FRONT_ANGLE },
+    { dist = 2.8, angle = FRONT_ANGLE - 0.35 },
+    { dist = 2.8, angle = FRONT_ANGLE + 0.35 },
+  },
+  melee = {
+    { dist = 3.1, angle = FRONT_ANGLE - 0.95 },
+    { dist = 3.1, angle = FRONT_ANGLE + 0.95 },
+    { dist = 3.4, angle = FRONT_ANGLE - 1.40 },
+    { dist = 3.4, angle = FRONT_ANGLE + 1.40 },
+    { dist = 3.6, angle = FRONT_ANGLE },
+  },
+  ranged = {
+    { dist = 3.8, angle = BACK_ANGLE - 0.85 },
+    { dist = 3.8, angle = BACK_ANGLE + 0.85 },
+    { dist = 4.1, angle = BACK_ANGLE - 1.30 },
+    { dist = 4.1, angle = BACK_ANGLE + 1.30 },
+    { dist = 4.0, angle = BACK_ANGLE },
+  },
+  caster = {
+    { dist = 4.0, angle = BACK_ANGLE },
+    { dist = 4.2, angle = BACK_ANGLE - 0.45 },
+    { dist = 4.2, angle = BACK_ANGLE + 0.45 },
+    { dist = 4.4, angle = BACK_ANGLE - 1.00 },
+    { dist = 4.4, angle = BACK_ANGLE + 1.00 },
+  },
+  healer = {
+    { dist = 4.2, angle = BACK_ANGLE },
+    { dist = 4.4, angle = BACK_ANGLE - 0.55 },
+    { dist = 4.4, angle = BACK_ANGLE + 0.55 },
+  }
+}
+local ROLE_ORDER = { "tank", "melee", "ranged", "caster", "healer" }
+
+------------------------------------------------------------
+-- SAFE HELPERS
+------------------------------------------------------------
+local function msg(p, t) if p and p.SendBroadcastMessage then p:SendBroadcastMessage(tostring(t)) end end
+local function logI(t) if DEBUG and PrintInfo then PrintInfo("[CompSquadCtl] "..tostring(t)) end end
+local function logE(t) if PrintError then PrintError("[CompSquadCtl] "..tostring(t)) end end
+
+local function safe(p, label, fn, ...)
+  local ok, ret = pcall(fn, ...)
+  if not ok then
+    msg(p, ("[CompSquadCtl] ERROR in %s: %s"):format(label, tostring(ret)))
+    logE(("ERROR in %s: %s"):format(label, tostring(ret)))
+    return nil
+  end
+  return ret
+end
+
+local function norm(s) return (s or ""):lower():gsub("[^a-z0-9]", "") end
+local function sql_escape(s) return (s or ""):gsub("'", "''") end
+
+local NAME_TO_ENTRY = {}
+do
+  for entry, m in pairs(META) do
+    NAME_TO_ENTRY[norm(m.name)] = entry
+  end
+end
+
+local function ResolveEntry(raw)
+  local n = tonumber(raw)
+  if n then return n end
+  return NAME_TO_ENTRY[norm(raw)]
+end
+
+------------------------------------------------------------
+-- GUID-SAFE CHAR DB (TC12)
+------------------------------------------------------------
+local HAS_CHARDB   = (type(CharDBQuery) == "function" and type(CharDBExecute) == "function")
+local guidByName   = {}
+local squadCache   = {}
+local controlCache = {}
+
+local function GetCharGuid(player)
+  if not HAS_CHARDB then return nil end
+  local name = player:GetName()
+  if not name then return nil end
+  if guidByName[name] then return guidByName[name] end
+
+  local q = CharDBQuery(("SELECT guid FROM characters WHERE name='%s' LIMIT 1;"):format(sql_escape(name)))
+  if q then
+    local g = q:GetUInt32(0)
+    guidByName[name] = g
+    return g
+  end
+  return nil
+end
+
+local function EnsureControlRow(charGuid)
+  if not HAS_CHARDB then return end
+  safe(nil, "EnsureControlRow", function()
+    CharDBExecute(("INSERT IGNORE INTO %s (guid, mode, follow) VALUES (%u, %u, %u);")
+      :format(CONTROL_TABLE, charGuid, MODE_ASSIST, 1))
+  end)
+end
+
+local function GetControl(player)
+  local cg = GetCharGuid(player)
+  if not cg then return MODE_ASSIST, 1 end
+
+  if controlCache[cg] then
+    return controlCache[cg].mode, controlCache[cg].follow
+  end
+
+  EnsureControlRow(cg)
+
+  local mode, follow = MODE_ASSIST, 1
+  local q = CharDBQuery(("SELECT mode, follow FROM %s WHERE guid=%u LIMIT 1;"):format(CONTROL_TABLE, cg))
+  if q then
+    mode = q:GetUInt32(0)
+    follow = q:GetUInt32(1)
+  end
+
+  controlCache[cg] = { mode = mode, follow = follow }
+  return mode, follow
+end
+
+local function SetMode(player, newMode)
+  local cg = GetCharGuid(player)
+  if not cg then return end
+  EnsureControlRow(cg)
+
+  controlCache[cg] = controlCache[cg] or { mode = MODE_ASSIST, follow = 1 }
+  controlCache[cg].mode = newMode
+
+  safe(nil, "SetMode DB", function()
+    CharDBExecute(("UPDATE %s SET mode=%u WHERE guid=%u;"):format(CONTROL_TABLE, newMode, cg))
+  end)
+
+  msg(player, ("Squad mode: %s"):format(ModeName(newMode)))
+end
+
+local function SetFollow(player, followFlag)
+  local cg = GetCharGuid(player)
+  if not cg then return end
+  EnsureControlRow(cg)
+
+  controlCache[cg] = controlCache[cg] or { mode = MODE_ASSIST, follow = 1 }
+  controlCache[cg].follow = followFlag
+
+  safe(nil, "SetFollow DB", function()
+    CharDBExecute(("UPDATE %s SET follow=%u WHERE guid=%u;"):format(CONTROL_TABLE, followFlag, cg))
+  end)
+
+  msg(player, ("Squad follow: %s"):format(followFlag == 1 and "FOLLOW" or "STAY"))
+end
+
+------------------------------------------------------------
+-- SQUAD DB
+------------------------------------------------------------
+local function EmptySlots()
+  local s = {}
+  for i=1,MAX_SQUAD do s[i] = nil end
+  return s
+end
+
+local function LoadSquadFromDB(charGuid)
+  local slots = EmptySlots()
+
+  local q = CharDBQuery(("SELECT slot, entry FROM %s WHERE guid=%u ORDER BY slot;"):format(SQUAD_TABLE, charGuid))
+  if q then
+    repeat
+      local slot = q:GetUInt32(0)
+      local entry = q:GetUInt32(1)
+      if slot >= 1 and slot <= MAX_SQUAD and META[entry] then
+        slots[slot] = entry
+      end
+    until not q:NextRow()
+  end
+
+  -- Legacy solo fallback
+  local any = false
+  for i=1,MAX_SQUAD do if slots[i] then any = true break end end
+  if not any then
+    local q2 = CharDBQuery(("SELECT entry FROM %s WHERE guid=%u LIMIT 1;"):format(SINGLE_TABLE, charGuid))
+    if q2 then
+      local e = q2:GetUInt32(0)
+      if META[e] then slots[1] = e end
+    end
+  end
+
+  return slots
+end
+
+local function GetSlots(player)
+  local cg = GetCharGuid(player)
+  if not cg then return nil end
+  if not squadCache[cg] then
+    squadCache[cg] = LoadSquadFromDB(cg)
+  end
+  return squadCache[cg], cg
+end
+
+local function SaveSlot(charGuid, slot, entry)
+  if not HAS_CHARDB then return end
+  if not entry or entry == 0 then
+    safe(nil, "SaveSlot DELETE", function()
+      CharDBExecute(("DELETE FROM %s WHERE guid=%u AND slot=%u;"):format(SQUAD_TABLE, charGuid, slot))
+    end)
+  else
+    safe(nil, "SaveSlot REPLACE", function()
+      CharDBExecute(("REPLACE INTO %s (guid, slot, entry) VALUES (%u, %u, %u);"):format(SQUAD_TABLE, charGuid, slot, entry))
+    end)
+  end
+end
+
+local function ClearSquadDB(charGuid)
+  if not HAS_CHARDB then return end
+  safe(nil, "ClearSquadDB", function()
+    CharDBExecute(("DELETE FROM %s WHERE guid=%u;"):format(SQUAD_TABLE, charGuid))
+  end)
+end
+
+local function SaveSoloDB(charGuid, entry)
+  if not HAS_CHARDB then return end
+  safe(nil, "SaveSoloDB", function()
+    CharDBExecute(("REPLACE INTO %s (guid, entry) VALUES (%u, %u);"):format(SINGLE_TABLE, charGuid, entry or 0))
+  end)
+end
+
+------------------------------------------------------------
+-- FORMATION PLAN (role-based)
+------------------------------------------------------------
+local function BuildFormationPlan(slots)
+  local roleSlots = { tank={}, melee={}, ranged={}, caster={}, healer={} }
+
+  for slot=1,MAX_SQUAD do
+    local entry = slots[slot]
+    if entry and META[entry] then
+      local role = META[entry].role or "ranged"
+      if not roleSlots[role] then role = "ranged" end
+      table.insert(roleSlots[role], slot)
+    end
+  end
+
+  for _, list in pairs(roleSlots) do table.sort(list) end
+
+  local plan = {}
+  local function assign(role)
+    local list = roleSlots[role]
+    local positions = ROLE_POSITIONS[role]
+    if not list or not positions then return end
+    for i, slot in ipairs(list) do
+      local pos = positions[i] or positions[#positions]
+      plan[slot] = { dist = pos.dist, angle = pos.angle, role = role, idx = i }
+    end
+  end
+
+  for _, role in ipairs(ROLE_ORDER) do assign(role) end
+  return plan
+end
+
+------------------------------------------------------------
+-- SPAWN / FIND / ENSURE
+------------------------------------------------------------
+local function GetCreatures(player, range)
+  local t = safe(player, "GetCreaturesInRange", function()
+    return player:GetCreaturesInRange(range)
+  end)
+  return t or {}
+end
+
+local function IsOwnedBy(player, cr)
+  if not (cr.GetOwnerGUID and player.GetGUID) then return false end
+  local og = safe(nil, "cr:GetOwnerGUID()", function() return cr:GetOwnerGUID() end)
+  local pg = safe(nil, "player:GetGUID()", function() return player:GetGUID() end)
+  return og ~= nil and pg ~= nil and og == pg
+end
+
+local function BuildOwnedMap(player)
+  local owned = {}
+  for _, cr in ipairs(GetCreatures(player, SEARCH_RANGE)) do
+    if cr and cr:IsInWorld() then
+      local e = safe(nil, "cr:GetEntry()", function() return cr:GetEntry() end)
+      if e and META[e] and IsOwnedBy(player, cr) then
+        local d = cr:GetDistance(player)
+        if (not owned[e]) or (d < owned[e].d) then
+          owned[e] = { cr = cr, d = d }
+        end
+      end
+    end
+  end
+  local map = {}
+  for e, v in pairs(owned) do map[e] = v.cr end
+  return map
+end
+
+local function DespawnOwnedAll(player)
+  local list = GetCreatures(player, SEARCH_RANGE)
+  for _, cr in ipairs(list) do
+    if cr and cr:IsInWorld() then
+      local e = safe(nil, "cr:GetEntry()", function() return cr:GetEntry() end)
+      if e and META[e] and IsOwnedBy(player, cr) then
+        safe(nil, "Despawn", function() cr:DespawnOrUnsummon() end)
+      end
+    end
+  end
+end
+
+local function ApplyFollow(cr, player, dist, angle)
+  safe(nil, "MoveFollow", function()
+    if cr.MoveFollow then cr:MoveFollow(player, dist, angle) end
+  end)
+end
+
+local function SpawnCompanion(player, entry, dist, angle)
+  local x, y, z, o = player:GetX() + 1, player:GetY() + 1, player:GetZ(), player:GetO()
+  local cr = nil
+
+  if player.SpawnCreature then
+    cr = safe(player, "SpawnCreature", function()
+      return player:SpawnCreature(entry, x, y, z, o, SPAWN_TYPE, DESPAWN_MS)
+    end)
+  end
+
+  if (not cr) and type(PerformIngameSpawn) == "function" then
+    local mapId  = player:GetMapId()
+    local instId = (player.GetInstanceId and player:GetInstanceId()) or 0
+    local phase  = (player.GetPhaseMask and player:GetPhaseMask()) or 1
+    cr = safe(player, "PerformIngameSpawn", function()
+      return PerformIngameSpawn(1, entry, mapId, instId, x, y, z, o, false, 0, phase)
+    end)
+  end
+
+  if not cr then return nil end
+
+  safe(nil, "SetOwnerGUID", function()
+    if cr.SetOwnerGUID and player.GetGUID then cr:SetOwnerGUID(player:GetGUID()) end
+  end)
+  safe(nil, "SetFaction", function()
+    if cr.SetFaction and player.GetFaction then cr:SetFaction(player:GetFaction()) end
+  end)
+  safe(nil, "SetFFA(false)", function()
+    if cr.SetFFA then cr:SetFFA(false) end
+  end)
+
+  ApplyFollow(cr, player, dist, angle)
+  return cr
+end
+
+local function EnsureSquad(player, interactive, forceRespawn)
+  local slots = GetSlots(player)
+  if not slots then
+    if interactive then msg(player, "[CompSquadCtl] Can't resolve numeric character GUID.") end
+    return nil
+  end
+
+  if forceRespawn then
+    DespawnOwnedAll(player)
+  end
+
+  local plan = BuildFormationPlan(slots)
+  local owned = BuildOwnedMap(player)
+  local companions = {}
+
+  for slot=1,MAX_SQUAD do
+    local entry = slots[slot]
+    if entry and META[entry] then
+      local p = plan[slot] or { dist = 4.0, angle = BACK_ANGLE, role = META[entry].role or "ranged" }
+      local cr = owned[entry]
+
+      if (not cr) or (not cr:IsAlive()) then
+        cr = SpawnCompanion(player, entry, p.dist, p.angle)
+        if cr then owned[entry] = cr end
+      end
+
+      if cr then
+        if (not player:IsInCombat()) and (not cr:IsInCombat()) and cr:GetDistance(player) > SNAP_DIST then
+          safe(nil, "DespawnSnap", function() cr:DespawnOrUnsummon() end)
+          cr = SpawnCompanion(player, entry, p.dist, p.angle)
+          if cr then owned[entry] = cr end
+        end
+        companions[slot] = cr
+      end
+    end
+  end
+
+  return companions, slots, plan
+end
+
+------------------------------------------------------------
+-- ENEMY TARGETING (prevents attacking friendlies / companions)
+------------------------------------------------------------
+local ENEMY_SCAN_RANGE = 140
+
+local function GuidKey(u)
+  if not u or not u.GetGUID then return nil end
+  return tostring(u:GetGUID())
+end
+
+local function BuildUnfriendlySet(player)
+  local set = {}
+  if player.GetUnfriendlyUnitsInRange then
+    local list = safe(player, "GetUnfriendlyUnitsInRange", function()
+      return player:GetUnfriendlyUnitsInRange(ENEMY_SCAN_RANGE)
+    end) or {}
+    for _, u in ipairs(list) do
+      local k = GuidKey(u)
+      if k then set[k] = true end
+    end
+  end
+  return set
+end
+
+local function IsEnemyTarget(player, target, unfSet)
+  if not target or not target.IsAlive or not target:IsAlive() then return false end
+  if not (player.GetGUID and target.GetGUID) then return true end
+
+  local pg = tostring(player:GetGUID())
+  local tg = tostring(target:GetGUID())
+
+  if tg == pg then return false end
+
+  -- don't attack your own companions
+  if target.GetOwnerGUID then
+    local og = safe(nil, "target:GetOwnerGUID", function() return target:GetOwnerGUID() end)
+    if og and tostring(og) == pg then
+      return false
+    end
+  end
+
+  return unfSet[tg] == true
+end
+
+local function GetAssistTarget(player, unfSet)
+  local sel = (player.GetSelection and player:GetSelection()) or nil
+  if sel and IsEnemyTarget(player, sel, unfSet) then return sel end
+
+  local v = player:GetVictim()
+  if v and IsEnemyTarget(player, v, unfSet) then return v end
+
+  return nil
+end
+
+local function GetDefendTarget(player, unfSet)
+  if player.GetAttackers then
+    local attackers = player:GetAttackers() or {}
+    local best, bestD = nil, 1e9
+    for _, a in ipairs(attackers) do
+      if a and IsEnemyTarget(player, a, unfSet) then
+        local d = a:GetDistance(player)
+        if d < bestD then best, bestD = a, d end
+      end
+    end
+    if best then return best end
+  end
+
+  local v = player:GetVictim()
+  if v and IsEnemyTarget(player, v, unfSet) then return v end
+
+  return nil
+end
+
+------------------------------------------------------------
+-- ACTIONS: formation, attack, hard regroup
+------------------------------------------------------------
+local function ApplyFormationOrStay(player, companions, plan, followFlag)
+  for slot, cr in pairs(companions) do
+    if cr and cr:IsInWorld() then
+      if cr.AttackStop then cr:AttackStop() end
+      if followFlag == 1 then
+        local p = plan[slot]
+        if p then ApplyFollow(cr, player, p.dist, p.angle) end
+      else
+        if cr.MoveClear then cr:MoveClear(true) end
+        if cr.MoveIdle then cr:MoveIdle() end
+      end
+    end
+  end
+end
+
+-- ✅ UPDATED: healer SetInCombatWith block included here
+local function CommandAttack(player, companions, plan, target)
+  if not target or not target:IsAlive() then return end
+
+  for slot, cr in pairs(companions) do
+    if cr and cr:IsInWorld() then
+      local entry = safe(nil, "cr:GetEntry", function() return cr:GetEntry() end)
+      local role = (entry and META[entry] and META[entry].role) or "ranged"
+
+      -- HEALERS do not attack (SmartAI handles healing)
+      if role == "healer" then
+        -- Keep healer "in combat" so FriendlyHealth% events fire reliably
+        if cr.SetInCombatWith and target then
+          cr:SetInCombatWith(target)
+        end
+
+        -- Stay in formation (but do not spam movement)
+        local p = plan[slot]
+        if p then
+          if cr:GetDistance(player) > 18 then
+            ApplyFollow(cr, player, p.dist, p.angle)
+          end
+        end
+
+      else
+        safe(nil, "AttackStart", function() cr:AttackStart(target) end)
+
+        -- If melee/tank stand still, force chase
+        if (role == "tank" or role == "melee") and cr.MoveChase then
+          local d = cr:GetDistance(target)
+          if d and d > 5.0 then
+            safe(nil, "MoveChase", function() cr:MoveChase(target) end)
+          end
+        end
+      end
+    end
+  end
+end
+
+local function HardRegroup(player, companions, plan, followFlag)
+  local px, py, pz, po = player:GetX(), player:GetY(), player:GetZ(), player:GetO()
+
+  for slot, cr in pairs(companions) do
+    if cr and cr:IsInWorld() then
+      if cr.AttackStop then cr:AttackStop() end
+      if cr.MoveClear then cr:MoveClear(true) end
+
+      local p = plan and plan[slot] or nil
+
+      if (not player:IsInCombat()) and (not cr:IsInCombat()) and cr.NearTeleport and cr:GetDistance(player) > 45 then
+        local dx, dy = 0, 0
+        if p then
+          dx = math.cos(p.angle) * 1.5
+          dy = math.sin(p.angle) * 1.5
+        end
+        cr:NearTeleport(px + dx, py + dy, pz, po)
+      end
+
+      if followFlag == 1 then
+        if p and cr.MoveFollow then
+          cr:MoveFollow(player, p.dist, p.angle)
+        elseif cr.MoveFollow then
+          cr:MoveFollow(player, 4.0, BACK_ANGLE)
+        end
+      else
+        if cr.MoveIdle then cr:MoveIdle() end
+      end
+    end
+  end
+end
+
+------------------------------------------------------------
+-- GLOBAL TICK
+------------------------------------------------------------
+local function TickAll()
+  if type(GetPlayersInWorld) ~= "function" then return end
+  local players = GetPlayersInWorld() or {}
+
+  for _, player in ipairs(players) do
+    local mode, followFlag = GetControl(player)
+    local companions, _, plan = EnsureSquad(player, false, false)
+    if companions and plan then
+      local unfSet = BuildUnfriendlySet(player)
+
+      local target = nil
+      if mode == MODE_ASSIST then
+        target = GetAssistTarget(player, unfSet)
+      elseif mode == MODE_DEFEND then
+        target = GetDefendTarget(player, unfSet)
+      end
+
+      if mode == MODE_PASSIVE or (not target) then
+        ApplyFormationOrStay(player, companions, plan, followFlag)
+      else
+        CommandAttack(player, companions, plan, target)
+      end
+    end
+  end
+end
+
+if type(CreateLuaEvent) == "function" then
+  CreateLuaEvent(function() safe(nil, "TickAll()", TickAll) end, TICK_MS, 0)
+end
+
+------------------------------------------------------------
+-- CHAT COMMANDS
+------------------------------------------------------------
+local function PrintRoster(player)
+  msg(player, "Companion roster:")
+  for _, entry in ipairs(ENTRY_LIST) do
+    local m = META[entry]
+    msg(player, (" - %s (%u) [%s | %s]"):format(m.name, entry, m.role, m.spec))
+  end
+end
+
+local function PrintPresets(player)
+  msg(player, "Presets:")
+  for k,_ in pairs(PRESETS) do msg(player, (" - %s"):format(k)) end
+end
+
+local function ShowSquad(player)
+  local slots, cg = GetSlots(player)
+  if not slots then return end
+  local mode, followFlag = GetControl(player)
+  msg(player, ("Squad for %s (guid=%u): mode=%s follow=%s"):format(
+    player:GetName(), cg, ModeName(mode), followFlag==1 and "FOLLOW" or "STAY"
+  ))
+
+  local plan = BuildFormationPlan(slots)
+  for slot=1,MAX_SQUAD do
+    local entry = slots[slot]
+    if entry and META[entry] then
+      local p = plan[slot]
+      msg(player, ("  Slot %u: %s (%u) | %s | dist=%.1f | angle=%.3f"):format(
+        slot, META[entry].name, entry, META[entry].role,
+        (p and p.dist) or 0, (p and p.angle) or 0
+      ))
+    end
+  end
+end
+
+local function ApplyPreset(player, presetName)
+  local preset = PRESETS[presetName]
+  if not preset then
+    msg(player, "Unknown preset. Use: #comp presets")
+    return
+  end
+
+  local slots, cg = GetSlots(player)
+  if not slots then return end
+
+  for i=1,MAX_SQUAD do slots[i] = nil end
+  ClearSquadDB(cg)
+
+  for i=1,math.min(#preset, MAX_SQUAD) do
+    local entry = preset[i]
+    if META[entry] then
+      slots[i] = entry
+      SaveSlot(cg, i, entry)
+    end
+  end
+
+  SaveSoloDB(cg, slots[1] or 0)
+  msg(player, ("Preset '%s' applied."):format(presetName))
+end
+
+local function SetSolo(player, entry)
+  local slots, cg = GetSlots(player)
+  if not slots then return end
+
+  for i=1,MAX_SQUAD do slots[i] = nil end
+  ClearSquadDB(cg)
+
+  slots[1] = entry
+  SaveSlot(cg, 1, entry)
+  SaveSoloDB(cg, entry)
+
+  msg(player, ("Solo set: %s (%u)"):format(META[entry].name, entry))
+end
+
+local function AddToSquad(player, entry)
+  local slots, cg = GetSlots(player)
+  if not slots then return end
+
+  for i=1,MAX_SQUAD do
+    if slots[i] == entry then
+      msg(player, ("Already in squad: %s (%u) in slot %u."):format(META[entry].name, entry, i))
+      return
+    end
+  end
+
+  for i=1,MAX_SQUAD do
+    if not slots[i] then
+      slots[i] = entry
+      SaveSlot(cg, i, entry)
+      if i == 1 then SaveSoloDB(cg, entry) end
+      msg(player, ("Added slot %u: %s (%u)."):format(i, META[entry].name, entry))
+      return
+    end
+  end
+
+  msg(player, ("Squad full (%u). Remove one: #comp remove <slot>"):format(MAX_SQUAD))
+end
+
+local function RemoveFromSquad(player, token)
+  local slots, cg = GetSlots(player)
+  if not slots then return end
+
+  local n = tonumber(token)
+  if n and n >= 1 and n <= MAX_SQUAD then
+    if slots[n] then
+      local e = slots[n]
+      msg(player, ("Removed slot %u: %s (%u)."):format(n, META[e].name, e))
+      slots[n] = nil
+      SaveSlot(cg, n, 0)
+      if n == 1 then SaveSoloDB(cg, 0) end
+    else
+      msg(player, ("Slot %u already empty."):format(n))
+    end
+    return
+  end
+
+  local entry = ResolveEntry(token)
+  if entry and META[entry] then
+    for i=1,MAX_SQUAD do
+      if slots[i] == entry then
+        msg(player, ("Removed slot %u: %s (%u)."):format(i, META[entry].name, entry))
+        slots[i] = nil
+        SaveSlot(cg, i, 0)
+        if i == 1 then SaveSoloDB(cg, 0) end
+        return
+      end
+    end
+    msg(player, ("Not in squad: %s (%u)."):format(META[entry].name, entry))
+    return
+  end
+
+  msg(player, "Usage: #comp remove <slot|entry|name>")
+end
+
+local function Dismiss(player)
+  DespawnOwnedAll(player)
+  msg(player, "Dismissed (selection kept).")
+end
+
+local function ClearAll(player)
+  local slots, cg = GetSlots(player)
+  if not slots then return end
+
+  DespawnOwnedAll(player)
+  for i=1,MAX_SQUAD do slots[i] = nil end
+  ClearSquadDB(cg)
+  SaveSoloDB(cg, 0)
+
+  msg(player, "Cleared (selection removed).")
+end
+
+local function Help(player)
+  msg(player, "Controls:")
+  msg(player, "  #comp assist | #comp defend | #comp passive")
+  msg(player, "  #comp attack | #comp regroup")
+  msg(player, "  #comp follow | #comp stay")
+  msg(player, "  #comp status")
+  msg(player, "Management:")
+  msg(player, "  #comp presets | #comp preset <name> | #comp show")
+  msg(player, "  #comp set <entry|name> | #comp add <entry|name> | #comp remove <slot|entry|name>")
+  msg(player, "  #comp summon | #comp force | #comp dismiss | #comp clear")
+end
+
+local function HandleComp(player, msgText)
+  return safe(player, "HandleComp()", function()
+    local tokens = {}
+    for w in (msgText or ""):gmatch("%S+") do table.insert(tokens, w) end
+    if (tokens[1] or ""):lower() ~= "#comp" then return end
+
+    local sub = (tokens[2] or "help"):lower()
+
+    -- MODE / CONTROL
+    if sub == "assist" then
+      SetMode(player, MODE_ASSIST)
+      EnsureSquad(player, true, false)
+
+    elseif sub == "defend" then
+      SetMode(player, MODE_DEFEND)
+      EnsureSquad(player, true, false)
+
+    elseif sub == "passive" then
+      SetMode(player, MODE_PASSIVE)
+      local companions, _, plan = EnsureSquad(player, true, false)
+      local _, followFlag = GetControl(player)
+      if companions and plan then ApplyFormationOrStay(player, companions, plan, followFlag) end
+
+    elseif sub == "follow" then
+      SetFollow(player, 1)
+      EnsureSquad(player, true, false)
+
+    elseif sub == "stay" then
+      SetFollow(player, 0)
+      local companions, _, plan = EnsureSquad(player, true, false)
+      if companions and plan then ApplyFormationOrStay(player, companions, plan, 0) end
+
+    elseif sub == "attack" then
+      local companions, _, plan = EnsureSquad(player, true, false)
+      if companions and plan then
+        local unfSet = BuildUnfriendlySet(player)
+        local target = GetAssistTarget(player, unfSet)
+        if target then
+          CommandAttack(player, companions, plan, target)
+          msg(player, "Attack: issued.")
+        else
+          msg(player, "Attack: select an ENEMY first.")
+        end
+      end
+
+    elseif sub == "regroup" then
+      local companions, _, plan = EnsureSquad(player, true, false)
+      local _, followFlag = GetControl(player)
+      if companions and plan then
+        HardRegroup(player, companions, plan, followFlag)
+        msg(player, "Regroup: done.")
+      end
+
+    elseif sub == "status" then
+      local mode, followFlag = GetControl(player)
+      msg(player, ("Status: mode=%s follow=%s"):format(ModeName(mode), followFlag==1 and "FOLLOW" or "STAY"))
+
+    -- MANAGEMENT
+    elseif sub == "list" then
+      PrintRoster(player)
+
+    elseif sub == "presets" then
+      PrintPresets(player)
+
+    elseif sub == "preset" and tokens[3] then
+      ApplyPreset(player, tokens[3]:lower())
+      EnsureSquad(player, true, true)
+
+    elseif sub == "show" then
+      ShowSquad(player)
+
+    elseif sub == "set" and tokens[3] then
+      local raw = table.concat(tokens, " ", 3)
+      local entry = ResolveEntry(raw)
+      if not entry or not META[entry] then
+        msg(player, "Unknown companion. Use: #comp list")
+        return false
+      end
+      SetSolo(player, entry)
+      EnsureSquad(player, true, true)
+
+    elseif sub == "add" and tokens[3] then
+      local raw = table.concat(tokens, " ", 3)
+      local entry = ResolveEntry(raw)
+      if not entry or not META[entry] then
+        msg(player, "Unknown companion. Use: #comp list")
+        return false
+      end
+      AddToSquad(player, entry)
+      EnsureSquad(player, true, false)
+
+    elseif (sub == "remove" or sub == "rm" or sub == "del") and tokens[3] then
+      RemoveFromSquad(player, table.concat(tokens, " ", 3))
+      EnsureSquad(player, true, false)
+
+    elseif sub == "summon" then
+      EnsureSquad(player, true, false)
+
+    elseif sub == "force" then
+      EnsureSquad(player, true, true)
+
+    elseif sub == "dismiss" then
+      Dismiss(player)
+
+    elseif sub == "clear" then
+      ClearAll(player)
+
+    else
+      Help(player)
+    end
+
+    return false
+  end)
+end
+
+local function OnAnyChat(event, player, msgText, ...)
+  return HandleComp(player, msgText)
+end
+
+RegisterPlayerEvent(18, OnAnyChat)
+RegisterPlayerEvent(20, OnAnyChat)
+RegisterPlayerEvent(21, OnAnyChat)
+RegisterPlayerEvent(22, OnAnyChat)
+
+RegisterPlayerEvent(4, function(_, player)
+  local name = player:GetName()
+  local cg = guidByName[name]
+  guidByName[name] = nil
+  if cg then
+    squadCache[cg] = nil
+    controlCache[cg] = nil
+  end
+end)
+
+if PrintInfo then PrintInfo("[CompSquadCtl] Loaded (healers + SetInCombatWith).") end

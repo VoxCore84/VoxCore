@@ -1,0 +1,938 @@
+-- VoxPlacer.lua — GM Placement Tool for VoxCore (12.x / Midnight)
+-- Visual NPC/Object placement with nudge, rotate, scale, keybinds, and live preview.
+--
+-- Slash commands: /vp  /voxplacer
+-- Dot-commands sent: .vp start <entry>, .vp gob <entry>, .vp clone,
+--                    .vp nudge <dx> <dy> <dz>, .vp rotate <deg>,
+--                    .vp scale <factor>, .vp here, .vp confirm, .vp cancel,
+--                    .vp info, .vp multi, .vp undo, .vp face
+
+------------------------------------------------------------
+-- SAVED VARIABLES & DEFAULTS
+------------------------------------------------------------
+VoxPlacerDB = VoxPlacerDB or {}
+
+local defaults = {
+    point     = "CENTER",
+    relPoint  = "CENTER",
+    xOfs      = 0,
+    yOfs      = 0,
+    nudgeInc  = 1.0,
+    mode      = "NPC",  -- "NPC" or "Object"
+    favorites = {},     -- saved entry IDs for quick placement
+    favNames  = {},     -- { [entryNumber] = "Name" } learned from server responses
+    minimapAngle = 220, -- degrees around minimap edge (default: lower-left area)
+}
+
+local function EnsureDefaults()
+    for k, v in pairs(defaults) do
+        if VoxPlacerDB[k] == nil then
+            VoxPlacerDB[k] = v
+        end
+    end
+    -- Ensure favorites/favNames are tables (protect against corruption)
+    if type(VoxPlacerDB.favorites) ~= "table" then
+        VoxPlacerDB.favorites = {}
+    end
+    if type(VoxPlacerDB.favNames) ~= "table" then
+        VoxPlacerDB.favNames = {}
+    end
+end
+
+------------------------------------------------------------
+-- STATE
+------------------------------------------------------------
+local previewActive = false
+local currentScale = 1.0
+local lastX, lastY, lastZ, lastFacing = "---", "---", "---", "---"
+
+------------------------------------------------------------
+-- HELPERS
+------------------------------------------------------------
+
+--- Send a dot-command to the server.
+--- Dot-commands are intercepted server-side and never broadcast to other players,
+--- regardless of chat type. SAY is used because the server processes it before
+--- any echo, so no chat text is visible to anyone (including the sender).
+local function SendCmd(cmd)
+    SendChatMessage(cmd, "SAY")
+end
+
+-- Belt-and-suspenders: filter out any echoed .vp commands from the chat frame.
+-- In practice, dot-commands never echo via SAY, but this prevents edge cases.
+ChatFrame_AddMessageEventFilter("CHAT_MSG_SAY", function(_, _, msg)
+    if msg and msg:match("^%.vp ") then return true end
+    return false
+end)
+
+local function SetPreviewState(active)
+    previewActive = active
+    if active then
+        currentScale = 1.0
+        VoxPlacer_BindKeys()
+        VoxPlacer_UpdateStatus("Preview Active")
+    else
+        VoxPlacer_UnbindKeys()
+        VoxPlacer_UpdateStatus("Idle")
+    end
+end
+
+------------------------------------------------------------
+-- MAIN FRAME
+------------------------------------------------------------
+local f = CreateFrame("Frame", "VoxPlacerFrame", UIParent, "BasicFrameTemplateWithInset")
+f:SetSize(280, 560)
+f:SetPoint("CENTER")
+f:SetClampedToScreen(true)
+tinsert(UISpecialFrames, "VoxPlacerFrame")
+f:Hide()
+f:SetMovable(true)
+f:EnableMouse(true)
+f:RegisterForDrag("LeftButton")
+f:SetScript("OnDragStart", f.StartMoving)
+f:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local point, _, relPoint, xOfs, yOfs = self:GetPoint()
+    VoxPlacerDB.point    = point
+    VoxPlacerDB.relPoint = relPoint
+    VoxPlacerDB.xOfs     = xOfs
+    VoxPlacerDB.yOfs     = yOfs
+end)
+
+-- Title
+f.title = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+f.title:SetPoint("LEFT", f.TitleBg, "LEFT", 5, 0)
+f.title:SetText("VoxPlacer")
+
+-- Status subtitle
+f.status = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+f.status:SetPoint("TOP", f, "TOP", 0, -28)
+f.status:SetTextColor(0.7, 0.7, 0.7)
+f.status:SetText("Idle")
+
+function VoxPlacer_UpdateStatus(text)
+    if text == "Preview Active" then
+        f.status:SetTextColor(0.3, 1.0, 0.3)
+    elseif text == "Idle" then
+        f.status:SetTextColor(0.7, 0.7, 0.7)
+    else
+        f.status:SetTextColor(1.0, 0.8, 0.2)
+    end
+    f.status:SetText(text)
+end
+
+------------------------------------------------------------
+-- TAB BUTTONS: Tools / Help
+------------------------------------------------------------
+local activeTab = "Tools"
+
+local tabTools = CreateFrame("Button", "VoxPlacerTabTools", f)
+tabTools:SetSize(120, 20)
+tabTools:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -42)
+tabTools.text = tabTools:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+tabTools.text:SetPoint("CENTER")
+tabTools.text:SetText("Tools")
+tabTools:SetScript("OnClick", function() VoxPlacer_SetTab("Tools") end)
+
+local tabHelp = CreateFrame("Button", "VoxPlacerTabHelp", f)
+tabHelp:SetSize(120, 20)
+tabHelp:SetPoint("LEFT", tabTools, "RIGHT", 8, 0)
+tabHelp.text = tabHelp:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+tabHelp.text:SetPoint("CENTER")
+tabHelp.text:SetText("Help")
+tabHelp:SetScript("OnClick", function() VoxPlacer_SetTab("Help") end)
+
+-- Underline indicators
+tabTools.line = tabTools:CreateTexture(nil, "ARTWORK")
+tabTools.line:SetColorTexture(1, 0.82, 0, 1)
+tabTools.line:SetSize(120, 2)
+tabTools.line:SetPoint("BOTTOM", tabTools, "BOTTOM", 0, -1)
+
+tabHelp.line = tabHelp:CreateTexture(nil, "ARTWORK")
+tabHelp.line:SetColorTexture(1, 0.82, 0, 1)
+tabHelp.line:SetSize(120, 2)
+tabHelp.line:SetPoint("BOTTOM", tabHelp, "BOTTOM", 0, -1)
+
+------------------------------------------------------------
+-- HELP PANEL (overlays content area when Help tab active)
+------------------------------------------------------------
+local helpPanel = CreateFrame("Frame", "VoxPlacerHelpPanel", f)
+helpPanel:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -64)
+helpPanel:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, 8)
+helpPanel:SetFrameLevel(f:GetFrameLevel() + 20) -- render above all tool widgets
+-- Opaque background so tool widgets don't bleed through
+local helpBg = helpPanel:CreateTexture(nil, "BACKGROUND")
+helpBg:SetAllPoints()
+helpBg:SetColorTexture(0.08, 0.08, 0.08, 0.95)
+helpPanel:Hide()
+
+-- Scrollable text area
+local helpScroll = CreateFrame("ScrollFrame", "VoxPlacerHelpScroll", helpPanel, "UIPanelScrollFrameTemplate")
+helpScroll:SetPoint("TOPLEFT", 4, -4)
+helpScroll:SetPoint("BOTTOMRIGHT", -26, 4)
+
+local helpContent = CreateFrame("Frame", "VoxPlacerHelpContent", helpScroll)
+helpContent:SetSize(220, 1) -- height set by text
+
+local helpText = helpContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+helpText:SetPoint("TOPLEFT")
+helpText:SetWidth(220)
+helpText:SetJustifyH("LEFT")
+helpText:SetSpacing(2)
+helpText:SetText(
+    "|cffffd700=== WORKFLOW ===|r\n" ..
+    "1. Target NPC/object, press |cff00ff00Clone Target|r\n" ..
+    "   (or type Entry ID and press Place)\n" ..
+    "2. A glowing preview spawns at your feet\n" ..
+    "3. Nudge / rotate / scale with buttons or numpad\n" ..
+    "4. Press |cff00ff00Confirm|r to save to DB\n" ..
+    "   or |cffff4444Cancel|r to discard\n" ..
+    "\n" ..
+    "|cffffd700=== DOT-COMMANDS ===|r\n" ..
+    "|cff69ccf0.vp clone|r\n" ..
+    "  Clone targeted NPC (or nearest object)\n" ..
+    "|cff69ccf0.vp start <entry>|r\n" ..
+    "  Spawn creature preview by entry ID\n" ..
+    "|cff69ccf0.vp gob <entry>|r\n" ..
+    "  Spawn gameobject preview by entry ID\n" ..
+    "|cff69ccf0.vp here|r\n" ..
+    "  Snap preview to your position\n" ..
+    "|cff69ccf0.vp nudge <dx> <dy> <dz>|r\n" ..
+    "  Offset preview (world-space X Y Z)\n" ..
+    "|cff69ccf0.vp rotate <degrees>|r\n" ..
+    "  Rotate preview facing\n" ..
+    "|cff69ccf0.vp scale <factor>|r\n" ..
+    "  Set absolute scale (0.1 - 50)\n" ..
+    "|cff69ccf0.vp face|r\n" ..
+    "  Rotate preview to face toward you\n" ..
+    "|cff69ccf0.vp confirm|r\n" ..
+    "  Save preview to database\n" ..
+    "|cff69ccf0.vp cancel|r\n" ..
+    "  Discard preview\n" ..
+    "|cff69ccf0.vp undo|r\n" ..
+    "  Remove the last confirmed spawn\n" ..
+    "|cff69ccf0.vp info|r\n" ..
+    "  Show current preview state\n" ..
+    "|cff69ccf0.vp multi|r\n" ..
+    "  Toggle multi-place (confirm spawns another)\n" ..
+    "\n" ..
+    "|cffffd700=== NUMPAD KEYBINDS ===|r\n" ..
+    "(active only during preview)\n" ..
+    "\n" ..
+    "|cff69ccf0Num 4 / 6|r   Nudge X (left / right)\n" ..
+    "|cff69ccf0Num 8 / 2|r   Nudge Y (fwd / back)\n" ..
+    "|cff69ccf0Num + / -|r   Nudge Z (up / down)\n" ..
+    "|cff69ccf0Num 7 / 9|r   Rotate -15\194\176 / +15\194\176\n" ..
+    "|cff69ccf0Num 0|r       Snap to player\n" ..
+    "|cff69ccf0Num .|r       Clone target\n" ..
+    "|cff69ccf0Num Enter|r   Confirm placement\n" ..
+    "|cff69ccf0Num 5|r       Cancel placement\n" ..
+    "|cff69ccf0Num 1|r       Undo last confirm\n" ..
+    "|cff69ccf0Num 3|r       Face toward player\n" ..
+    "\n" ..
+    "|cffffd700=== FAVORITES ===|r\n" ..
+    "Type an Entry ID and click |cff69ccf0+ Add|r to\n" ..
+    "save it. Click a favorite to place it.\n" ..
+    "Right-click a favorite to remove it.\n" ..
+    "\n" ..
+    "|cffffd700=== QUIET COMMANDS ===|r\n" ..
+    "All .vp commands are invisible to other players.\n" ..
+    "The server intercepts them before broadcasting.\n" ..
+    "\n" ..
+    "|cffffd700=== OTHER GM COMMANDS ===|r\n" ..
+    "|cff69ccf0.npc add <entry>|r  Spawn NPC at feet\n" ..
+    "|cff69ccf0.npc copy|r  Clone targeted NPC (quick)\n" ..
+    "|cff69ccf0.npc move|r  Move NPC to your position\n" ..
+    "|cff69ccf0.npc del|r  Delete targeted NPC\n" ..
+    "|cff69ccf0.npc set movetype stay|r  Stop wandering\n" ..
+    "|cff69ccf0.npc set wanderdistance 0|r  Zero wander\n" ..
+    "|cff69ccf0.npc set phase <id>|r  Set NPC phase\n" ..
+    "|cff69ccf0.npc set faction <id>|r  Set NPC faction\n" ..
+    "|cff69ccf0.npc set level <lvl>|r  Set NPC level\n" ..
+    "|cff69ccf0.npc info|r  Show NPC details\n" ..
+    "|cff69ccf0.npc near|r  List nearby NPCs\n" ..
+    "\n" ..
+    "|cff69ccf0.gobject add <entry>|r  Spawn object\n" ..
+    "|cff69ccf0.gobject move|r  Move object to you\n" ..
+    "|cff69ccf0.gobject delete|r  Delete object\n" ..
+    "|cff69ccf0.gobject near|r  List nearby objects\n" ..
+    "|cff69ccf0.gobject target|r  Target nearest object\n" ..
+    "|cff69ccf0.gobject turn <deg>|r  Rotate object\n" ..
+    "|cff69ccf0.gobject set scale <f>|r  Scale object\n" ..
+    "\n" ..
+    "|cffffd700=== DISPLAY / EFFECTS ===|r\n" ..
+    "|cff69ccf0.display set <slot> <itemID>|r  Transmog slot\n" ..
+    "|cff69ccf0.display clear|r  Clear transmog\n" ..
+    "|cff69ccf0.effect play <kitID>|r  Play SpellVisualKit\n" ..
+    "|cff69ccf0.effect persist <kitID>|r  Persist SVK\n" ..
+    "|cff69ccf0.effect clear|r  Remove effects\n" ..
+    "|cff69ccf0.wmorph <displayID>|r  Morph player model\n" ..
+    "|cff69ccf0.wscale <factor>|r  Scale player\n" ..
+    "\n" ..
+    "|cffffd700=== TIPS ===|r\n" ..
+    "- Clone is the fastest workflow: target, clone,\n" ..
+    "  nudge into position, confirm.\n" ..
+    "- Preview uses the REAL model so you see\n" ..
+    "  exactly what the final NPC looks like.\n" ..
+    "- Numpad keys only bind while a preview is\n" ..
+    "  active. Normal gameplay is unaffected.\n" ..
+    "- Position readout updates live at the bottom\n" ..
+    "  of the Tools tab.\n" ..
+    "- Multi-place: turn on, then confirm places\n" ..
+    "  the NPC and spawns a new preview instantly.\n" ..
+    "  Great for lining up rows of guards/objects.\n" ..
+    "- Undo is 10 levels deep — you can undo the\n" ..
+    "  last 10 confirmed spawns in reverse order.\n" ..
+    "- Face Me turns the preview toward you — great\n" ..
+    "  for NPCs that should look at a walkway.\n" ..
+    "- Commands work from chat too — the addon\n" ..
+    "  is optional UI sugar."
+)
+
+-- Set scroll child and size
+helpScroll:SetScrollChild(helpContent)
+helpContent:SetHeight(helpText:GetStringHeight() + 16)
+
+-- Resize helpContent after text is set (deferred for accurate measurement)
+helpPanel:SetScript("OnShow", function()
+    helpContent:SetHeight(helpText:GetStringHeight() + 16)
+end)
+
+------------------------------------------------------------
+-- TAB SWITCHING
+------------------------------------------------------------
+function VoxPlacer_SetTab(tab)
+    activeTab = tab
+    if tab == "Tools" then
+        helpPanel:Hide()
+        tabTools.text:SetTextColor(1, 0.82, 0)
+        tabTools.line:Show()
+        tabHelp.text:SetTextColor(0.5, 0.5, 0.5)
+        tabHelp.line:Hide()
+    else
+        helpPanel:Show()
+        tabHelp.text:SetTextColor(1, 0.82, 0)
+        tabHelp.line:Show()
+        tabTools.text:SetTextColor(0.5, 0.5, 0.5)
+        tabTools.line:Hide()
+    end
+end
+
+------------------------------------------------------------
+-- UTILITY: Create a standard button
+------------------------------------------------------------
+local function MakeButton(parent, name, width, height, text, anchor, relFrame, relAnchor, xOff, yOff, onClick)
+    local btn = CreateFrame("Button", name, parent, "GameMenuButtonTemplate")
+    btn:SetSize(width, height)
+    btn:SetPoint(anchor, relFrame, relAnchor, xOff, yOff)
+    btn:SetText(text)
+    btn:SetNormalFontObject("GameFontNormal")
+    btn:SetHighlightFontObject("GameFontHighlight")
+    btn:SetScript("OnClick", onClick)
+    return btn
+end
+
+------------------------------------------------------------
+-- MODE TOGGLE: NPC / Object
+------------------------------------------------------------
+local modeLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+modeLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -66)
+modeLabel:SetText("Mode:")
+
+local btnNPC = MakeButton(f, "VoxPlacerBtnNPC", 80, 24, "NPC",
+    "TOPLEFT", f, "TOPLEFT", 60, -62, function()
+        VoxPlacerDB.mode = "NPC"
+        VoxPlacer_UpdateModeButtons()
+    end)
+
+local btnObj = MakeButton(f, "VoxPlacerBtnObj", 80, 24, "Object",
+    "LEFT", btnNPC, "RIGHT", 4, 0, function()
+        VoxPlacerDB.mode = "Object"
+        VoxPlacer_UpdateModeButtons()
+    end)
+
+function VoxPlacer_UpdateModeButtons()
+    if VoxPlacerDB.mode == "NPC" then
+        btnNPC:GetFontString():SetTextColor(1, 0.82, 0)
+        btnObj:GetFontString():SetTextColor(0.6, 0.6, 0.6)
+    else
+        btnNPC:GetFontString():SetTextColor(0.6, 0.6, 0.6)
+        btnObj:GetFontString():SetTextColor(1, 0.82, 0)
+    end
+end
+
+------------------------------------------------------------
+-- ENTRY ID INPUT
+------------------------------------------------------------
+local entryLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+entryLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -92)
+entryLabel:SetText("Entry ID:")
+
+local entryBox = CreateFrame("EditBox", "VoxPlacerEntryBox", f, "InputBoxTemplate")
+entryBox:SetSize(100, 22)
+entryBox:SetPoint("LEFT", entryLabel, "RIGHT", 8, 0)
+entryBox:SetAutoFocus(false)
+entryBox:SetNumeric(true)
+entryBox:SetMaxLetters(10)
+entryBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+entryBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+
+------------------------------------------------------------
+-- PLACE & CLONE BUTTONS
+------------------------------------------------------------
+local btnPlace = MakeButton(f, "VoxPlacerBtnPlace", 120, 26, "Place",
+    "TOPLEFT", f, "TOPLEFT", 16, -118, function()
+        local entry = entryBox:GetText()
+        if entry == "" then return end
+        if VoxPlacerDB.mode == "NPC" then
+            SendCmd(".vp start " .. entry)
+        else
+            SendCmd(".vp gob " .. entry)
+        end
+        -- Don't set preview active here — wait for server success response
+        -- in CHAT_MSG_SYSTEM to avoid false-positive keybind binding on failure
+    end)
+
+local btnClone = MakeButton(f, "VoxPlacerBtnClone", 120, 26, "|cffffd700Clone Target|r",
+    "LEFT", btnPlace, "RIGHT", 8, 0, function()
+        SendCmd(".vp clone")
+    end)
+
+------------------------------------------------------------
+-- NUDGE INCREMENT SELECTOR
+------------------------------------------------------------
+local nudgeLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+nudgeLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -152)
+nudgeLabel:SetText("Nudge Step:")
+
+local nudgeIncrements = { 0.1, 0.5, 1.0, 5.0 }
+local nudgeBtns = {}
+
+for i, inc in ipairs(nudgeIncrements) do
+    local nb = MakeButton(f, "VoxPlacerNudge" .. i, 50, 22, tostring(inc),
+        "TOPLEFT", f, "TOPLEFT", 16 + (i - 1) * 54, -170, function()
+            VoxPlacerDB.nudgeInc = inc
+            VoxPlacer_UpdateNudgeButtons()
+        end)
+    nudgeBtns[i] = nb
+end
+
+function VoxPlacer_UpdateNudgeButtons()
+    for i, nb in ipairs(nudgeBtns) do
+        if nudgeIncrements[i] == VoxPlacerDB.nudgeInc then
+            nb:GetFontString():SetTextColor(1, 0.82, 0)
+        else
+            nb:GetFontString():SetTextColor(0.6, 0.6, 0.6)
+        end
+    end
+end
+
+------------------------------------------------------------
+-- NUDGE FUNCTIONS
+------------------------------------------------------------
+local function NudgeX(dir)
+    local v = dir * VoxPlacerDB.nudgeInc
+    SendCmd(string.format(".vp nudge %.2f 0 0", v))
+end
+
+local function NudgeY(dir)
+    local v = dir * VoxPlacerDB.nudgeInc
+    SendCmd(string.format(".vp nudge 0 %.2f 0", v))
+end
+
+local function NudgeZ(dir)
+    local v = dir * VoxPlacerDB.nudgeInc
+    SendCmd(string.format(".vp nudge 0 0 %.2f", v))
+end
+
+------------------------------------------------------------
+-- NUDGE GRID (3-column layout: X, Y, Z)
+------------------------------------------------------------
+local nudgeGridLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+nudgeGridLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -198)
+nudgeGridLabel:SetText("Nudge:")
+
+-- Row labels
+local xLabel = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+xLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 24, -216)
+xLabel:SetText("X")
+
+local yLabel = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+yLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 110, -216)
+yLabel:SetText("Y")
+
+local zLabel = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+zLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 196, -216)
+zLabel:SetText("Z")
+
+-- X: left / right
+MakeButton(f, "VoxPlacerNudgeXM", 36, 24, "<",
+    "TOPLEFT", f, "TOPLEFT", 16, -230, function() NudgeX(-1) end)
+MakeButton(f, "VoxPlacerNudgeXP", 36, 24, ">",
+    "TOPLEFT", f, "TOPLEFT", 56, -230, function() NudgeX(1) end)
+
+-- Y: forward / back
+MakeButton(f, "VoxPlacerNudgeYP", 36, 24, "^",
+    "TOPLEFT", f, "TOPLEFT", 102, -230, function() NudgeY(1) end)
+MakeButton(f, "VoxPlacerNudgeYM", 36, 24, "v",
+    "TOPLEFT", f, "TOPLEFT", 142, -230, function() NudgeY(-1) end)
+
+-- Z: up / down
+MakeButton(f, "VoxPlacerNudgeZP", 36, 24, "+",
+    "TOPLEFT", f, "TOPLEFT", 188, -230, function() NudgeZ(1) end)
+MakeButton(f, "VoxPlacerNudgeZM", 36, 24, "-",
+    "TOPLEFT", f, "TOPLEFT", 228, -230, function() NudgeZ(-1) end)
+
+------------------------------------------------------------
+-- ROTATE CONTROLS
+------------------------------------------------------------
+local rotateLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+rotateLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -262)
+rotateLabel:SetText("Rotate:")
+
+MakeButton(f, "VoxPlacerRot15M", 52, 24, "-15\194\176",
+    "TOPLEFT", f, "TOPLEFT", 16, -280, function() SendCmd(".vp rotate -15") end)
+
+MakeButton(f, "VoxPlacerRot15P", 52, 24, "+15\194\176",
+    "TOPLEFT", f, "TOPLEFT", 72, -280, function() SendCmd(".vp rotate 15") end)
+
+MakeButton(f, "VoxPlacerRot45M", 52, 24, "-45\194\176",
+    "TOPLEFT", f, "TOPLEFT", 140, -280, function() SendCmd(".vp rotate -45") end)
+
+MakeButton(f, "VoxPlacerRot45P", 52, 24, "+45\194\176",
+    "TOPLEFT", f, "TOPLEFT", 196, -280, function() SendCmd(".vp rotate 45") end)
+
+------------------------------------------------------------
+-- SCALE CONTROLS
+------------------------------------------------------------
+local scaleLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+scaleLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -310)
+scaleLabel:SetText("Scale:")
+
+MakeButton(f, "VoxPlacerScaleM", 52, 24, "- 0.1",
+    "TOPLEFT", f, "TOPLEFT", 16, -328, function()
+        currentScale = math.max(0.1, currentScale - 0.1)
+        SendCmd(string.format(".vp scale %.1f", currentScale))
+    end)
+
+MakeButton(f, "VoxPlacerScaleR", 52, 24, "Reset",
+    "TOPLEFT", f, "TOPLEFT", 72, -328, function()
+        currentScale = 1.0
+        SendCmd(".vp scale 1.0")
+    end)
+
+MakeButton(f, "VoxPlacerScaleP", 52, 24, "+ 0.1",
+    "TOPLEFT", f, "TOPLEFT", 128, -328, function()
+        currentScale = currentScale + 0.1
+        SendCmd(string.format(".vp scale %.1f", currentScale))
+    end)
+
+------------------------------------------------------------
+-- MULTI-PLACE TOGGLE, INFO, UNDO
+------------------------------------------------------------
+local multiPlaceOn = false
+
+local btnMulti = MakeButton(f, "VoxPlacerBtnMulti", 110, 24, "Multi: OFF",
+    "TOPLEFT", f, "TOPLEFT", 16, -360, function()
+        SendCmd(".vp multi")
+        multiPlaceOn = not multiPlaceOn
+        VoxPlacerBtnMulti:SetText(multiPlaceOn and "|cff00ff00Multi: ON|r" or "Multi: OFF")
+    end)
+
+local btnInfo = MakeButton(f, "VoxPlacerBtnInfo", 56, 24, "Info",
+    "LEFT", btnMulti, "RIGHT", 4, 0, function()
+        SendCmd(".vp info")
+    end)
+
+local btnUndo = MakeButton(f, "VoxPlacerBtnUndo", 56, 24, "|cffff9900Undo|r",
+    "LEFT", btnInfo, "RIGHT", 4, 0, function()
+        SendCmd(".vp undo")
+    end)
+
+------------------------------------------------------------
+-- SNAP / FACE / CONFIRM / CANCEL
+------------------------------------------------------------
+MakeButton(f, "VoxPlacerBtnSnap", 120, 26, "Snap To Me",
+    "TOPLEFT", f, "TOPLEFT", 16, -390, function() SendCmd(".vp here") end)
+
+MakeButton(f, "VoxPlacerBtnFace", 120, 26, "Face Me",
+    "TOPLEFT", f, "TOPLEFT", 144, -390, function() SendCmd(".vp face") end)
+
+local btnConfirm = MakeButton(f, "VoxPlacerBtnConfirm", 120, 28,
+    "|cff00ff00Confirm|r",
+    "TOPLEFT", f, "TOPLEFT", 16, -422, function()
+        SendCmd(".vp confirm")
+        if not multiPlaceOn then
+            SetPreviewState(false)
+        end
+    end)
+
+local btnCancel = MakeButton(f, "VoxPlacerBtnCancel", 120, 28,
+    "|cffff4444Cancel|r",
+    "LEFT", btnConfirm, "RIGHT", 8, 0, function()
+        SendCmd(".vp cancel")
+        SetPreviewState(false)
+        -- Turn off multi-place when cancelling
+        multiPlaceOn = false
+        VoxPlacerBtnMulti:SetText("Multi: OFF")
+    end)
+
+------------------------------------------------------------
+-- COORDINATE READOUT
+------------------------------------------------------------
+local coordLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+coordLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -456)
+coordLabel:SetText("Position:")
+
+local coordText = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+coordText:SetPoint("TOPLEFT", coordLabel, "TOPRIGHT", 6, 0)
+coordText:SetJustifyH("LEFT")
+coordText:SetText("---  ---  ---   F: ---")
+
+local function UpdateCoordReadout()
+    coordText:SetText(string.format("%s  %s  %s   F: %s", lastX, lastY, lastZ, lastFacing))
+end
+
+------------------------------------------------------------
+-- FAVORITES
+------------------------------------------------------------
+local favLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+favLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -478)
+favLabel:SetText("Favorites:")
+
+local FAV_BTN_W = 74
+local FAV_BTN_H = 22
+local FAV_PER_ROW = 3
+local FAV_MAX = 6
+
+local favBtns = {}
+
+local function FavPlace(entry)
+    entryBox:SetText(tostring(entry))
+    if VoxPlacerDB.mode == "NPC" then
+        SendCmd(".vp start " .. entry)
+    else
+        SendCmd(".vp gob " .. entry)
+    end
+    SetPreviewState(true)
+end
+
+local function FavRemove(idx)
+    table.remove(VoxPlacerDB.favorites, idx)
+    VoxPlacer_RefreshFavorites()
+end
+
+-- Create favorite slot buttons (pre-allocated, shown/hidden dynamically)
+for i = 1, FAV_MAX do
+    local btn = CreateFrame("Button", "VoxPlacerFav" .. i, f, "GameMenuButtonTemplate")
+    btn:SetSize(FAV_BTN_W, FAV_BTN_H)
+    btn:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -496) -- repositioned in refresh
+    btn:SetNormalFontObject("GameFontNormalSmall")
+    btn:SetHighlightFontObject("GameFontHighlightSmall")
+    btn.favIdx = i
+    btn.entry = 0
+    btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    btn:SetScript("OnClick", function(self, button)
+        if button == "RightButton" then
+            FavRemove(self.favIdx)
+        else
+            FavPlace(self.entry)
+        end
+    end)
+    btn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        local name = VoxPlacerDB.favNames and VoxPlacerDB.favNames[self.entry]
+        if name then
+            GameTooltip:SetText(name)
+            GameTooltip:AddLine("Entry: " .. self.entry, 1, 1, 1)
+        else
+            GameTooltip:SetText("Entry: " .. (self.entry or "?"))
+        end
+        GameTooltip:AddLine("Left-click: Place  |  Right-click: Remove", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    btn:Hide()
+    favBtns[i] = btn
+end
+
+-- [+ Add] button
+local btnAddFav = MakeButton(f, "VoxPlacerBtnAddFav", FAV_BTN_W, FAV_BTN_H, "+ Add",
+    "TOPLEFT", f, "TOPLEFT", 16, -496, function()
+        local entry = entryBox:GetText()
+        if entry == "" then return end
+        local num = tonumber(entry)
+        if not num then return end
+        num = math.floor(num) -- ensure integer
+        -- Don't add duplicates
+        for _, v in ipairs(VoxPlacerDB.favorites) do
+            if v == num then return end
+        end
+        if #VoxPlacerDB.favorites >= FAV_MAX then
+            print("|cffff4444[VoxPlacer] Max " .. FAV_MAX .. " favorites. Right-click one to remove it first.|r")
+            return
+        end
+        table.insert(VoxPlacerDB.favorites, num)
+        VoxPlacer_RefreshFavorites()
+    end)
+
+function VoxPlacer_RefreshFavorites()
+    local favs = VoxPlacerDB.favorites or {}
+    for i = 1, FAV_MAX do
+        if i <= #favs then
+            favBtns[i].entry = favs[i]
+            favBtns[i].favIdx = i
+            local name = VoxPlacerDB.favNames and VoxPlacerDB.favNames[favs[i]]
+            favBtns[i]:SetText(name and name:sub(1, 9) or tostring(favs[i]))
+            local row = math.floor((i - 1) / FAV_PER_ROW)
+            local col = (i - 1) % FAV_PER_ROW
+            favBtns[i]:ClearAllPoints()
+            favBtns[i]:SetPoint("TOPLEFT", f, "TOPLEFT", 16 + col * (FAV_BTN_W + 4), -496 - row * (FAV_BTN_H + 2))
+            favBtns[i]:Show()
+        else
+            favBtns[i]:Hide()
+        end
+    end
+    -- Position [+ Add] after the last favorite
+    local addIdx = #favs
+    if addIdx < FAV_MAX then
+        local row = math.floor(addIdx / FAV_PER_ROW)
+        local col = addIdx % FAV_PER_ROW
+        btnAddFav:ClearAllPoints()
+        btnAddFav:SetPoint("TOPLEFT", f, "TOPLEFT", 16 + col * (FAV_BTN_W + 4), -496 - row * (FAV_BTN_H + 2))
+        btnAddFav:Show()
+    else
+        btnAddFav:Hide()
+    end
+end
+
+------------------------------------------------------------
+-- OVERRIDE KEYBINDS (active only during preview)
+------------------------------------------------------------
+-- We create an invisible button-frame for each keybind action.
+-- SetOverrideBindingClick maps a key to click that button.
+------------------------------------------------------------
+local bindOwner = CreateFrame("Frame", "VoxPlacerBindOwner", UIParent)
+
+local function MakeKeyBtn(name, func)
+    local btn = CreateFrame("Button", name, UIParent, "SecureActionButtonTemplate")
+    btn:SetSize(1, 1)
+    btn:SetPoint("TOPLEFT", UIParent, "TOPLEFT", -100, 100)
+    btn:RegisterForClicks("AnyDown")
+    btn:SetScript("OnClick", func)
+    return btn
+end
+
+MakeKeyBtn("VoxPlacerKeyNudgeXM",   function() NudgeX(-1) end)
+MakeKeyBtn("VoxPlacerKeyNudgeXP",   function() NudgeX(1) end)
+MakeKeyBtn("VoxPlacerKeyNudgeYP",   function() NudgeY(1) end)
+MakeKeyBtn("VoxPlacerKeyNudgeYM",   function() NudgeY(-1) end)
+MakeKeyBtn("VoxPlacerKeyNudgeZP",   function() NudgeZ(1) end)
+MakeKeyBtn("VoxPlacerKeyNudgeZM",   function() NudgeZ(-1) end)
+MakeKeyBtn("VoxPlacerKeyRot15M",    function() SendCmd(".vp rotate -15") end)
+MakeKeyBtn("VoxPlacerKeyRot15P",    function() SendCmd(".vp rotate 15") end)
+MakeKeyBtn("VoxPlacerKeySnapHere",  function() SendCmd(".vp here") end)
+MakeKeyBtn("VoxPlacerKeyClone",     function() SendCmd(".vp clone") end)
+MakeKeyBtn("VoxPlacerKeyConfirm",   function()
+    SendCmd(".vp confirm")
+    if not multiPlaceOn then SetPreviewState(false) end
+end)
+MakeKeyBtn("VoxPlacerKeyCancel",    function()
+    SendCmd(".vp cancel")
+    SetPreviewState(false)
+    multiPlaceOn = false
+    VoxPlacerBtnMulti:SetText("Multi: OFF")
+end)
+MakeKeyBtn("VoxPlacerKeyUndo",      function() SendCmd(".vp undo") end)
+MakeKeyBtn("VoxPlacerKeyFace",      function() SendCmd(".vp face") end)
+
+function VoxPlacer_BindKeys()
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD4",      "VoxPlacerKeyNudgeXM")
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD6",      "VoxPlacerKeyNudgeXP")
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD8",      "VoxPlacerKeyNudgeYP")
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD2",      "VoxPlacerKeyNudgeYM")
+    SetOverrideBindingClick(bindOwner, true, "NUMPADADD",    "VoxPlacerKeyNudgeZP")
+    SetOverrideBindingClick(bindOwner, true, "NUMPADMINUS",  "VoxPlacerKeyNudgeZM")
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD7",      "VoxPlacerKeyRot15M")
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD9",      "VoxPlacerKeyRot15P")
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD0",      "VoxPlacerKeySnapHere")
+    SetOverrideBindingClick(bindOwner, true, "NUMPADDECIMAL", "VoxPlacerKeyClone")
+    SetOverrideBindingClick(bindOwner, true, "NUMPADENTER",  "VoxPlacerKeyConfirm")
+    -- Note: ESCAPE can't be reliably overridden (WoW intercepts it first).
+    -- Use Numpad 5 for cancel via keybind; the Cancel button in the UI also works.
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD5",      "VoxPlacerKeyCancel")
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD1",      "VoxPlacerKeyUndo")
+    SetOverrideBindingClick(bindOwner, true, "NUMPAD3",      "VoxPlacerKeyFace")
+end
+
+function VoxPlacer_UnbindKeys()
+    ClearOverrideBindings(bindOwner)
+end
+
+------------------------------------------------------------
+-- CHAT MESSAGE PARSING — extract coordinates from server
+------------------------------------------------------------
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("CHAT_MSG_SYSTEM")
+eventFrame:SetScript("OnEvent", function(_, event, msg)
+    if event == "CHAT_MSG_SYSTEM" and msg then
+        -- Look for [VoxPlacer] coordinate messages
+        local x, y, z, facing = msg:match(
+            "%[VoxPlacer%] Position: ([%d%.%-]+), ([%d%.%-]+), ([%d%.%-]+)%s+Facing: ([%d%.]+)"
+        )
+        if x then
+            lastX = x
+            lastY = y
+            lastZ = z
+            lastFacing = facing
+            UpdateCoordReadout()
+        end
+
+        -- Learn entry → name mappings from server responses
+        -- Matches: 'Some Name' (entry 12345)
+        local entryName, entryId = msg:match("'([^']+)' %(entry (%d+)%)")
+        if entryName and entryId then
+            VoxPlacerDB.favNames[tonumber(entryId)] = entryName
+            VoxPlacer_RefreshFavorites()
+        end
+
+        -- Detect state changes from server responses (single source of truth)
+        if msg:find("%[VoxPlacer%]") then
+            -- Spawn success — activate preview keybinds
+            if msg:find("spawned") or msg:find("^%[VoxPlacer%] Cloned") then
+                SetPreviewState(true)
+            elseif msg:find("[Cc]onfirmed") then
+                -- In multi-place, server auto-spawns next preview so stay active
+                if not multiPlaceOn then
+                    SetPreviewState(false)
+                end
+            elseif msg:find("[Cc]ancelled") or msg:find("[Cc]anceled") then
+                SetPreviewState(false)
+                multiPlaceOn = false
+                VoxPlacerBtnMulti:SetText("Multi: OFF")
+            end
+            -- Undo responses don't change preview state (undo affects confirmed
+            -- spawns, not the current preview)
+        end
+    end
+end)
+
+------------------------------------------------------------
+-- ADDON LOAD — restore saved position & state
+------------------------------------------------------------
+local loadFrame = CreateFrame("Frame")
+loadFrame:RegisterEvent("ADDON_LOADED")
+loadFrame:SetScript("OnEvent", function(_, _, addonName)
+    if addonName == "VoxPlacer" then
+        EnsureDefaults()
+
+        -- Restore frame position
+        f:ClearAllPoints()
+        f:SetPoint(
+            VoxPlacerDB.point    or "CENTER",
+            UIParent,
+            VoxPlacerDB.relPoint or "CENTER",
+            VoxPlacerDB.xOfs     or 0,
+            VoxPlacerDB.yOfs     or 0
+        )
+
+        VoxPlacer_UpdateModeButtons()
+        VoxPlacer_UpdateNudgeButtons()
+        VoxPlacer_UpdateStatus("Idle")
+        VoxPlacer_SetTab("Tools")
+        VoxPlacer_RefreshFavorites()
+        VoxPlacer_UpdateMinimapPosition()
+
+        loadFrame:UnregisterEvent("ADDON_LOADED")
+    end
+end)
+
+------------------------------------------------------------
+-- SLASH COMMANDS
+------------------------------------------------------------
+SLASH_VOXPLACER1 = "/vp"
+SLASH_VOXPLACER2 = "/voxplacer"
+SlashCmdList["VOXPLACER"] = function()
+    if VoxPlacerFrame:IsShown() then
+        VoxPlacerFrame:Hide()
+    else
+        VoxPlacerFrame:Show()
+    end
+end
+
+------------------------------------------------------------
+-- MINIMAP BUTTON (draggable, like other addons)
+------------------------------------------------------------
+local mmBtn = CreateFrame("Button", "VoxPlacerMinimapButton", Minimap)
+mmBtn:SetSize(32, 32)
+mmBtn:SetFrameStrata("MEDIUM")
+mmBtn:SetFrameLevel(8)
+mmBtn:SetMovable(true)
+mmBtn:SetClampedToScreen(true)
+mmBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+mmBtn:RegisterForDrag("LeftButton")
+mmBtn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+
+-- Icon (wrench — placement tool)
+local mmIcon = mmBtn:CreateTexture(nil, "ARTWORK")
+mmIcon:SetSize(20, 20)
+mmIcon:SetPoint("CENTER")
+mmIcon:SetTexture("Interface\\Icons\\INV_Misc_Wrench_01")
+
+-- Circular border overlay (matches stock minimap buttons)
+local mmBorder = mmBtn:CreateTexture(nil, "OVERLAY")
+mmBorder:SetSize(54, 54)
+mmBorder:SetPoint("CENTER")
+mmBorder:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+
+-- Position around the minimap edge given an angle in degrees
+local function VoxPlacer_UpdateMinimapPosition()
+    local angle = math.rad(VoxPlacerDB.minimapAngle or 220)
+    local radius = 80
+    mmBtn:ClearAllPoints()
+    mmBtn:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * radius, math.sin(angle) * radius)
+end
+
+-- Drag to reposition around the minimap
+mmBtn:SetScript("OnDragStart", function(self)
+    self.dragging = true
+end)
+mmBtn:SetScript("OnDragStop", function(self)
+    self.dragging = false
+end)
+mmBtn:SetScript("OnUpdate", function(self)
+    if not self.dragging then return end
+    local mx, my = Minimap:GetCenter()
+    local cx, cy = GetCursorPosition()
+    local scale = UIParent:GetEffectiveScale()
+    cx, cy = cx / scale, cy / scale
+    VoxPlacerDB.minimapAngle = math.deg(math.atan2(cy - my, cx - mx))
+    VoxPlacer_UpdateMinimapPosition()
+end)
+
+-- Left-click: toggle panel. Right-click: quick clone target.
+mmBtn:SetScript("OnClick", function(_, button)
+    if button == "RightButton" then
+        SendCmd(".vp clone")
+    else
+        if VoxPlacerFrame:IsShown() then
+            VoxPlacerFrame:Hide()
+        else
+            VoxPlacerFrame:Show()
+        end
+    end
+end)
+
+-- Tooltip
+mmBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+    GameTooltip:SetText("|cffffd700VoxPlacer|r")
+    GameTooltip:AddLine("Left-click: Toggle placement tool", 1, 1, 1)
+    GameTooltip:AddLine("Right-click: Clone target", 1, 1, 1)
+    GameTooltip:AddLine("Drag to reposition", 0.7, 0.7, 0.7)
+    GameTooltip:Show()
+end)
+mmBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+-- Initial position (updated again in ADDON_LOADED after SavedVars load)
+VoxPlacer_UpdateMinimapPosition()

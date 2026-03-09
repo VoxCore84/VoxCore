@@ -1,0 +1,443 @@
+-------------------------------------------------------------------------------
+-- VoxCore Professions — All 13 professions in one interactive panel
+-- /profs or /professions to toggle
+--
+-- Left-click   = learn (if unknown) or open crafting (if known)
+-- Right-click   = unlearn (if known)
+-- Minimap icon  = toggle panel
+-------------------------------------------------------------------------------
+local addonName = ...
+VoxCoreProfDB = VoxCoreProfDB or {}
+
+-------------------------------------------------------------------------------
+-- Layout constants
+-------------------------------------------------------------------------------
+local FRAME_WIDTH   = 320
+local ROW_HEIGHT    = 32
+local ICON_SIZE     = 26
+local PADDING       = 12
+local HEADER_HEIGHT = 20
+local GAP_AFTER_SEC = 8
+local BTN_HEIGHT    = 24
+
+-------------------------------------------------------------------------------
+-- Profession data
+-- spellID  = base profession spell (used for IsSpellKnown detection)
+-- key      = matches Eluna .prof command key
+-- crafting = true if left-click should open a crafting window
+-------------------------------------------------------------------------------
+local SECTIONS = {
+    {
+        header = "Crafting",
+        profs = {
+            { spellID = 2259,  name = "Alchemy",        key = "alchemy",        crafting = true  },
+            { spellID = 2018,  name = "Blacksmithing",  key = "blacksmithing",  crafting = true  },
+            { spellID = 7411,  name = "Enchanting",     key = "enchanting",     crafting = true  },
+            { spellID = 4036,  name = "Engineering",    key = "engineering",    crafting = true  },
+            { spellID = 45357, name = "Inscription",    key = "inscription",    crafting = true  },
+            { spellID = 25229, name = "Jewelcrafting",  key = "jewelcrafting",  crafting = true  },
+            { spellID = 2108,  name = "Leatherworking", key = "leatherworking", crafting = true  },
+            { spellID = 3908,  name = "Tailoring",      key = "tailoring",      crafting = true  },
+        },
+    },
+    {
+        header = "Gathering",
+        profs = {
+            { spellID = 2366,  name = "Herbalism",  key = "herbalism",  crafting = false },
+            { spellID = 2575,  name = "Mining",     key = "mining",     crafting = true  }, -- Smelting
+            { spellID = 8613,  name = "Skinning",   key = "skinning",   crafting = false },
+        },
+    },
+    {
+        header = "Secondary",
+        profs = {
+            { spellID = 2550,   name = "Cooking", key = "cooking", crafting = true  },
+            { spellID = 131474, name = "Fishing", key = "fishing", crafting = false },
+        },
+    },
+}
+
+-------------------------------------------------------------------------------
+-- API compatibility
+-------------------------------------------------------------------------------
+local function SafeIsSpellKnown(id)
+    if C_Spell and C_Spell.IsSpellKnown then return C_Spell.IsSpellKnown(id) end
+    if IsSpellKnown then return IsSpellKnown(id) end
+    return false
+end
+
+local function SafeGetSpellName(id)
+    if C_Spell and C_Spell.GetSpellName then return C_Spell.GetSpellName(id) end
+    if GetSpellInfo then return (GetSpellInfo(id)) end
+    return nil
+end
+
+local function SafeGetSpellTexture(id)
+    if C_Spell and C_Spell.GetSpellTexture then return C_Spell.GetSpellTexture(id) end
+    if GetSpellTexture then return GetSpellTexture(id) end
+    return nil
+end
+
+-------------------------------------------------------------------------------
+-- Send a dot command to the server via chat
+-- The server intercepts "." messages before they reach other players
+-------------------------------------------------------------------------------
+local function DotCommand(cmd)
+    SendChatMessage("." .. cmd, "SAY")
+end
+
+-------------------------------------------------------------------------------
+-- Main frame
+-------------------------------------------------------------------------------
+local f = CreateFrame("Frame", "VoxCoreProfFrame", UIParent, "BackdropTemplate")
+f:SetSize(FRAME_WIDTH, 400)
+f:SetPoint("CENTER")
+f:SetMovable(true)
+f:EnableMouse(true)
+f:RegisterForDrag("LeftButton")
+f:SetFrameStrata("HIGH")
+f:SetClampedToScreen(true)
+f:SetBackdrop({
+    bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 11, right = 12, top = 12, bottom = 11 },
+})
+f:SetBackdropColor(0, 0, 0, 0.95)
+f:SetScript("OnDragStart", f.StartMoving)
+f:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local p, _, rp, x, y = self:GetPoint()
+    VoxCoreProfDB.p  = p
+    VoxCoreProfDB.rp = rp
+    VoxCoreProfDB.x  = x
+    VoxCoreProfDB.y  = y
+end)
+f:Hide()
+tinsert(UISpecialFrames, "VoxCoreProfFrame") -- ESC closes it
+
+-- Title
+local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+title:SetPoint("TOP", 0, -16)
+title:SetText("All Professions")
+title:SetTextColor(1, 0.82, 0)
+
+-- Subtitle (learned count)
+local subtitle = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+subtitle:SetPoint("TOP", title, "BOTTOM", 0, -2)
+subtitle:SetTextColor(0.7, 0.7, 0.7)
+
+-- Close button
+local closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+closeBtn:SetPoint("TOPRIGHT", -3, -3)
+
+-------------------------------------------------------------------------------
+-- Row factory — simple buttons, no SecureActionButton
+-------------------------------------------------------------------------------
+local allRows = {}
+local rowCount = 0
+
+local function CreateRow(prof)
+    rowCount = rowCount + 1
+    local idx = rowCount
+
+    local row = CreateFrame("Button", "VoxProfRow" .. idx, f, "BackdropTemplate")
+    row:SetSize(FRAME_WIDTH - 2 * PADDING - 10, ROW_HEIGHT)
+    row:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        insets = { left = 1, right = 1, top = 1, bottom = 1 },
+    })
+    row:SetBackdropColor(1, 1, 1, 0)
+    row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    row:EnableMouse(true)
+
+    -- Icon
+    local icon = row:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(ICON_SIZE, ICON_SIZE)
+    icon:SetPoint("LEFT", 4, 0)
+    row.icon = icon
+
+    -- Name
+    local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    nameText:SetPoint("LEFT", icon, "RIGHT", 8, 0)
+    nameText:SetWidth(150)
+    nameText:SetJustifyH("LEFT")
+    row.nameText = nameText
+
+    -- Status label (right side)
+    local status = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    status:SetPoint("RIGHT", -6, 0)
+    status:SetJustifyH("RIGHT")
+    row.status = status
+
+    -- Hover highlight
+    row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    row._spellID  = prof.spellID
+    row._profName = prof.name
+    row._profKey  = prof.key
+    row._hasCraft = prof.crafting
+    row._known    = false
+
+    -- Tooltip
+    row:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if self._known then
+            GameTooltip:SetText(self._profName, 1, 1, 1)
+            if self._hasCraft then
+                GameTooltip:AddLine("Left-click to open crafting", 0, 1, 0)
+            else
+                GameTooltip:AddLine("Gathering profession", 0.7, 0.7, 0.7)
+            end
+            GameTooltip:AddLine("Right-click to unlearn", 1, 0.3, 0.3)
+        else
+            GameTooltip:SetText(self._profName, 0.5, 0.5, 0.5)
+            GameTooltip:AddLine("Left-click to learn", 0, 1, 0)
+        end
+        GameTooltip:Show()
+        self:SetBackdropColor(1, 1, 1, 0.05)
+    end)
+    row:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
+        self:SetBackdropColor(1, 1, 1, 0)
+    end)
+
+    -- Click handler — all actions via server dot commands
+    row:SetScript("OnClick", function(self, button)
+        if button == "LeftButton" then
+            if self._known and self._hasCraft then
+                DotCommand("prof open " .. self._profKey)
+            elseif not self._known then
+                DotCommand("prof learn " .. self._profKey)
+            end
+        elseif button == "RightButton" then
+            if self._known then
+                DotCommand("prof unlearn " .. self._profKey)
+            end
+        end
+    end)
+
+    allRows[idx] = row
+    return row
+end
+
+-------------------------------------------------------------------------------
+-- Build UI (called once at PLAYER_LOGIN)
+-------------------------------------------------------------------------------
+local built = false
+
+local function TogglePanel()
+    if f:IsShown() then
+        f:Hide()
+    else
+        f:Show()
+    end
+end
+
+local function BuildUI()
+    if built then return end
+    built = true
+
+    local yOff = -40 -- below title + subtitle
+    for si, section in ipairs(SECTIONS) do
+        -- Section header
+        local hdr = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        hdr:SetPoint("TOPLEFT", PADDING + 6, yOff)
+        hdr:SetText(section.header)
+        hdr:SetTextColor(0.9, 0.75, 0.3)
+        yOff = yOff - HEADER_HEIGHT
+
+        -- Thin separator line
+        local sep = f:CreateTexture(nil, "ARTWORK")
+        sep:SetHeight(1)
+        sep:SetPoint("TOPLEFT", PADDING + 4, yOff + 2)
+        sep:SetPoint("TOPRIGHT", -PADDING - 4, yOff + 2)
+        sep:SetColorTexture(0.6, 0.5, 0.2, 0.3)
+
+        for _, prof in ipairs(section.profs) do
+            local row = CreateRow(prof)
+            row:SetPoint("TOPLEFT", PADDING + 2, yOff - 2)
+            yOff = yOff - (ROW_HEIGHT + 1)
+        end
+
+        yOff = yOff - GAP_AFTER_SEC
+    end
+
+    -- Button bar
+    yOff = yOff - 2
+    local btnWidth = (FRAME_WIDTH - 2 * PADDING - 18) / 3
+
+    -- "Learn All" button
+    local learnAllBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    learnAllBtn:SetSize(btnWidth, BTN_HEIGHT)
+    learnAllBtn:SetPoint("TOPLEFT", PADDING + 4, yOff)
+    learnAllBtn:SetText("Learn All")
+    learnAllBtn:SetScript("OnClick", function() DotCommand("prof all") end)
+    learnAllBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Learn All Professions", 1, 1, 1)
+        GameTooltip:AddLine("Learns all 13 professions at once", 0, 1, 0)
+        GameTooltip:Show()
+    end)
+    learnAllBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- "Max Skills" button
+    local maxBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    maxBtn:SetSize(btnWidth, BTN_HEIGHT)
+    maxBtn:SetPoint("LEFT", learnAllBtn, "RIGHT", 3, 0)
+    maxBtn:SetText("Max Skills")
+    maxBtn:SetScript("OnClick", function() DotCommand("prof max") end)
+    maxBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Max All Skill Levels", 1, 1, 1)
+        GameTooltip:AddLine("Sets all learned professions to max skill", 0, 1, 0)
+        GameTooltip:Show()
+    end)
+    maxBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    -- "Reset All" button
+    local resetBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    resetBtn:SetSize(btnWidth, BTN_HEIGHT)
+    resetBtn:SetPoint("LEFT", maxBtn, "RIGHT", 3, 0)
+    resetBtn:SetText("Reset All")
+    resetBtn:GetFontString():SetTextColor(1, 0.4, 0.4)
+    resetBtn:SetScript("OnClick", function()
+        StaticPopupDialogs["VOXPROF_RESET_ALL"] = {
+            text = "Reset ALL professions?\nThis will unlearn every profession.",
+            button1 = "Yes",
+            button2 = "Cancel",
+            OnAccept = function() DotCommand("prof reset") end,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+            preferredIndex = 3,
+        }
+        StaticPopup_Show("VOXPROF_RESET_ALL")
+    end)
+    resetBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP")
+        GameTooltip:SetText("Reset All Professions", 1, 0.3, 0.3)
+        GameTooltip:AddLine("Unlearns every profession (asks for confirmation)", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    resetBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    yOff = yOff - (BTN_HEIGHT + 6)
+
+    -- Help text at bottom
+    local helpText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    helpText:SetPoint("TOPLEFT", PADDING + 6, yOff)
+    helpText:SetPoint("TOPRIGHT", -PADDING - 6, yOff)
+    helpText:SetJustifyH("CENTER")
+    helpText:SetText("|cff888888Left-click: Learn/Open  |  Right-click: Unlearn|r")
+    yOff = yOff - 16
+
+    f:SetHeight(math.abs(yOff) + PADDING)
+end
+
+-------------------------------------------------------------------------------
+-- Refresh row visuals
+-------------------------------------------------------------------------------
+local function Refresh()
+    if not built then return end
+
+    local knownPrimary, totalPrimary = 0, 11
+
+    for _, row in ipairs(allRows) do
+        local known = SafeIsSpellKnown(row._spellID)
+        row._known = known
+
+        -- Icon
+        local tex = SafeGetSpellTexture(row._spellID) or 134400
+        row.icon:SetTexture(tex)
+
+        -- Name (prefer live API, fallback to our table)
+        local name = SafeGetSpellName(row._spellID) or row._profName
+        row.nameText:SetText(name)
+
+        if known then
+            row.nameText:SetTextColor(1, 1, 1)
+            row.icon:SetDesaturated(false)
+            row.icon:SetAlpha(1)
+            if row._hasCraft then
+                row.status:SetText("|cff00cc00Open|r")
+            else
+                row.status:SetText("|cff88cc88Learned|r")
+            end
+        else
+            row.nameText:SetTextColor(0.4, 0.4, 0.4)
+            row.icon:SetDesaturated(true)
+            row.icon:SetAlpha(0.35)
+            row.status:SetText("|cff666666Not learned|r")
+        end
+    end
+
+    -- Count only the 11 primary professions (first 11 rows)
+    for i = 1, math.min(11, #allRows) do
+        if allRows[i]._known then
+            knownPrimary = knownPrimary + 1
+        end
+    end
+    subtitle:SetText(knownPrimary .. " of " .. totalPrimary .. " primary learned")
+end
+
+-------------------------------------------------------------------------------
+-- Addon Compartment button (the grid of icons near the minimap in 12.x)
+-- Registered via TOC: AddonCompartmentFunc / OnEnter / OnLeave
+-------------------------------------------------------------------------------
+function VoxCoreProf_OnClick(addonName, buttonName)
+    TogglePanel()
+end
+
+function VoxCoreProf_OnEnter(addonName, menuButtonFrame)
+    GameTooltip:SetOwner(menuButtonFrame, "ANCHOR_LEFT")
+    GameTooltip:SetText("VoxCore Professions", 1, 0.82, 0)
+    GameTooltip:AddLine("Click to toggle profession panel", 0.7, 0.7, 0.7)
+    GameTooltip:AddLine("/profs also works", 0.5, 0.5, 0.5)
+    GameTooltip:Show()
+end
+
+function VoxCoreProf_OnLeave(addonName, menuButtonFrame)
+    GameTooltip:Hide()
+end
+
+-------------------------------------------------------------------------------
+-- Events
+-------------------------------------------------------------------------------
+f:RegisterEvent("PLAYER_LOGIN")
+f:RegisterEvent("SPELLS_CHANGED")
+f:RegisterEvent("SKILL_LINES_CHANGED")
+
+f:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_LOGIN" then
+        BuildUI()
+        if VoxCoreProfDB.p then
+            self:ClearAllPoints()
+            self:SetPoint(
+                VoxCoreProfDB.p, UIParent, VoxCoreProfDB.rp,
+                VoxCoreProfDB.x or 0, VoxCoreProfDB.y or 0
+            )
+        end
+    end
+    Refresh()
+end)
+
+f:SetScript("OnShow", Refresh)
+
+-------------------------------------------------------------------------------
+-- Slash commands
+-------------------------------------------------------------------------------
+SLASH_VOXPROF1 = "/profs"
+SLASH_VOXPROF2 = "/professions"
+
+SlashCmdList["VOXPROF"] = function()
+    TogglePanel()
+end
+
+-------------------------------------------------------------------------------
+-- Load message
+-------------------------------------------------------------------------------
+if C_Timer and C_Timer.After then
+    C_Timer.After(3, function()
+        print("|cffff9900[VoxCore Professions]|r Type |cff00ff00/profs|r or click the Alchemy flask icon near the minimap.")
+    end)
+end
