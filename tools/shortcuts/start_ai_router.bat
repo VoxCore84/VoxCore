@@ -1,6 +1,6 @@
 @echo off
 setlocal
-set "RUNTIME=C:\Users\atayl\VoxCore\tools"
+set "RUNTIME=C:\Users\atayl\VoxCore\tools\ai_studio"
 :: Use pythonw to launch without a console window. 
 :: The pystray icon will appear in the system tray.
 start "AI Studio Router Daemon" /B pythonw "%RUNTIME%\ai_studio_router.py"

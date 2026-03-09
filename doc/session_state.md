@@ -25,7 +25,8 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Main (121) | VoxPlacer polish — undo, face, favorites, minimap, ghost aura, QA | COMPLETE | `4fc562e404`. 4 features (undo stack, face-toward, favorites list, minimap button), ghost preview aura (37800), 6 QA fixes (keybinds, memory leak, false-positive state, fragile clone ref, GO clone props/orientation) |
 | Main (123) | auto_parse v3 — modular log pipeline rewrite + QA + audit | COMPLETE | `98aa66149c`. 19-module package, 2,498 lines. 3 QA passes + Antigravity audit. 7 parsers, HTML dashboard, TOML config, tray icon, toast notifications |
 | Main (124) | Tongue & Quill Auto-Formatter (standalone project) | COMPLETE | `C:\Users\atayl\TongueAndQuill\`. v2.1 production release, 8 AFH templates, auto-detect, PyInstaller build, audit prompt. No VoxCore commits. |
-| Main (125) | DevOps pipeline overhaul — memory sync | COMPLETE | Synced Claude Code memory with Cowork-built pipeline: `start_all.bat`/`stop_all.bat` lifecycle, `apply_pending_sql.bat`, client data capture, `_Session_Brief.md`, handover agent. Created `doc/claude_memory.md`. Updated MEMORY.md, tooling-inventory.md, todo.md |
+| Main (125) | DevOps pipeline overhaul — memory sync | COMPLETE | Synced memory with pipeline. Created `doc/claude_memory.md`. Updated 5 memory files |
+| Main (127) | AI Studio + full sync + commit | COMPLETE | `9ee8c2bb55`. AI Studio hub (junctions for 3 projects), .agentrules, gitignore hardening (discord exports, transmog export, session logs), discord analytics script, DevOps prompts. 21 files, 855 insertions |
 | — | — | — | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.

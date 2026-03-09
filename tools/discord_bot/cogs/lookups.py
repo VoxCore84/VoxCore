@@ -71,6 +71,9 @@ def _format_results(results: list[dict], id_col: str, name_col: str, extra_cols:
 class Lookups(commands.Cog):
     """Slash commands for game data lookups."""
 
+    # Per-user cooldown: 5 uses per 30 seconds
+    _cooldown = app_commands.checks.cooldown(5, 30.0, key=lambda i: i.user.id)
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self._spell_csv = WAGO_CSV_DIR / "SpellName-enUS.csv"
@@ -81,6 +84,7 @@ class Lookups(commands.Cog):
 
     @app_commands.command(name="spell", description="Look up a spell by ID or name")
     @app_commands.describe(query="Spell ID or name to search for")
+    @app_commands.checks.cooldown(5, 30.0, key=lambda i: i.user.id)
     async def spell_lookup(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
         results = _search_csv(self._spell_csv, "ID", "Name_lang", query)
@@ -91,6 +95,7 @@ class Lookups(commands.Cog):
 
     @app_commands.command(name="item", description="Look up an item by ID or name")
     @app_commands.describe(query="Item ID or name to search for")
+    @app_commands.checks.cooldown(5, 30.0, key=lambda i: i.user.id)
     async def item_lookup(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
         results = _search_csv(self._item_csv, "ID", "Display_lang", query, extra_cols=["OverallQualityID"])
@@ -109,6 +114,7 @@ class Lookups(commands.Cog):
 
     @app_commands.command(name="creature", description="Look up a creature/NPC by ID or name")
     @app_commands.describe(query="Creature entry ID or name to search for")
+    @app_commands.checks.cooldown(5, 30.0, key=lambda i: i.user.id)
     async def creature_lookup(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
 
@@ -159,6 +165,7 @@ class Lookups(commands.Cog):
 
     @app_commands.command(name="area", description="Look up a zone/area by ID or name")
     @app_commands.describe(query="Area ID or name to search for")
+    @app_commands.checks.cooldown(5, 30.0, key=lambda i: i.user.id)
     async def area_lookup(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
 
@@ -181,6 +188,7 @@ class Lookups(commands.Cog):
 
     @app_commands.command(name="faction", description="Look up a faction by ID or name")
     @app_commands.describe(query="Faction ID or name to search for")
+    @app_commands.checks.cooldown(5, 30.0, key=lambda i: i.user.id)
     async def faction_lookup(self, interaction: discord.Interaction, query: str):
         await interaction.response.defer()
 

@@ -2,8 +2,8 @@
 """Generate all RP fun spells batch SQL with unique hotfix_data IDs."""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent / "wago"))
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "wago"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 VERIFIED_BUILD = 66263
 

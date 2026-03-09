@@ -26,7 +26,7 @@ import json
 import argparse
 from collections import defaultdict
 
-DEFAULT_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OPCODES_H_REL = "src/server/game/Server/Protocol/Opcodes.h"
 OPCODES_CPP_REL = "src/server/game/Server/Protocol/Opcodes.cpp"
 CACHE_FILE = ".opcode_cache.json"

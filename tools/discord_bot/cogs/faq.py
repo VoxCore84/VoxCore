@@ -4,12 +4,14 @@ Patterns and responses derived from analysis of 30K+ messages across 10 channels
 in the DraconicWoW Discord (Apr 2024 – Mar 2026).
 """
 
-import re
 import json
 import logging
+import re
+from collections import Counter
 from pathlib import Path
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from config import SUPPORT_CHANNEL_IDS, GITHUB_REPO, GITHUB_AUTH_SQL_PATH
@@ -19,11 +21,26 @@ log = logging.getLogger(__name__)
 
 # Load FAQ data from JSON
 _FAQ_PATH = Path(__file__).parent.parent / "data" / "faq_responses.json"
+_STATS_PATH = Path(__file__).parent.parent / "data" / "faq_stats.json"
 
 
 def _load_faq() -> list[dict]:
     with open(_FAQ_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _load_stats() -> Counter:
+    try:
+        with open(_STATS_PATH, "r", encoding="utf-8") as f:
+            return Counter(json.load(f))
+    except Exception:
+        return Counter()
+
+
+def _save_stats(stats: Counter):
+    _STATS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(_STATS_PATH, "w", encoding="utf-8") as f:
+        json.dump(dict(stats), f, indent=2)
 
 
 class FAQResponder(commands.Cog):
@@ -38,6 +55,8 @@ class FAQResponder(commands.Cog):
         # Cooldown: don't spam the same FAQ in the same channel within 5 minutes
         # key = (channel_id, faq_id) → last trigger timestamp
         self._cooldowns: dict[tuple[int, str], float] = {}
+        # Persistent stats: how many times each FAQ has triggered
+        self._stats: Counter = _load_stats()
         log.info("FAQResponder loaded %d FAQ entries", len(self.faq_entries))
 
     def _check_cooldown(self, channel_id: int, faq_id: str, now: float) -> bool:
@@ -81,8 +100,37 @@ class FAQResponder(commands.Cog):
                 )
                 embed.set_footer(text=f"{em('fix', '\U0001f527')} Automated answer \u2022 If this doesn't help, wait for a human!")
                 await message.reply(embed=embed, mention_author=False)
-                log.info("FAQ '%s' triggered by %s in #%s", faq_id, message.author, message.channel)
+                self._stats[faq_id] += 1
+                _save_stats(self._stats)
+                log.info("FAQ '%s' triggered by %s in #%s (total: %d)", faq_id, message.author, message.channel, self._stats[faq_id])
                 return  # Only one FAQ per message
+
+    @app_commands.command(name="faqstats", description="Show which FAQ topics trigger most often (admin only)")
+    @app_commands.checks.has_permissions(manage_messages=True)
+    async def faq_stats(self, interaction: discord.Interaction):
+        if not self._stats:
+            await interaction.response.send_message("No FAQ stats yet — the bot hasn't triggered any FAQs.", ephemeral=True)
+            return
+
+        # Build a title lookup
+        title_map = {e["id"]: e["title"] for e in self.faq_entries}
+
+        # Sort by count descending
+        lines = []
+        total = sum(self._stats.values())
+        for faq_id, count in self._stats.most_common():
+            title = title_map.get(faq_id, faq_id)
+            pct = count / total * 100 if total else 0
+            lines.append(f"**{count}x** — {title} ({pct:.0f}%)")
+
+        icon = em("faq", "\u2753")
+        embed = discord.Embed(
+            title=f"{icon} FAQ Trigger Stats",
+            description="\n".join(lines) + f"\n\n**Total triggers:** {total}",
+            color=discord.Color.blue(),
+        )
+        embed.set_footer(text="Stats persist across bot restarts")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

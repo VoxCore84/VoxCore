@@ -28,7 +28,7 @@ from typing import Any, Optional
 # ---------------------------------------------------------------------------
 # Bootstrap — add wago/ to path so we can import project modules
 # ---------------------------------------------------------------------------
-TOOLS_DIR = Path(__file__).resolve().parent
+TOOLS_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = TOOLS_DIR.parent
 sys.path.insert(0, str(PROJECT_ROOT / "wago"))
 

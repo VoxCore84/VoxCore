@@ -1,12 +1,19 @@
 """DraconicBot — main bot class."""
 
 import logging
+import time
 
 import discord
 from discord.ext import commands
 from emojis import load_app_emojis
+from config import (
+    CHANNEL_TROUBLESHOOTING, CHANNEL_BUGREPORT, CHANNEL_TWW,
+    CHANNEL_GENERAL, CHANNEL_ANNOUNCEMENTS, SUPPORT_CHANNEL_IDS,
+)
 
 log = logging.getLogger(__name__)
+
+BOT_VERSION = "2.1.0"
 
 COGS = [
     "cogs.help",
@@ -21,6 +28,8 @@ COGS = [
     "cogs.changelog",
     "cogs.automod",
     "cogs.welcome_role",
+    "cogs.about",
+    "cogs.announce",
 ]
 
 
@@ -37,6 +46,7 @@ class VoxCoreBot(commands.Bot):
             intents=intents,
             help_command=None,
         )
+        self.start_time = time.time()
 
     async def setup_hook(self):
         """Load all cogs and sync slash commands."""
@@ -58,6 +68,9 @@ class VoxCoreBot(commands.Bot):
         # Load application emojis
         await load_app_emojis(self)
 
+        # Startup config validation
+        self._validate_config()
+
         # Set a status message
         await self.change_presence(
             activity=discord.Activity(
@@ -65,6 +78,24 @@ class VoxCoreBot(commands.Bot):
                 name="/help for commands",
             )
         )
+
+    def _validate_config(self):
+        """Log warnings for unconfigured channels so admins know what's missing."""
+        channel_map = {
+            "CHANNEL_TROUBLESHOOTING": CHANNEL_TROUBLESHOOTING,
+            "CHANNEL_BUGREPORT": CHANNEL_BUGREPORT,
+            "CHANNEL_TWW": CHANNEL_TWW,
+            "CHANNEL_GENERAL": CHANNEL_GENERAL,
+            "CHANNEL_ANNOUNCEMENTS": CHANNEL_ANNOUNCEMENTS,
+        }
+        missing = [name for name, cid in channel_map.items() if not cid]
+        if missing:
+            log.warning(
+                "Unconfigured channels (set in .env): %s — some features will be disabled",
+                ", ".join(missing),
+            )
+        if not SUPPORT_CHANNEL_IDS:
+            log.warning("No support channels configured — FAQ and wowhead resolver will be inactive")
 
     async def on_command_error(self, ctx: commands.Context, error: commands.CommandError):
         if isinstance(error, commands.CommandNotFound):

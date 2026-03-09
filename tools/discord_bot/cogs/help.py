@@ -67,13 +67,22 @@ CATEGORIES = [
         ],
     ),
     (
-        "shield", "\U0001f6e1\ufe0f", "Moderation",
-        "Auto-mod and server management tools.",
+        "shield", "\U0001f6e1\ufe0f", "Moderation & Admin",
+        "Auto-mod, announcements, and server management tools.",
         [
+            ("/announce", "Post a formatted announcement embed (admin only)"),
             ("/verifypanel", "Post the verification button panel (admin only)"),
+            ("/faqstats", "Show which FAQ topics trigger most often (admin only)"),
             ("Invite filter", "Auto-deletes Discord invite links from non-mods"),
             ("Spam detection", "Warns users sending too many messages too fast"),
             ("New account alerts", "Flags accounts younger than 7 days in mod-log"),
+        ],
+    ),
+    (
+        "dragon", "\U0001f409", "Bot Info",
+        "About the bot.",
+        [
+            ("/about", "Bot version, uptime, and stats"),
         ],
     ),
 ]

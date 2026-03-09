@@ -4,6 +4,26 @@ This document contains all the copy-paste prompts required to initialize the Mul
 
 ---
 
+## 0. The Central Brain (CRITICAL FOR ALL AGENTS)
+We operate a highly concurrent Triad AI workspace with over 10 active agents at a time. To prevent collisions and redundant work, we use a centralized Blackboard architecture.
+**All AI Agents (ChatGPT, Claude Code, and Antigravity) must obey this core directive:**
+Whenever you are given a new task, you MUST read `C:\Users\atayl\VoxCore\AI_Studio\0_Central_Brain.md` (or ask the user for its contents if you cannot read files) to ensure no other agent is already working on it. 
+**CRITICAL STOMPING RULE:** When updating the Central Brain file, DO NOT overwrite lines written by other agents! Use targeted line-replacement tools to update your specific task status without altering the rest of the document. If you notice another agent's task is missing from the Brain file, figure out what they are currently doing and re-add it to the Brain!
+
+---
+
+## 0.5 SYSTEM PAUSE (RUN THIS WHEN PAUSING ALL TABS)
+*If the user decides to pause the multi-agent UI tabs (e.g., to migrate to the API orchestrator), copy and paste the following prompt to every active tab so they properly suspend their state:*
+> **CRITICAL WORKSPACE OVERRIDE - FULL SYSTEM PAUSE INITIATED:** 
+> We are pausing all manual AI Studio tabs to migrate to an automated API orchestrator.
+> **ACTION REQUIRED IMMEDIATELY:**
+> 1. Stop whatever task you are currently working on.
+> 2. Read `C:\Users\atayl\VoxCore\AI_Studio\0_Central_Brain.md`.
+> 3. Move your current task from "Current Active Tabs" down to the "Paused / Suspended Tasks (Awaiting API Migration)" section. Include a detailed sub-bullet explaining exactly where you left off so the Orchestrator can seamlessly resume it later. Use strict line-replacement tools to avoid stomping the file.
+> 4. Acknowledge this pause and stand by for further instructions once the API is sorted out.
+
+---
+
 ## 1. ChatGPT (Lead Architect)
 *Paste this into the ChatGPT web interface to enforce the Spec pipeline.*
 
