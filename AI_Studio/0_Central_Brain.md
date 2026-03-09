@@ -1,5 +1,27 @@
 # AI Studio Active State
 
+## Triad Coordination — READ FIRST (all agents)
+
+**Last updated**: 2026-03-09, session 133 (Claude Code)
+
+### Agent Reference Files
+- **Claude Code config**: `CLAUDE.md` (root) + `~/.claude/projects/.../memory/MEMORY.md` (26 topic files linked from index)
+- **Central Brain**: this file (`AI_Studio/0_Central_Brain.md`) — all agents read at session start
+- **Specs inbox**: `AI_Studio/1_Inbox/` — ChatGPT drops specs here, Claude reads before implementing
+- **Audit results**: `AI_Studio/3_Audits/` — Antigravity writes findings here, Claude reads on demand
+
+### Active Operations
+- **Antigravity**: Phase 1 "Aegis Config" — scanning scripts, removing hardcoded paths. Claude Code will NOT interfere with path changes during this operation
+- **Claude Code**: Standing by for first spec in `1_Inbox/`. No active implementation work
+- **ChatGPT**: Architecture role. Pending specs: Command Center Overhaul, idTIP Transmog Mini-Bridge
+
+### Communication Protocol
+All agents: write status updates HERE instead of relaying through the user. One file, one truth.
+- Starting work → update "Current Active Tabs" with your assignment
+- Pausing → move entry to "Paused / Suspended Tasks" with resume point
+- Finishing → move to "Completed Today"
+- Found a conflict → write it here with `[CONFLICT]` tag, don't proceed
+
 ## Current Active Tabs
 
 ## Completed Today
