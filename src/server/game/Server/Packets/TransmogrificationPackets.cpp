@@ -162,35 +162,36 @@ void TransmogOutfitNew::Read()
         IconFileDataID = ReadLE<uint32>(remaining, 2);
 
         // Fixed header is 6 bytes: type(1) + flags(1) + icon(4)
-        // After the fixed header and any slot data, we have: [nameLen:u8][pad:u8][name:nameLen bytes]
-        // Work backward from the end using the length byte to find the name
-        // The nameLen byte is at (remaining.size() - nameLen - 2), pad is at (remaining.size() - nameLen - 1)
-
-        // First, use the length-byte approach: scan for the nameLen/pad pair
-        // The name ends at the very end of the payload. The byte at offset (end - nameLen - 2) should equal nameLen.
-        // We try the length-byte method first, then fall back to ASCII scan for diagnostics.
+        // After the fixed header and any slot data, we have: [nameLen:u8][pad:u8=0x80][name:nameLen bytes]
+        // Use modular arithmetic on slot alignment to find the nameLen byte position,
+        // then validate with both the nameLen byte value and the 0x80 pad byte.
+        // Falls back to backward ASCII scan if the primary method doesn't match.
 
         std::size_t nameLength = 0;
         std::size_t nameStart = 0;
         bool usedLengthByte = false;
 
-        // Try length-byte parsing: iterate possible name lengths (1..127)
-        // The nameLen byte is at (remaining.size() - candidateLen - 2), pad byte at (remaining.size() - candidateLen - 1)
-        for (std::size_t candidateLen = 1; candidateLen <= 127 && candidateLen + 2 <= remaining.size(); ++candidateLen)
+        // Deterministic name extraction using slot-data alignment + pad byte validation.
+        // Wire: [header:6][N*16-byte slots][nameLen:u8][pad:u8=0x80][name:nameLen bytes]
+        // remaining.size() = 6 + N*16 + 2 + nameLen, so nameLen ≡ (remaining.size() - 8) mod 16.
+        // Only test congruent candidates; validate both nameLen byte value AND pad byte (0x80 or 0x00).
+        if (remaining.size() >= 8)
         {
-            std::size_t lenByteOffset = remaining.size() - candidateLen - 2;
-            if (lenByteOffset < 6) // must be after the 6-byte fixed header
-                break;
-            if (remaining[lenByteOffset] == candidateLen) // pad byte varies (0x00 or 0x80)
+            std::size_t residue = (remaining.size() - 8) % 16;
+            for (int k = 0; k <= 8 && !usedLengthByte; ++k)
             {
-                // Validate that the space between fixed header and lenByte is a multiple of 16 (slot data)
-                std::size_t slotRegion = lenByteOffset - 6;
-                if (slotRegion % 16 == 0)
+                std::size_t candidate = residue + std::size_t(k) * 16;
+                if (candidate == 0 || candidate > 127)
+                    continue;
+                std::size_t lenByteOffset = remaining.size() - candidate - 2;
+                if (lenByteOffset < 6)
+                    break;
+                if (remaining[lenByteOffset] == uint8(candidate) &&
+                    (remaining[lenByteOffset + 1] == 0x80 || remaining[lenByteOffset + 1] == 0x00))
                 {
-                    nameLength = candidateLen;
+                    nameLength = candidate;
                     nameStart = lenByteOffset + 2;
                     usedLengthByte = true;
-                    break;
                 }
             }
         }
@@ -263,14 +264,15 @@ void TransmogOutfitNew::Read()
                 //   bytes[6-7] = ItemAppearance.DisplayType of the IMAID (uint16 LE) — THIS is the routing key
                 //   bytes[8-15]= Reserved (zeros)
                 uint8 ordinal = slotData[i + 0];
+                uint8 option = slotData[i + 1];
                 uint32 appearanceID = ReadLE<uint32>(slotData, i + 2);
                 uint16 wireDisplayType = ReadLE<uint16>(slotData, i + 6);
 
                 // Empty slot = IMAID is 0 (no transmog applied)
                 if (appearanceID == 0)
                 {
-                    TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_NEW entry[{}]: ordinal={} wireDT={} (empty, skipped)",
-                        idx, ordinal, wireDisplayType);
+                    TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_NEW entry[{}]: ordinal={} option={} wireDT={} (empty, skipped)",
+                        idx, ordinal, option, wireDisplayType);
                     continue;
                 }
 
@@ -297,8 +299,14 @@ void TransmogOutfitNew::Read()
                         Set.Appearances[equipSlot] = int32(appearanceID);
                 }
 
-                TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_NEW entry[{}]: appear={} ordinal={} wireDT={} serverDT={} equipSlot={}",
-                    idx, appearanceID, ordinal, wireDisplayType, serverDT, equipSlot);
+                // Store weapon option index for MH/OH
+                if (equipSlot == EQUIPMENT_SLOT_MAINHAND && option > 0 && !Set.MainHandOption)
+                    Set.MainHandOption = option;
+                else if (equipSlot == EQUIPMENT_SLOT_OFFHAND && option > 0 && !Set.OffHandOption)
+                    Set.OffHandOption = option;
+
+                TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_NEW entry[{}]: appear={} ordinal={} option={} wireDT={} serverDT={} equipSlot={}",
+                    idx, appearanceID, ordinal, option, wireDisplayType, serverDT, equipSlot);
             }
         }
 
@@ -566,6 +574,12 @@ void TransmogOutfitUpdateSlots::Read()
             // First non-zero wins within the last group — earliest valid entry for each slot takes priority
             if (equipSlot < EQUIPMENT_SLOT_END && !Set.Appearances[equipSlot])
                 Set.Appearances[equipSlot] = int32(slot.AppearanceID);
+
+            // Store weapon option index for MH/OH
+            if (equipSlot == EQUIPMENT_SLOT_MAINHAND && slot.Option > 0 && !Set.MainHandOption)
+                Set.MainHandOption = slot.Option;
+            else if (equipSlot == EQUIPMENT_SLOT_OFFHAND && slot.Option > 0 && !Set.OffHandOption)
+                Set.OffHandOption = slot.Option;
 
             TC_LOG_DEBUG("network.opcode.transmog", "CMSG_TRANSMOG_OUTFIT_UPDATE_SLOTS entry[{}]: appear={} ordinal={} option={} wireDT={} serverDT={} equipSlot={}",
                 i, slot.AppearanceID, ordinal, slot.Option, slot.WireDisplayType, serverDT, equipSlot);

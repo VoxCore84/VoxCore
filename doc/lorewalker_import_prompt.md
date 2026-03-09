@@ -1,92 +1,89 @@
 # LoreWalker TDB Import — Claude Code Task Prompt
 
-> **Copy everything below this line into a new Claude Code tab opened in `C:\Users\atayl\VoxCore\`**
+> **Paste this entire document into a Claude Code tab opened in `C:\Users\atayl\VoxCore\`.**
+> Then tell the tab which Files to generate (e.g., "Generate Files 1, 2, 3, and 7").
+> See `doc/lorewalker_tab_plan.md` for tab assignments.
 
 ---
 
-## Task: Build and Execute LoreWalker TDB Selective Import Pipeline
+## Task: Generate LoreWalker TDB Selective Import SQL Files
 
-You are working on VoxCore, a TrinityCore-based WoW private server. A new LoreWalker TDB dump (March 6 2026, build 66102) has been loaded into `lorewalker_world` on the same MySQL instance as our production `world` database.
+You are working on VoxCore, a TrinityCore-based WoW private server. A LoreWalker TDB dump (March 6 2026, build 66102) has been loaded into `lorewalker_world` on the same MySQL instance as our production `world` database. Your job is to generate SQL update files that selectively import missing data from LW into our world DB.
 
 ### Connection Info
 - MySQL: `"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -padmin`
-- Source DB: `lorewalker_world` (935MB, 250 tables, freshly imported reference)
-- Target DB: `world` (our production world database)
-- SQL output dir: `sql/updates/world/master/` (naming: `YYYY_MM_DD_NN_world.sql`)
+- Source DB: `lorewalker_world` (935MB, 250 tables, build 66102)
+- Target DB: `world` (our production world database, build 66263)
+- SQL output dir: `sql/updates/world/master/` (naming: `2026_03_08_NN_world.sql`)
 - Today's date: 2026-03-08
 
-### What Was Already Analyzed (6-agent sweep, all confirmed)
+### Verified Analysis (3 QA passes, all counts confirmed against live DBs)
 
-**Schema**: Perfect match. All 253 LW tables exist in our world DB. Only 4 extra columns on our side (creature.size, gameobject.size, gameobject.visibility, npc_vendor.OverrideGoldCost) — all have defaults. No translation needed. Same engines, same PKs.
+**Schema**: All LW tables exist in our world DB. 4 extra columns on OUR side only:
+- `creature.size` (default -1)
+- `gameobject.size` (default -1)
+- `gameobject.visibility` (default 256)
+- `npc_vendor.OverrideGoldCost` (default -1)
 
-**Collisions**: NONE with our custom systems. Our custom ranges (creature_template 400000+, companions 500001-500005, spells 1900003+, portal GOs 620001-620011) have zero overlap with LW data.
+One extra column on LW side: `lorewalker_world.scene_template.RTComment` (we don't have it — exclude from SELECT).
 
-**Data Quality Issues in LW to FILTER OUT**:
-- 41,911 gameobject rows with corrupt GUIDs >= 1,913,720,832,000 (seasonal import artifacts)
-- 226 creature/gameobject spawns at position (0,0,0)
-- 950 orphan spawns referencing non-existent templates (258 creature, 692 gameobject)
-- LW custom range 9,100,000+ (creatures, quests) — their housing/plot system, skip entirely
+**No collisions** with our custom ranges (creature_template 400000+, companions 500001-500005, spells 1900003+, portal GOs 620001-620011).
 
-**Critical Gaps (LW has, we don't)**:
-| Category | Missing Rows | Impact |
-|---|---|---|
-| phase_area | 662 | HIGHEST — invisible NPCs/objects |
-| SmartAI (creature, source_type=0) | 169,464 | NPC behavior |
-| SmartAI (timed actionlists, source_type=9) | 946 | NPC scripted sequences |
-| Creature spawns (open world) | ~10,890 | World population |
-| Creature spawns (instances) | ~92,000 | Dungeon/raid population |
-| Gameobject spawns | 43,986 | World objects |
-| Gameobject loot templates | 58,641 | Loot tables |
-| Quest template addon | 57,699 | Quest metadata |
-| Waypoint path nodes | 50,925 | NPC movement |
-| Creature addon | 16,598 | NPC visual data |
-| Scene templates | 194 | Cutscene data |
-| Quest templates | 306 (187 retail) | Quests |
-| Vendor data | 3,910 rows / 233 NPCs | Shop items |
-| Waypoint paths | 61 | Patrol definitions |
-
-**Where WE lead (do NOT overwrite)**:
-- creature_loot_template: we have 50K more rows (raidbots imports)
-- spell_script_names: we have 1,928 more (custom script bindings)
-- creature_template: we have 251 more (custom NPCs)
-- trainer/trainer_spell: we have more (custom trainers)
-- npc_vendor: we have 4,326 more total rows
-- creature_queststarter/questender: we have more
-
-### Strategy: Direct Cross-Database SQL
-
-Since both DBs are on the same MySQL instance, use `INSERT IGNORE INTO world.X SELECT * FROM lorewalker_world.X` with LEFT JOIN exclusion filters. This avoids Python entirely — produces clean, auditable, idempotent SQL files.
-
-### Execution Plan — 5 SQL Files
-
-Generate these as separate SQL update files using the project's naming convention (`sql/updates/world/master/2026_03_08_NN_world.sql`). Check what sequence numbers already exist and use the next available ones.
-
-**IMPORTANT RULES**:
-- Every file must start with a comment block explaining what it does
-- Use INSERT IGNORE everywhere (idempotent, safe to re-run)
-- For UPDATE operations (CT backfill), use UPDATE...JOIN with WHERE to only touch rows that need it
-- NEVER delete or overwrite data in tables where we lead (creature_loot_template, spell_script_names, trainer, etc.)
-- Filter out LW custom range (entry/ID >= 9,100,000) from all imports
-- Filter out corrupt GO GUIDs >= 1,913,720,832,000
-- Filter out spawns at position (0,0,0)
-- Filter out orphan spawns (spawns referencing non-existent templates in OUR world DB)
-- Do NOT import SmartAI source_type=5 (337K rows — LW custom scene extension we don't support)
-- All imported rows should have VerifiedBuild set to 0 (marks as custom/imported)
+**Data quality filters** (apply to ALL imports):
+- LW custom range: `entry/ID >= 9,100,000` (their housing system) → EXCLUDE
+- Corrupt GO GUIDs: `guid >= 1,913,720,832,000` (41,911 seasonal artifacts) → EXCLUDE
+- Origin spawns: `position_x = 0 AND position_y = 0 AND position_z = 0` (226 total) → EXCLUDE
+- Orphan spawns: spawns referencing templates that don't exist in OUR world DB → EXCLUDE
 
 ---
 
-#### FILE 1: Phase Area + Phase Name (Quick Win — Highest Impact)
-Sequence: next available after existing _08_xx files.
+## IMPORTANT RULES
+
+1. **DESCRIBE every table in BOTH databases** before writing any INSERT. Never guess column names.
+2. **Use INSERT IGNORE** for all tables that have a primary key (idempotent, safe to re-run).
+3. **Use `INSERT INTO ... SELECT ... WHERE NOT EXISTS`** for tables with NO primary key (all `*_loot_template` tables). See File 6 for details.
+4. **Explicit column lists** (no `SELECT *`) for any table where the two DBs have different column counts. For tables with identical schemas, `SELECT *` is acceptable.
+5. **Filter out LW custom range** (`>= 9,100,000`) from every import that has an entry/ID column.
+6. **For UPDATE operations** (File 7), use `UPDATE ... JOIN ... WHERE` to only touch rows that need it.
+7. **NEVER delete or overwrite** data in tables where we lead: `creature_loot_template`, `spell_script_names`, `trainer`, `trainer_spell`.
+8. **VerifiedBuild override**: For tables that have a `VerifiedBuild` column, emit `0 AS VerifiedBuild` in the SELECT instead of copying LW's value. This marks rows as imported.
+9. **Performance**: Wrap Files 4, 5, and 6 in `SET autocommit=0;` at the top and `COMMIT;` at the bottom (100K+ row inserts).
+10. Every SQL file must start with a comment block explaining what it does and listing estimated row counts.
+11. **Do NOT apply** the SQL files — only generate them. User will review and apply manually.
+
+### Tables with VerifiedBuild column (use `0 AS VerifiedBuild`):
+creature_template, creature_template_difficulty, creature_template_model, gameobject_template, quest_template, quest_objectives, quest_details, quest_offer_reward, quest_request_items, creature, gameobject, npc_vendor, gossip_menu, gossip_menu_option
+
+### Tables WITHOUT VerifiedBuild (copy all columns):
+phase_area, phase_name, gameobject_template_addon, quest_template_addon, creature_addon, gameobject_addon, creature_movement_override, smart_scripts, waypoint_path, waypoint_path_node, scene_template, creature_text, npc_text, conditions, all `*_loot_template` tables, spawn_group, pool_template, pool_members, creature_formations, game_event_creature, game_event_gameobject, creature_equip_template, creature_template_addon, creature_template_spell, quest_poi, quest_poi_points, quest_visual_effect, creature_queststarter, creature_questender, gameobject_queststarter, gameobject_questender, creature_questitem, gameobject_questitem
+
+### Known Schema Pitfalls
+- **`gameobject_loot_template`** (and all `*_loot_template` tables): The column is **`ItemType`**, NOT `Reference`. There is NO `Reference` column.
+- **`waypoint_path`**: Has a `Velocity` column between `Flags` and `Comment`. Include it in explicit column lists.
+- **`creature_addon`**: AnimKit columns (`aiAnimKit`, `movementAnimKit`, `meleeAnimKit`) are `smallint signed` in world but `smallint unsigned` in LW. INSERT IGNORE handles this, but values >32767 would be truncated.
+- **`lorewalker_world.scene_template`** has an extra `RTComment` column we don't have. Use explicit column list to exclude it.
+
+---
+
+## Execution Plan — 7 SQL Files
+
+Check what sequence numbers already exist in `sql/updates/world/master/2026_03_08_*` and use the next 7 consecutive numbers.
+
+---
+
+### FILE 1: Phases (~1,279 rows)
+
+**Tables**: `phase_area`, `phase_name`
 
 ```sql
--- Import phase_area entries from LoreWalker that we're missing
+-- Phase areas we're missing (662 rows)
 INSERT IGNORE INTO world.phase_area (AreaId, PhaseId, Comment)
 SELECT l.AreaId, l.PhaseId, l.Comment
 FROM lorewalker_world.phase_area l
 LEFT JOIN world.phase_area w ON l.AreaId = w.AreaId AND l.PhaseId = w.PhaseId
 WHERE w.AreaId IS NULL;
 
--- Import phase_name entries from LoreWalker that we're missing
+-- Phase names we're missing (617 rows)
 INSERT IGNORE INTO world.phase_name (ID, Name)
 SELECT l.ID, l.Name
 FROM lorewalker_world.phase_name l
@@ -94,112 +91,255 @@ LEFT JOIN world.phase_name w ON l.ID = w.ID
 WHERE w.ID IS NULL;
 ```
 
-Before writing the file, DESCRIBE both tables to verify column names match exactly. Run a SELECT COUNT first to confirm expected row counts.
+DESCRIBE both tables first to verify column names match.
 
 ---
 
-#### FILE 2: Templates (creature_template, creature_template_difficulty, gameobject_template, quest_template + addons)
+### FILE 2: Templates (~4,450 rows)
 
-Import NEW templates only (not updates to existing ones). Filter out LW custom range (>= 9,100,000).
+**Tables**: `creature_template`, `creature_template_difficulty`, `creature_template_model`, `creature_template_addon`, `creature_template_spell`, `creature_equip_template`, `gameobject_template`, `gameobject_template_addon`
 
-Key tables:
-- creature_template (36 missing, exclude >= 9100000)
-- creature_template_difficulty (for those 36 new templates)
-- creature_template_model (for those 36 new templates)
-- gameobject_template (2,191 missing)
-- gameobject_template_addon (for new GO templates)
-- quest_template (187 retail quests, exclude >= 9100000)
-- quest_template_addon (join against quest_template to only add addons for quests that exist)
-- quest_objectives (for new quests)
-- quest_details, quest_offer_reward, quest_request_items (for new quests)
+Import NEW entries only (LEFT JOIN exclusion). Filter `entry < 9100000` on all.
 
-DESCRIBE every table before writing INSERT statements. The column lists must be explicit (no SELECT *) for tables where we have extra columns.
+**creature_template** (~10 new entries): DESCRIBE in both DBs. Our table is identical to LW — use explicit column list anyway for safety, with `0 AS VerifiedBuild`.
 
-For creature and gameobject tables where we have extra columns (size, visibility, OverrideGoldCost), you MUST list columns explicitly in the INSERT to avoid column count mismatches.
+**creature_template_difficulty** (~20 rows): Import ALL missing rows (not just for new templates — some existing templates have difficulty rows in LW that we lack). This is important because File 7's ContentTuningID backfill needs the rows to exist. JOIN on `(Entry, DifficultyID)`. Override VerifiedBuild to 0.
+
+**creature_template_model** (~13 rows): For new templates only. JOIN on `(CreatureID, Idx)`. Override VerifiedBuild to 0.
+
+**creature_template_addon** (~125 rows): All missing rows. JOIN on `(entry)`.
+
+**creature_template_spell** (~163 rows): All missing rows. JOIN on `(CreatureID, Index)`. Backtick `Index` — it's a reserved word.
+
+**creature_equip_template** (~2,023 rows): All missing rows. JOIN on `(CreatureID, ID)`.
+
+**gameobject_template** (~2,089 rows): DESCRIBE in both DBs. Override VerifiedBuild to 0.
+
+**gameobject_template_addon** (~10 rows): For new GO templates.
+
+DESCRIBE every table before writing. Use explicit column lists where schema differs.
 
 ---
 
-#### FILE 3: Spawn Data (creatures + gameobjects)
+### FILE 3: Quests (~98,000 rows)
 
-This is the biggest file. Import creature and gameobject spawns that exist in LW but not in our world DB.
+**Tables**: `quest_template`, `quest_template_addon`, `quest_objectives`, `quest_details`, `quest_offer_reward`, `quest_request_items`, `quest_poi`, `quest_poi_points`, `quest_visual_effect`, `creature_queststarter`, `creature_questender`, `gameobject_queststarter`, `gameobject_questender`, `creature_questitem`, `gameobject_questitem`
 
+**quest_template** (~198 new quests): Only new (LEFT JOIN on ID), filter `ID < 9100000`. Override VerifiedBuild to 0.
+
+**quest_template_addon** (~57,611 rows): Import for ALL quests (new AND existing) that are missing addon data. LEFT JOIN on `(QuestId)`.
+
+**quest_objectives** (~888 rows): All missing. LEFT JOIN on `(ID)`. Override VerifiedBuild to 0.
+
+**quest_details** (~962 rows): All missing. LEFT JOIN on `(ID)`. Override VerifiedBuild to 0.
+
+**quest_offer_reward** (~551 rows): All missing. LEFT JOIN on `(ID)`. Override VerifiedBuild to 0.
+
+**quest_request_items** (~1,894 rows): All missing. LEFT JOIN on `(ID)`. Override VerifiedBuild to 0.
+
+**quest_poi** (~10,424 rows): Quest map markers. DESCRIBE to get columns and PK. LEFT JOIN exclusion.
+
+**quest_poi_points** (~23,476 rows): Map marker polygon vertices. DESCRIBE to get columns and PK. LEFT JOIN exclusion.
+
+**quest_visual_effect** (~545 rows): DESCRIBE to get columns and PK.
+
+**creature_queststarter** (~889 rows): INSERT IGNORE preserves our existing data while adding LW-only entries. LEFT JOIN on `(quest, id)`.
+
+**creature_questender** (~714 rows): Same pattern as queststarter.
+
+**gameobject_queststarter** (~154 rows), **gameobject_questender** (~162 rows): Same pattern.
+
+**creature_questitem** (~258 rows), **gameobject_questitem** (~519 rows): DESCRIBE to get PKs.
+
+DESCRIBE every table before writing.
+
+---
+
+### FILE 4: Spawns (~132,000 rows) — WRAP IN autocommit=0/COMMIT
+
+**Tables**: `creature`, `gameobject`, `creature_addon`, `gameobject_addon`, `creature_movement_override`, `spawn_group`, `pool_template`, `pool_members`, `creature_formations`, `game_event_creature`, `game_event_gameobject`
+
+**creature spawns** (~101,018 rows):
 ```sql
--- Creature spawns: INSERT IGNORE, filter corrupt/broken data
-INSERT IGNORE INTO world.creature (guid, id, map, zoneId, areaId, ...all columns except 'size'...)
-SELECT l.guid, l.id, l.map, l.zoneId, l.areaId, ...
+SET autocommit=0;
+
+-- DESCRIBE world.creature and lorewalker_world.creature first!
+-- Our creature table has extra column 'size' — use explicit column list excluding it.
+INSERT IGNORE INTO world.creature (guid, id, map, zoneId, areaId, /* ...all cols except size... */)
+SELECT l.guid, l.id, l.map, l.zoneId, l.areaId, /* ... */, 0 AS VerifiedBuild
 FROM lorewalker_world.creature l
 LEFT JOIN world.creature w ON l.guid = w.guid
 WHERE w.guid IS NULL
-  AND l.id < 9100000                    -- exclude LW custom creatures
-  AND NOT (l.position_x = 0 AND l.position_y = 0 AND l.position_z = 0)  -- exclude origin
-  AND l.id IN (SELECT entry FROM world.creature_template)  -- template must exist in our DB
-;
+  AND l.id < 9100000
+  AND NOT (l.position_x = 0 AND l.position_y = 0 AND l.position_z = 0)
+  AND EXISTS (SELECT 1 FROM world.creature_template ct WHERE ct.entry = l.id);
 ```
 
-For gameobjects, add the additional corrupt GUID filter:
-```sql
-  AND l.guid < 1913720832000            -- exclude corrupt seasonal GUIDs
-```
+**gameobject spawns** (~1,290 rows): Same pattern as creature, plus:
+- Extra columns to exclude: `size`, `visibility`
+- Additional filter: `AND l.guid < 1913720832000` (corrupt GUID filter)
+- Orphan filter: `AND EXISTS (SELECT 1 FROM world.gameobject_template gt WHERE gt.entry = l.id)`
 
-Also import associated addon data:
-- creature_addon (for newly imported creature GUIDs)
-- gameobject_addon (for newly imported gameobject GUIDs)
-- creature_movement_override (for newly imported creature GUIDs)
+**creature_addon** (~16,640 rows): Import all missing. LEFT JOIN on `(guid)`. Only import for GUIDs that exist in world.creature (use EXISTS).
 
-DESCRIBE `creature` and `gameobject` tables in BOTH databases first — our tables have extra columns (size, visibility) that must be excluded from the SELECT.
+**gameobject_addon** (~200 rows): Same pattern as creature_addon.
+
+**creature_movement_override** (~100 rows): For GUIDs that exist in world.creature.
+
+**spawn_group** (~10,145 rows): DESCRIBE to get columns and PK. LEFT JOIN exclusion.
+
+**pool_template** (~1,886 rows): DESCRIBE. LEFT JOIN on `(entry)`.
+
+**pool_members** (~240 rows): DESCRIBE. LEFT JOIN exclusion.
+
+**creature_formations** (~1,475 rows): DESCRIBE. LEFT JOIN on `(leaderGUID, memberGUID)`.
+
+**game_event_creature** (~1,376 rows): LEFT JOIN on `(guid, eventEntry)`.
+
+**game_event_gameobject** (~10,791 rows): LEFT JOIN on `(guid, eventEntry)`. Apply corrupt GUID filter (`guid < 1913720832000`).
+
+End file with `COMMIT;`
+
+DESCRIBE `creature` and `gameobject` in BOTH databases — the extra columns MUST be excluded from the column lists.
 
 ---
 
-#### FILE 4: Behavioral Data (SmartAI, Waypoints, Vendors, Scenes, Gossip)
+### FILE 5: Behavioral (~176,000 rows) — WRAP IN autocommit=0/COMMIT
 
-SmartAI (CRITICAL — only source_type 0 and 9):
+**Tables**: `smart_scripts`, `waypoint_path`, `waypoint_path_node`, `npc_vendor`, `gossip_menu`, `gossip_menu_option`, `npc_text`, `creature_text`, `scene_template`, `conditions`
+
+**smart_scripts** (~170,518 rows):
 ```sql
+SET autocommit=0;
+
 INSERT IGNORE INTO world.smart_scripts
-  (entryorguid, source_type, id, link, ...)
-SELECT l.entryorguid, l.source_type, l.id, l.link, ...
+  (entryorguid, source_type, id, link, /* ...all columns... */)
+SELECT l.entryorguid, l.source_type, l.id, l.link, /* ... */
 FROM lorewalker_world.smart_scripts l
 LEFT JOIN world.smart_scripts w
-  ON l.entryorguid = w.entryorguid AND l.source_type = w.source_type AND l.id = w.id AND l.link = w.link
+  ON l.entryorguid = w.entryorguid
+  AND l.source_type = w.source_type
+  AND l.id = w.id
+  AND l.link = w.link
 WHERE w.entryorguid IS NULL
-  AND l.source_type IN (0, 1, 2, 9)    -- creature, gameobject, areatrigger, timed actionlist
-  AND l.entryorguid NOT BETWEEN 9100000 AND 9199999  -- exclude LW custom
-  AND l.entryorguid NOT BETWEEN -9199999 AND -9100000  -- exclude LW custom (negative = per-GUID)
-;
+  AND l.source_type IN (0, 1, 2, 9)   -- creature, gameobject, areatrigger, timed actionlist
+  AND l.entryorguid < 9100000          -- exclude LW custom range
+  AND l.entryorguid > -9100000;        -- exclude LW custom (negative = per-GUID)
 ```
 
-Waypoints:
+**waypoint_path** (~61 rows): Include ALL columns — DESCRIBE first. Note: table has `Velocity` column between Flags and Comment.
 ```sql
-INSERT IGNORE INTO world.waypoint_path (PathId, MoveType, Flags, Comment)
-SELECT l.PathId, l.MoveType, l.Flags, l.Comment
+INSERT IGNORE INTO world.waypoint_path (PathId, MoveType, Flags, Velocity, Comment)
+SELECT l.PathId, l.MoveType, l.Flags, l.Velocity, l.Comment
 FROM lorewalker_world.waypoint_path l
 LEFT JOIN world.waypoint_path w ON l.PathId = w.PathId
 WHERE w.PathId IS NULL;
+```
 
--- Then nodes for those new paths
+**waypoint_path_node** (~87 rows): Nodes for NEW paths only.
+```sql
 INSERT IGNORE INTO world.waypoint_path_node (PathId, NodeId, PositionX, PositionY, PositionZ, Orientation, Delay)
 SELECT l.PathId, l.NodeId, l.PositionX, l.PositionY, l.PositionZ, l.Orientation, l.Delay
 FROM lorewalker_world.waypoint_path_node l
 WHERE l.PathId IN (
-    SELECT PathId FROM lorewalker_world.waypoint_path lp
+    SELECT lp.PathId FROM lorewalker_world.waypoint_path lp
     LEFT JOIN world.waypoint_path wp ON lp.PathId = wp.PathId
     WHERE wp.PathId IS NULL
 );
 ```
 
-Vendors, scenes, gossip — same INSERT IGNORE pattern with LEFT JOIN exclusion.
+**npc_vendor** (~3,910 rows): Explicit column list — our table has extra `OverrideGoldCost`.
+```sql
+INSERT IGNORE INTO world.npc_vendor
+  (entry, slot, item, maxcount, incrtime, ExtendedCost, type, BonusListIDs, PlayerConditionID, IgnoreFiltering, VerifiedBuild)
+SELECT l.entry, l.slot, l.item, l.maxcount, l.incrtime, l.ExtendedCost, l.type,
+       l.BonusListIDs, l.PlayerConditionID, l.IgnoreFiltering, 0
+FROM lorewalker_world.npc_vendor l
+LEFT JOIN world.npc_vendor w
+  ON l.entry = w.entry AND l.item = w.item AND l.ExtendedCost = w.ExtendedCost AND l.type = w.type
+WHERE w.entry IS NULL
+  AND l.entry < 9100000;
+```
 
-For npc_vendor, our table has an extra column `OverrideGoldCost` — list columns explicitly.
+**gossip_menu** (~399 rows): Override VerifiedBuild to 0.
+```sql
+INSERT IGNORE INTO world.gossip_menu (MenuID, TextID, VerifiedBuild)
+SELECT l.MenuID, l.TextID, 0
+FROM lorewalker_world.gossip_menu l
+LEFT JOIN world.gossip_menu w ON l.MenuID = w.MenuID AND l.TextID = w.TextID
+WHERE w.MenuID IS NULL;
+```
+
+**gossip_menu_option** (~279 rows): DESCRIBE first. LEFT JOIN on `(MenuID, OptionID)`. Override VerifiedBuild to 0.
+
+**npc_text** (~343 rows): DESCRIBE first. LEFT JOIN on `(ID)`.
+
+**creature_text** (~235 rows): DESCRIBE first. LEFT JOIN on `(CreatureID, GroupID, ID)`.
+
+**scene_template** (~195 rows): Use explicit column list — LW has extra `RTComment` we don't have.
+```sql
+INSERT IGNORE INTO world.scene_template (SceneId, Flags, ScriptPackageID, Encrypted, ScriptName)
+SELECT l.SceneId, l.Flags, l.ScriptPackageID, l.Encrypted, l.ScriptName
+FROM lorewalker_world.scene_template l
+LEFT JOIN world.scene_template w ON l.SceneId = w.SceneId
+WHERE w.SceneId IS NULL;
+```
+
+**conditions** (~1,044 rows): DESCRIBE first — conditions table has a large composite key. LEFT JOIN on all PK columns.
+
+End file with `COMMIT;`
 
 ---
 
-#### FILE 5: ContentTuningID Backfill (UPDATE, not INSERT)
+### FILE 6: Loot Tables (~63,000 rows) — SPECIAL: WHERE NOT EXISTS
 
-Use LW's ContentTuningID values to fix our CT=0 entries. Only update rows where:
-- Our CT = 0
-- LW's CT != 0
-- Same Entry + DifficultyID
+**CRITICAL**: All `*_loot_template` tables have **NO primary key** and **NO unique index**. `INSERT IGNORE` would blindly insert all rows every time (nothing to collide on). Use `WHERE NOT EXISTS` for idempotency.
+
+**CRITICAL**: The item type column is called **`ItemType`**, NOT `Reference`.
+
+**WRAP IN autocommit=0/COMMIT.**
+
+**reference_loot_template** (~51 rows) — import FIRST (other loot tables may reference these):
+```sql
+SET autocommit=0;
+
+INSERT INTO world.reference_loot_template (Entry, ItemType, Item, Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, Comment)
+SELECT l.Entry, l.ItemType, l.Item, l.Chance, l.QuestRequired, l.LootMode, l.GroupId, l.MinCount, l.MaxCount, l.Comment
+FROM lorewalker_world.reference_loot_template l
+WHERE NOT EXISTS (
+    SELECT 1 FROM world.reference_loot_template w
+    WHERE w.Entry = l.Entry AND w.ItemType = l.ItemType AND w.Item = l.Item
+);
+```
+
+**gameobject_loot_template** (~60,244 rows):
+```sql
+INSERT INTO world.gameobject_loot_template (Entry, ItemType, Item, Chance, QuestRequired, LootMode, GroupId, MinCount, MaxCount, Comment)
+SELECT l.Entry, l.ItemType, l.Item, l.Chance, l.QuestRequired, l.LootMode, l.GroupId, l.MinCount, l.MaxCount, l.Comment
+FROM lorewalker_world.gameobject_loot_template l
+WHERE NOT EXISTS (
+    SELECT 1 FROM world.gameobject_loot_template w
+    WHERE w.Entry = l.Entry AND w.ItemType = l.ItemType AND w.Item = l.Item
+);
+```
+
+**pickpocketing_loot_template** (~1,389 rows), **skinning_loot_template** (~402 rows), **item_loot_template** (~110 rows), **spell_loot_template** (~64 rows): Same `WHERE NOT EXISTS` pattern. DESCRIBE each to verify column names match (they should all follow the same schema as gameobject_loot_template).
+
+End file with `COMMIT;`
+
+---
+
+### FILE 7: ContentTuningID Backfill (~7,678 updates)
+
+Use LW's ContentTuningID values to fill our CT=0 gaps.
 
 ```sql
+-- Preview count first:
+-- SELECT COUNT(*) FROM world.creature_template_difficulty w
+-- JOIN lorewalker_world.creature_template_difficulty l
+--   ON w.Entry = l.Entry AND w.DifficultyID = l.DifficultyID
+-- WHERE w.ContentTuningID = 0 AND l.ContentTuningID != 0;
+
 UPDATE world.creature_template_difficulty w
 JOIN lorewalker_world.creature_template_difficulty l
   ON w.Entry = l.Entry AND w.DifficultyID = l.DifficultyID
@@ -207,30 +347,35 @@ SET w.ContentTuningID = l.ContentTuningID
 WHERE w.ContentTuningID = 0 AND l.ContentTuningID != 0;
 ```
 
-Run a SELECT COUNT first to see how many rows this would affect.
+Run the SELECT COUNT first and report the result before writing the file.
 
 ---
 
-### Verification Steps (after each file)
+## Build Version Note
 
-1. Run the SQL file: `/apply-sql world` (or direct mysql command)
-2. Check `DBErrors.log` for any errors
+LoreWalker is build 66102, we are build 66263. For ContentTuningID backfill (File 7) this is safe since we only fill CT=0 gaps. For other data, INSERT IGNORE / WHERE NOT EXISTS means our newer data always wins.
+
+## Verification Steps (after each file is applied)
+
+1. Apply with: `"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -padmin world < filename.sql`
+2. Check `DBErrors.log` for errors
 3. Report: rows affected per statement
 
-### Final Deliverable
+## Final Deliverable
 
-5 SQL update files in `sql/updates/world/master/`, each with:
-- Header comment explaining what it does and row counts
-- Idempotent INSERT IGNORE / conditional UPDATE statements
-- Explicit column lists (no SELECT * for tables with schema diffs)
+7 SQL update files in `sql/updates/world/master/`, each with:
+- Header comment block explaining contents and estimated row counts
+- Idempotent INSERT IGNORE / WHERE NOT EXISTS / conditional UPDATE
+- Explicit column lists for tables with schema differences
 - All filters applied (corrupt GUIDs, origin spawns, orphans, LW custom range)
+- VerifiedBuild = 0 for tables that have the column
 
-After all 5 files are generated, provide a summary table showing total rows imported per category.
+After all files are generated, provide a summary table showing actual rows per statement.
 
-### DO NOT:
-- Overwrite tables where we lead (creature_loot_template, spell_script_names, trainer*, creature_quest*)
-- Import SmartAI source_type=5 (unsupported LW extension)
-- Import LW custom range (9100000+)
+## DO NOT:
+- Overwrite tables where we lead: `creature_loot_template`, `spell_script_names`, `trainer`, `trainer_spell`
+- Import SmartAI source_type=5 (LW custom scene extension, 526K rows)
+- Import LW custom range (entry/ID >= 9,100,000)
 - Use DELETE statements
-- Apply the SQL files — just generate them. User will review and apply manually.
+- Apply the SQL files — only generate them
 - Build any C++ code — this is purely SQL work

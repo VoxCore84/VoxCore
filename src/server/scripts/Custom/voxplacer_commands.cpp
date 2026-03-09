@@ -13,6 +13,7 @@
 
 #include <cmath>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace Trinity::ChatCommands;
 
@@ -26,6 +27,11 @@ using namespace Trinity::ChatCommands;
 //   2. .vp here / .vp nudge / .vp rotate / .vp scale — adjust placement
 //   3. .vp confirm          — persist to DB
 //      .vp cancel           — discard preview
+//   Extra:
+//      .vp info             — show current preview state
+//      .vp multi            — toggle multi-place (confirm auto-spawns next)
+//      .vp undo             — remove the last confirmed spawn
+//      .vp face             — rotate preview to face toward the player
 // ---------------------------------------------------------------------------
 
 namespace
@@ -39,11 +45,26 @@ struct PlacementPreview
     uint32 entry       = 0;     // creature_template or gameobject_template entry
     bool isGameObject  = false; // true = GO, false = creature
     float scale        = 1.0f;  // custom scale (1.0 = default)
-    ObjectGuid sourceGuid;      // original creature GUID if cloned (for copying addon data)
-    bool isClone       = false; // true if this was a .vp clone
+    ObjectGuid sourceGuid;                  // runtime GUID (may become invalid if source despawns)
+    ObjectGuid::LowType sourceSpawnId = 0;  // DB spawn ID of source (stable reference for clone copy)
+    bool isClone       = false;             // true if this was a .vp clone
 };
 
 static std::unordered_map<ObjectGuid, PlacementPreview> s_previews;
+static std::unordered_set<ObjectGuid> s_multiPlace; // players with multi-place enabled
+
+// ---- Per-player undo state -------------------------------------------------
+
+struct UndoInfo
+{
+    ObjectGuid::LowType spawnId = 0;
+    uint32 entry       = 0;
+    bool isGameObject  = false;
+};
+
+static std::unordered_map<ObjectGuid, std::vector<UndoInfo>> s_lastConfirmed;
+
+constexpr uint32 UNDO_STACK_MAX = 10;
 
 // ---- Helpers -------------------------------------------------------------
 
@@ -174,6 +195,10 @@ public:
             { "confirm", HandleVpConfirm, rbac::RBAC_PERM_COMMAND_NPC_ADD, Console::No },
             { "cancel",  HandleVpCancel,  rbac::RBAC_PERM_COMMAND_NPC_ADD, Console::No },
             { "scale",   HandleVpScale,   rbac::RBAC_PERM_COMMAND_NPC_ADD, Console::No },
+            { "info",    HandleVpInfo,    rbac::RBAC_PERM_COMMAND_NPC_ADD, Console::No },
+            { "multi",   HandleVpMulti,   rbac::RBAC_PERM_COMMAND_NPC_ADD, Console::No },
+            { "undo",    HandleVpUndo,    rbac::RBAC_PERM_COMMAND_NPC_ADD, Console::No },
+            { "face",    HandleVpFace,    rbac::RBAC_PERM_COMMAND_NPC_ADD, Console::No },
         };
 
         static ChatCommandTable commandTable =
@@ -226,8 +251,9 @@ public:
             pv.entry       = entry;
             pv.isGameObject = false;
             pv.scale       = 1.0f;
-            pv.sourceGuid  = target->GetGUID();
-            pv.isClone     = true;
+            pv.sourceGuid    = target->GetGUID();
+            pv.sourceSpawnId = target->GetSpawnId();
+            pv.isClone       = true;
             s_previews[player->GetGUID()] = pv;
 
             handler->PSendSysMessage("[VoxPlacer] Cloned creature '%s' (entry %u). Move with .vp here/nudge/rotate, then .vp confirm.",
@@ -244,7 +270,7 @@ public:
             constexpr float SEARCH_RANGE = 30.0f;
             QueryResult result = WorldDatabase.PQuery(
                 "SELECT guid, id, position_x, position_y, position_z, orientation "
-                "FROM gameobject WHERE map = '{}' "
+                "FROM gameobject WHERE map = {} "
                 "AND position_x BETWEEN {} AND {} "
                 "AND position_y BETWEEN {} AND {} "
                 "ORDER BY (POW(position_x - {}, 2) + POW(position_y - {}, 2) + POW(position_z - {}, 2)) ASC LIMIT 1",
@@ -266,9 +292,11 @@ public:
                     return false;
                 }
 
-                // Spawn a temp GO preview at the player's position
-                QuaternionData rot = QuaternionData::fromEulerAnglesZYX(player->GetOrientation(), 0.0f, 0.0f);
-                GameObject* go = player->SummonGameObject(goEntry, *player, rot, 86400s);
+                // Spawn a temp GO preview at the player's position, preserving source orientation
+                float sourceOri = fields[5].GetFloat();
+                Position spawnPos(player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), sourceOri);
+                QuaternionData rot = QuaternionData::fromEulerAnglesZYX(sourceOri, 0.0f, 0.0f);
+                GameObject* go = player->SummonGameObject(goEntry, spawnPos, rot, 86400s);
                 if (!go)
                 {
                     handler->SendSysMessage("[VoxPlacer] Failed to summon gameobject preview.");
@@ -281,8 +309,9 @@ public:
                 pv.entry        = goEntry;
                 pv.isGameObject = true;
                 pv.scale        = 1.0f;
-                pv.sourceGuid   = ObjectGuid::Empty;
-                pv.isClone      = true;
+                pv.sourceGuid    = ObjectGuid::Empty;
+                pv.sourceSpawnId = fields[0].GetUInt64();
+                pv.isClone       = true;
                 s_previews[player->GetGUID()] = pv;
 
                 handler->PSendSysMessage("[VoxPlacer] Cloned gameobject '%s' (entry %u). Move with .vp here/nudge/rotate, then .vp confirm.",
@@ -622,6 +651,24 @@ public:
 
             // Clean delete → fresh reload from DB
             delete go;
+
+            // If this was a clone, copy per-spawn overrides from the source GO
+            if (pv.isClone && pv.sourceSpawnId)
+            {
+                WorldDatabase.DirectPExecute(
+                    "UPDATE gameobject dst JOIN gameobject src ON src.guid = {} SET "
+                    "dst.spawnDifficulties = src.spawnDifficulties, "
+                    "dst.phaseUseFlags = src.phaseUseFlags, "
+                    "dst.PhaseId = src.PhaseId, "
+                    "dst.PhaseGroup = src.PhaseGroup, "
+                    "dst.terrainSwapMap = src.terrainSwapMap, "
+                    "dst.spawntimesecs = src.spawntimesecs, "
+                    "dst.ScriptName = src.ScriptName, "
+                    "dst.StringId = src.StringId "
+                    "WHERE dst.guid = {}",
+                    pv.sourceSpawnId, spawnId);
+            }
+
             go = GameObject::CreateGameObjectFromDB(spawnId, map);
             if (!go)
             {
@@ -636,6 +683,12 @@ public:
             handler->PSendSysMessage("[VoxPlacer] Confirmed gameobject '%s' (entry %u). Spawn GUID: %s  Pos: %.1f, %.1f, %.1f",
                 goInfo ? goInfo->name.c_str() : "unknown", pv.entry, std::to_string(spawnId).c_str(),
                 pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ());
+
+            // Push to undo stack
+            auto& goUndoStack = s_lastConfirmed[player->GetGUID()];
+            goUndoStack.push_back({ spawnId, pv.entry, true });
+            if (goUndoStack.size() > UNDO_STACK_MAX)
+                goUndoStack.erase(goUndoStack.begin());
         }
         else
         {
@@ -674,10 +727,9 @@ public:
             delete creature;
 
             // If this was a clone, copy per-spawn DB overrides from the source
-            if (pv.isClone)
+            if (pv.isClone && pv.sourceSpawnId)
             {
-                Creature* sourceCreature = map->GetCreature(pv.sourceGuid);
-                ObjectGuid::LowType sourceSpawnId = sourceCreature ? sourceCreature->GetSpawnId() : 0;
+                ObjectGuid::LowType sourceSpawnId = pv.sourceSpawnId;
 
                 if (sourceSpawnId)
                 {
@@ -762,10 +814,9 @@ public:
             }
 
             // If cloned, live-sync addon visuals (same as npc_copy_command.cpp)
-            if (pv.isClone)
+            if (pv.isClone && pv.sourceSpawnId)
             {
-                Creature* sourceCreature = map->GetCreature(pv.sourceGuid);
-                ObjectGuid::LowType sourceSpawnId = sourceCreature ? sourceCreature->GetSpawnId() : 0;
+                ObjectGuid::LowType sourceSpawnId = pv.sourceSpawnId;
 
                 if (sourceSpawnId)
                 {
@@ -805,6 +856,235 @@ public:
             handler->PSendSysMessage("[VoxPlacer] Confirmed creature '%s' (entry %u). Spawn GUID: %s  Pos: %.1f, %.1f, %.1f",
                 cInfo ? cInfo->Name.c_str() : "unknown", pv.entry, std::to_string(newGuid).c_str(),
                 pos.GetPositionX(), pos.GetPositionY(), pos.GetPositionZ());
+
+            // Push to undo stack
+            auto& crUndoStack = s_lastConfirmed[player->GetGUID()];
+            crUndoStack.push_back({ newGuid, pv.entry, false });
+            if (crUndoStack.size() > UNDO_STACK_MAX)
+                crUndoStack.erase(crUndoStack.begin());
+        }
+
+        // Multi-place: auto-spawn a new preview at the player's feet
+        if (s_multiPlace.contains(player->GetGUID()))
+        {
+            if (pv.isGameObject)
+            {
+                QuaternionData rot = QuaternionData::fromEulerAnglesZYX(player->GetOrientation(), 0.0f, 0.0f);
+                GameObject* nextGo = player->SummonGameObject(pv.entry, *player, rot, 86400s);
+                if (nextGo)
+                {
+                    PlacementPreview next;
+                    next.previewGuid  = nextGo->GetGUID();
+                    next.entry        = pv.entry;
+                    next.isGameObject = true;
+                    next.scale        = 1.0f;
+                    next.isClone      = false;
+                    s_previews[player->GetGUID()] = next;
+
+                    handler->SendSysMessage("[VoxPlacer] Multi-place: next preview spawned at your feet.");
+                    SendPositionMessage(handler, player->GetPosition());
+                }
+            }
+            else
+            {
+                TempSummon* nextCr = player->SummonCreature(pv.entry, player->GetPosition(), TEMPSUMMON_MANUAL_DESPAWN);
+                if (nextCr)
+                {
+                    nextCr->SetUnitFlag(UNIT_FLAG_NON_ATTACKABLE);
+                    nextCr->ReplaceAllNpcFlags(NPCFlags(UNIT_NPC_FLAG_NONE));
+                    nextCr->SendPlaySpellVisualKit(PREVIEW_VISUAL_KIT, 0, 0);
+
+                    PlacementPreview next;
+                    next.previewGuid  = nextCr->GetGUID();
+                    next.entry        = pv.entry;
+                    next.isGameObject = false;
+                    next.scale        = 1.0f;
+                    next.isClone      = false;
+                    s_previews[player->GetGUID()] = next;
+
+                    handler->SendSysMessage("[VoxPlacer] Multi-place: next preview spawned at your feet.");
+                    SendPositionMessage(handler, player->GetPosition());
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------
+    // .vp info — show current preview state
+    // -----------------------------------------------------------------------
+    static bool HandleVpInfo(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+
+        auto it = s_previews.find(player->GetGUID());
+        if (it == s_previews.end())
+        {
+            bool multi = s_multiPlace.contains(player->GetGUID());
+            handler->PSendSysMessage("[VoxPlacer] No active preview. Multi-place: %s.", multi ? "ON" : "OFF");
+            return true;
+        }
+
+        PlacementPreview const& pv = it->second;
+        bool multi = s_multiPlace.contains(player->GetGUID());
+
+        char const* typeName = pv.isGameObject ? "Gameobject" : "Creature";
+        char const* name = "unknown";
+
+        if (pv.isGameObject)
+        {
+            GameObjectTemplate const* t = sObjectMgr->GetGameObjectTemplate(pv.entry);
+            if (t) name = t->name.c_str();
+        }
+        else
+        {
+            CreatureTemplate const* t = sObjectMgr->GetCreatureTemplate(pv.entry);
+            if (t) name = t->Name.c_str();
+        }
+
+        handler->PSendSysMessage("[VoxPlacer] %s preview: '%s' (entry %u)", typeName, name, pv.entry);
+        auto undoIt = s_lastConfirmed.find(player->GetGUID());
+        uint32 undoDepth = (undoIt != s_lastConfirmed.end()) ? static_cast<uint32>(undoIt->second.size()) : 0;
+        handler->PSendSysMessage("[VoxPlacer] Scale: %.2f | Clone: %s | Multi: %s | Undo: %u",
+            pv.scale, pv.isClone ? "yes" : "no", multi ? "ON" : "OFF", undoDepth);
+
+        // Show current position from the live object
+        Map* map = player->GetMap();
+        if (pv.isGameObject)
+        {
+            if (GameObject* go = map->GetGameObject(pv.previewGuid))
+                SendPositionMessage(handler, go->GetPosition());
+        }
+        else
+        {
+            if (Creature* cr = map->GetCreature(pv.previewGuid))
+                SendPositionMessage(handler, cr->GetPosition());
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------
+    // .vp multi — toggle multi-place mode
+    // -----------------------------------------------------------------------
+    static bool HandleVpMulti(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+        ObjectGuid guid = player->GetGUID();
+
+        if (s_multiPlace.contains(guid))
+        {
+            s_multiPlace.erase(guid);
+            handler->SendSysMessage("[VoxPlacer] Multi-place OFF. Confirm will end placement.");
+        }
+        else
+        {
+            s_multiPlace.insert(guid);
+            handler->SendSysMessage("[VoxPlacer] Multi-place ON. Confirm will spawn and start a new preview.");
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------
+    // .vp undo — remove the last confirmed spawn
+    // -----------------------------------------------------------------------
+    static bool HandleVpUndo(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+
+        auto it = s_lastConfirmed.find(player->GetGUID());
+        if (it == s_lastConfirmed.end() || it->second.empty())
+        {
+            handler->SendSysMessage("[VoxPlacer] Nothing to undo.");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        UndoInfo undo = it->second.back();
+        it->second.pop_back();
+        if (it->second.empty())
+            s_lastConfirmed.erase(it);
+
+        if (undo.isGameObject)
+        {
+            if (!GameObject::DeleteFromDB(undo.spawnId))
+            {
+                handler->SendSysMessage("[VoxPlacer] Failed to undo — gameobject data not found.");
+                handler->SetSentErrorMessage(true);
+                return false;
+            }
+
+            GameObjectTemplate const* goInfo = sObjectMgr->GetGameObjectTemplate(undo.entry);
+            handler->PSendSysMessage("[VoxPlacer] Undone: gameobject '%s' (entry %u, GUID %s) removed.",
+                goInfo ? goInfo->name.c_str() : "unknown", undo.entry, std::to_string(undo.spawnId).c_str());
+        }
+        else
+        {
+            if (!Creature::DeleteFromDB(undo.spawnId))
+            {
+                handler->SendSysMessage("[VoxPlacer] Failed to undo — creature data not found.");
+                handler->SetSentErrorMessage(true);
+                return false;
+            }
+
+            CreatureTemplate const* cInfo = sObjectMgr->GetCreatureTemplate(undo.entry);
+            handler->PSendSysMessage("[VoxPlacer] Undone: creature '%s' (entry %u, GUID %s) removed.",
+                cInfo ? cInfo->Name.c_str() : "unknown", undo.entry, std::to_string(undo.spawnId).c_str());
+        }
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------
+    // .vp face — rotate preview to face toward the player
+    // -----------------------------------------------------------------------
+    static bool HandleVpFace(ChatHandler* handler)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+
+        auto it = s_previews.find(player->GetGUID());
+        if (it == s_previews.end())
+        {
+            handler->SendSysMessage("[VoxPlacer] No active preview. Use .vp start, .vp gob, or .vp clone first.");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        PlacementPreview& pv = it->second;
+
+        if (pv.isGameObject)
+        {
+            GameObject* go = GetGameObjectPreview(handler, pv);
+            if (!go)
+                return false;
+
+            float angle = Position::NormalizeOrientation(
+                std::atan2(player->GetPositionY() - go->GetPositionY(),
+                           player->GetPositionX() - go->GetPositionX()));
+
+            Position newPos(go->GetPositionX(), go->GetPositionY(), go->GetPositionZ(), angle);
+            if (!RespawnGOPreview(player, pv, newPos))
+            {
+                handler->SendSysMessage("[VoxPlacer] Failed to rotate gameobject preview.");
+                handler->SetSentErrorMessage(true);
+                return false;
+            }
+            SendPositionMessage(handler, newPos);
+        }
+        else
+        {
+            Creature* cr = GetCreaturePreview(handler, pv);
+            if (!cr)
+                return false;
+
+            float angle = Position::NormalizeOrientation(
+                std::atan2(player->GetPositionY() - cr->GetPositionY(),
+                           player->GetPositionX() - cr->GetPositionX()));
+
+            cr->SetFacingTo(angle);
+            SendPositionMessage(handler, { cr->GetPositionX(), cr->GetPositionY(), cr->GetPositionZ(), angle });
         }
 
         return true;
@@ -832,7 +1112,26 @@ public:
     }
 };
 
+// ---------------------------------------------------------------------------
+// Logout cleanup — prevent memory leak of per-player state
+// ---------------------------------------------------------------------------
+
+class voxplacer_player_cleanup : public PlayerScript
+{
+public:
+    voxplacer_player_cleanup() : PlayerScript("voxplacer_player_cleanup") { }
+
+    void OnLogout(Player* player) override
+    {
+        ObjectGuid guid = player->GetGUID();
+        CancelPreview(player);
+        s_multiPlace.erase(guid);
+        s_lastConfirmed.erase(guid);
+    }
+};
+
 void AddSC_voxplacer_commands()
 {
     new voxplacer_commandscript();
+    new voxplacer_player_cleanup();
 }

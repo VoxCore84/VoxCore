@@ -117,6 +117,28 @@ sql/
 - **GitHub**: `VoxCore84/RoleplayCore` (private), `gh` CLI authenticated
 - Full inventory: auto-memory `tooling-inventory.md`
 
+### Proactive Skill Reminders — MANDATORY
+
+**The user should NEVER have to remember to run a slash command. Claude MUST remind them at the right moment.** Use this exact phrasing: *"Want me to run `/command`?"* or just run it if the context is unambiguous.
+
+| When this happens... | ...remind/run this |
+|---|---|
+| User says "I'm done", "that's it", "wrapping up", conversation is winding down, or long silence after completing work | `/wrap-up` — *"Want me to run `/wrap-up`?"* |
+| Server was restarted, crash mentioned, or debugging begins | `/check-logs` — just run it (auto-approved) |
+| User mentions a build error or paste a build log | `/parse-errors` — just run it |
+| C++ file was edited and work on it is complete | Remind: *"Ready to build in VS — those changes need compiling"* |
+| SQL file was created or edited | `/smartai-check` (if SmartAI) or remind to `/apply-sql` |
+| Writing new SQL update | `/new-sql-update` — just run it to get the right filename |
+| User asks about transmog bugs or starts transmog work | `/transmog-status` — run it first to show current state |
+| Multiple tasks mentioned or scope is expanding | Multi-tab suggestion (see BLOCKING OBLIGATION below) |
+| Start of session | Auto-read `doc/session_state.md` + `todo.md` (see Session Start below) |
+| User mentions a spell/item/creature/area by name without an ID | Run the appropriate `/lookup-*` to resolve it |
+
+**Rules:**
+- If in doubt, ask. A one-line reminder is cheap; forgetting a `/wrap-up` loses work.
+- Never skip `/wrap-up` at end of session — if the conversation looks like it's ending, remind.
+- `/check-logs` is always safe to run proactively — it's read-only.
+
 ## Server Runtime & Logs
 
 - **Primary runtime**: `out/build/x64-RelWithDebInfo/bin/RelWithDebInfo/`
@@ -137,6 +159,17 @@ sql/
 
 Full recipes, data source tables, and anti-patterns: auto-memory `debugging-methodology.md`
 
+## Session Start — MANDATORY (runs automatically, no slash command needed)
+
+**Every new conversation MUST begin by doing these two things BEFORE responding to the user's first message:**
+
+1. **Read `doc/session_state.md`** (if it exists) — check Active Tabs, pending handoffs, file ownership claims
+2. **Read the `## Next Session` section of `todo.md`** from memory — this is your pre-loaded task list
+
+If `doc/session_state.md` exists and has active tab assignments, announce what this tab should focus on. If the user's request conflicts with tab assignments, ask before proceeding.
+
+If neither file exists or both are stale, proceed normally with the user's request.
+
 ## Work Style
 
 **MANDATORY**: Always default to parallel execution. Hardware is not a constraint (Ryzen 9 9950X3D 12C/24T, 128GB DDR5, NVMe).
@@ -147,28 +180,50 @@ Full recipes, data source tables, and anti-patterns: auto-memory `debugging-meth
 4. **Multiple errors → one agent per error category**
 5. **Builds, long queries, server restarts → always background**
 
-### Multi-Tab Delegation (ALWAYS CONSIDER)
+### *** MULTI-TAB DELEGATION — BLOCKING OBLIGATION ***
 
-**Separate Claude Code tabs in Windows Terminal produce better results than one tab doing everything.** A single tab doing too much gets lost in loops, burns context, and loses focus. Multiple tabs each doing one focused job finish faster and with higher quality.
+**This is NOT optional. This is NOT "consider it." This is a HARD REQUIREMENT with specific triggers.**
 
-**When to suggest opening another tab:**
-- Task has 2+ independent workstreams (e.g., transmog bugs + Draconic diff + spell audit)
-- Current task is getting complex and a subtask could run independently
-- A domain has its own skill (`/transmog-implement`, `/transmog-correct`) that another tab can just run
-- Investigation + implementation could be split (one tab researches, writes a plan; another implements)
-- Any time you notice the current tab's scope is growing beyond one focused objective
+The user runs multiple Claude Code tabs in Windows Terminal. Each tab is a separate conversation with full project access. Tabs are cheap (user has budget for multiple AI subscriptions). Single tabs doing too much burn context, lose focus, and produce worse results. **When a trigger fires, you MUST suggest a tab split. Do NOT silently continue in one tab.**
 
-**How to suggest it:** Proactively tell the user: *"This has N independent parts — want me to write instructions for a second tab to handle X while we focus on Y?"* Then:
-1. Write clear instructions to `doc/session_state.md` (update Active Tabs table)
-2. Specify exactly what the other tab should read first and what skill/command to run
-3. Note which files each tab owns (prevent conflicts)
+**HARD TRIGGERS — if ANY of these are true, you MUST suggest opening another tab:**
 
-**Coordination file:** `doc/session_state.md` is the multi-tab war room. Every tab reads it first, claims assignments, and updates status when done. If it doesn't exist or is stale, recreate it.
+| # | Trigger | Example |
+|---|---------|---------|
+| 1 | User's request touches 2+ independent subsystems | "fix transmog bugs and also run the LoreWalker import" |
+| 2 | Current task is growing beyond one focused objective | Started with SQL, now also debugging C++ and writing docs |
+| 3 | A subtask has its own dedicated skill | `/transmog-implement`, `/transmog-correct`, `/transmog-status` can run standalone |
+| 4 | Investigation + implementation are both needed | One tab researches and writes a plan, another implements |
+| 5 | Task involves both C++ code changes AND SQL generation | These don't share files — perfect split |
+| 6 | You're about to start a second unrelated fix | Stop. Suggest a tab for it instead |
+| 7 | User says "also", "and then", "while you're at it" | Each "also" is a tab candidate |
 
-**Never do these in a single tab when they could be split:**
-- Transmog fixes + world DB cleanup + spell audit (3 separate tabs)
-- Deep investigation + code implementation (research tab + implement tab)
-- Multiple bug fixes touching different subsystems
+**How to suggest it (use this exact format):**
+
+> **Tab split recommended.** This has N independent parts:
+> - **This tab**: [what we continue doing here]
+> - **New tab**: Open a new Claude Code tab and tell it: `[exact instruction to paste]`
+>
+> Want me to write the handoff to `doc/session_state.md`?
+
+**Coordination file:** `doc/session_state.md` is the multi-tab war room.
+- Every tab reads it at session start (see Session Start above)
+- Before starting work, claim your assignment in the Active Tabs table
+- When done, update status and clear your claim
+- If the file doesn't exist or is stale, recreate it
+
+**What goes in the handoff:**
+1. Exact slash command or instruction for the other tab
+2. Which files that tab owns (prevent merge conflicts)
+3. What this tab is NOT touching (so the other tab knows it's safe)
+4. Any context the other tab needs (DB state, build status, blockers)
+
+**Never do these in a single tab:**
+- Transmog fixes + world DB cleanup + spell audit → 3 tabs
+- Deep investigation + code implementation → 2 tabs
+- Multiple bug fixes in different subsystems → 1 tab per subsystem
+- C++ development + SQL generation for unrelated systems → 2 tabs
+- Any task list with 3+ independent items → split across tabs
 
 ## Transmog UI / Midnight 12.x — Authoritative Rules
 

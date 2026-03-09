@@ -3,7 +3,7 @@
 **Read this FIRST in any new Claude Code tab.**
 This is the single source of truth for what all tabs are doing, what's done, what's blocked, and what to pick up next. Updated by whichever tab finishes work.
 
-**Last updated**: March 8, 2026 — Session 109 (ImageMagick + sniffing docs)
+**Last updated**: March 8, 2026 — Session 114 (LoreWalker Import v3 — QA-verified pre-baked SQL)
 
 ---
 
@@ -14,7 +14,9 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Main (session 107) | Meta infrastructure, gist updates, coordination | COMPLETE | Commit `8aa10362ad`. Created session_state, bug tracker, skills, report |
 | Main (session 108) | Consolidation — review all transmog docs, fix errors, update gists/memory | COMPLETE | Slot ordering fix, sniffing docs tracked |
 | Main (session 109) | ImageMagick install + sniffing guide updates | COMPLETE | `8150cf3dd5` |
-| Transmog Tab | Bug fixes from `memory/transmog-bugtracker.md` | NOT STARTED | Run `/transmog-implement` to begin |
+| Transmog Tab | Bug fixes from `memory/transmog-bugtracker.md` | COMPLETE | Session 110. 8 bugs fixed (G,H1,M6,M9,M1,M5,M2,UNICODE), 3 QA passes done. Ready for build. |
+| Resource Tab (113) | Transmog resource audit — 3-pass QA of all tooling | COMPLETE | `7cef6952b0`. Bridge v3 IMPLEMENTED. lookup.py wrong DT labels. Enriched CSVs stale. Report: `doc/transmog_resource_audit.md` |
+| Main (114) | LoreWalker import v3 — 3-pass QA of import prompt | COMPLETE | `80917a2739`. Fixed VB-in-PK bug, verified all 53 row counts, pre-baked SQL. Prompt: `doc/lorewalker_import_v3.md` |
 | — | — | — | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.
@@ -28,7 +30,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 - **Client**: 12.0.1.66263
 - **DB**: world 1,086 MB (611K creatures) | hotfixes 811 MB (400K spells) | characters 4 MB
 - **Logs**: Clean — zero crashes/fatals. SmartAI warnings + unhandled 12.x opcodes only.
-- **Needs build**: `.npc copy` command + `cs_npc` kill/respawn removal (code done, not compiled)
+- **Needs build**: `.npc copy` command + voxplacer + **8 transmog bug fixes** (session 110). See `doc/transmog_next_steps.md` for test plan.
 
 ---
 
@@ -55,18 +57,16 @@ These are blocked on building in VS and running the server. No Claude Code tab c
 **Full context**: `doc/transmog_implementation_report.md`
 **Behavioral rules**: CLAUDE.md "Transmog UI / Midnight 12.x" section
 
-Priority order:
-1. **BUG-F** (CRITICAL): SetID mapping destroyed after first apply — needs investigation
-2. **BUG-G** (CRITICAL): Name pad byte 0x80 backward scan — fix: use nameLen field
-3. **BUG-H** (CRITICAL): Individual slot transmog blocked — needs investigation
-4. **BUG-H1** (HIGH): Stored Slots accumulation 30→60→90 — 2-line fix in Player.cpp
-5. **BUG-M1** (HIGH): Enchant rejects entire outfit — zero bad enchants instead
-6. **BUG-M6** (HIGH): Hidden pants missing — add ItemID 216696 to two arrays
-7. **BUG-M9** (HIGH): Illusion bootstrap leaks into stored — add `!isStored` gate
-8. **BUG-M2** (HIGH): Bridge loses illusions — decouple enchant mask
-9. **BUG-M5** (HIGH): Weapon option never stored — store byte[1] to MH/OH option
+**Session 110 DONE** — 8 bugs fixed (BUG-G, H1, M6, M9, M1, M5, M2, UNICODE). Ready for build.
+See `doc/transmog_next_steps.md` for full test plan and remaining bugs.
 
-After each fix: update bug tracker status, show diff, note "ready for build".
+Remaining (MEDIUM/LOW):
+1. **BUG-M3**: HandleTransmogOutfitNew missing bridge defer
+2. **BUG-M7**: EffectEquipTransmogOutfit return value ignored
+3. **BUG-M8**: Missing SMSG response after spell-based outfit apply
+4. **BUG-M10**: UpdateSlots parser heuristic skip
+5. **BUG-L1**: Dead HandleTransmogrifyItems handler (~400 lines)
+6. **BUG-L4**: spell_clear_transmog auxiliary fields
 
 ### Tier 3: World DB Cleanup (Claude Code tab can do independently)
 
@@ -158,6 +158,10 @@ Each zone produces a SQL file in `sql/exports/` and findings for review.
 
 | Session | What | Key Output |
 |---------|------|-----------|
+| 113 | Transmog Resource Audit | 3-pass QA of all transmog tools/CSVs/bridge. Key: bridge v3 implemented, lookup.py wrong DT numbering, enriched CSVs stale. `doc/transmog_resource_audit.md` |
+| 112 | Sniffing Guide Polish | Hub gist cleanup, generic branding, Heads Up section |
+| 111 | LoreWalker TDB Analysis | 6-agent sweep, import pipeline ready in `doc/lorewalker_import_prompt.md` |
+| 110 | Transmog Master Tab | 8 bugs fixed, 3 QA passes, DT/validator clean, resource audit. `doc/transmog_next_steps.md` |
 | 109 | ImageMagick + sniffing docs | Installed IM, updated Midnight priorities + WPP sanitize |
 | 108 | Transmog consolidation | Slot ordering fix, sniffing docs tracked |
 | 107 | Meta infrastructure | This file, bug tracker, skills, gist updates |

@@ -36,6 +36,7 @@ void AddSC_maxtitles_command();
 void AddSC_maxachieve_command();
 void AddSC_arcane_waygate();
 void AddSC_npc_copy_command();
+void AddSC_voxplacer_commands();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -60,5 +61,6 @@ void AddCustomScripts()
     AddSC_maxachieve_command();
     AddSC_arcane_waygate();
     AddSC_npc_copy_command();
+    AddSC_voxplacer_commands();
 
 }

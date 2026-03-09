@@ -18052,7 +18052,8 @@ void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
         // Returns true for items like "Hidden Helm" (134110), "Hidden Shoulder" (134112), etc.
         static constexpr uint32 hiddenItemIDs[] = {
             134110, 134111, 134112, 168659, 142503,
-            142504, 168665, 158329, 143539, 168664
+            142504, 168665, 158329, 143539, 168664,
+            216696  // Hidden Pants (IMA 198608)
         };
         auto isHiddenAppearance = [](uint32 imaID) -> bool
         {
@@ -18269,7 +18270,8 @@ void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
 
             // Bootstrap illusion from equipped weapon when outfit doesn't define one.
             // Without this, the paperdoll loses weapon enchant visuals after outfit apply/relog.
-            if (enchant == 0 && (mapping.equipSlot == EQUIPMENT_SLOT_MAINHAND || mapping.equipSlot == EQUIPMENT_SLOT_OFFHAND))
+            // Only for ViewedOutfit — stored outfits must only show explicitly-saved illusions.
+            if (!isStored && enchant == 0 && (mapping.equipSlot == EQUIPMENT_SLOT_MAINHAND || mapping.equipSlot == EQUIPMENT_SLOT_OFFHAND))
             {
                 if (Item* weapon = GetItemByPos(INVENTORY_SLOT_BAG_0, mapping.equipSlot))
                 {
@@ -18339,6 +18341,8 @@ void Player::_SyncTransmogOutfitsToActivePlayerData(char const* caller)
 
         auto transmogOutfitSetter = activePlayerData.ModifyValue(&UF::ActivePlayerData::TransmogOutfits, equipmentSet.Data.SetID);
         SetUpdateFieldValue(transmogOutfitSetter.ModifyValue(&UF::TransmogOutfitData::Id), equipmentSet.Data.SetID);
+        ClearDynamicUpdateFieldValues(transmogOutfitSetter.ModifyValue(&UF::TransmogOutfitData::Slots));
+        ClearDynamicUpdateFieldValues(transmogOutfitSetter.ModifyValue(&UF::TransmogOutfitData::Situations));
         fillOutfitData(transmogOutfitSetter, &equipmentSet.Data, true);
 
         TC_LOG_DEBUG("entities.player", "_SyncTransmogOutfitsToActivePlayerData [{}]: setId={} guid={} name='{}' icon='{}'",

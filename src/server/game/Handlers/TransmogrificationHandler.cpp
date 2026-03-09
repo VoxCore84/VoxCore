@@ -174,14 +174,14 @@ bool ValidateTransmogOutfitSet(WorldSession* session, EquipmentSetInfo::Equipmen
 
     if (set.Enchants[0] && !validateIllusion(set.Enchants[0]))
     {
-        TC_LOG_ERROR("network.opcode.transmog", "Transmog outfit rejected [{}]: invalid main-hand enchant {}", session->GetPlayerInfo(), set.Enchants[0]);
-        return false;
+        TC_LOG_ERROR("network.opcode.transmog", "Transmog outfit [{}]: invalid main-hand enchant {} — zeroing slot", session->GetPlayerInfo(), set.Enchants[0]);
+        set.Enchants[0] = 0;
     }
 
     if (set.Enchants[1] && !validateIllusion(set.Enchants[1]))
     {
-        TC_LOG_ERROR("network.opcode.transmog", "Transmog outfit rejected [{}]: invalid off-hand enchant {}", session->GetPlayerInfo(), set.Enchants[1]);
-        return false;
+        TC_LOG_ERROR("network.opcode.transmog", "Transmog outfit [{}]: invalid off-hand enchant {} — zeroing slot", session->GetPlayerInfo(), set.Enchants[1]);
+        set.Enchants[1] = 0;
     }
 
     return true;
@@ -833,12 +833,18 @@ void WorldSession::HandleTransmogOutfitUpdateSlots(WorldPackets::Transmogrificat
             }
         }
 
-        // Update secondary shoulder and enchants from incoming packet
+        // Update secondary shoulder and weapon options from incoming packet
         if (transmogOutfitUpdateSlots.Set.SecondaryShoulderApparanceID)
         {
             updatedSet.SecondaryShoulderApparanceID = transmogOutfitUpdateSlots.Set.SecondaryShoulderApparanceID;
             updatedSet.SecondaryShoulderSlot = transmogOutfitUpdateSlots.Set.SecondaryShoulderSlot;
         }
+
+        // Merge weapon option indices from parsed packet (byte[1] per slot entry)
+        if (transmogOutfitUpdateSlots.Set.MainHandOption)
+            updatedSet.MainHandOption = transmogOutfitUpdateSlots.Set.MainHandOption;
+        if (transmogOutfitUpdateSlots.Set.OffHandOption)
+            updatedSet.OffHandOption = transmogOutfitUpdateSlots.Set.OffHandOption;
     }
     else
     {
@@ -898,6 +904,7 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
     bool mergedOverrides = false;
     bool bridgeOverrodeSecondary = false; // separate flag — secondary shoulder doesn't use bridgeOverriddenMask
     uint32 bridgeOverriddenMask = 0; // bitmask of equipment slots the bridge explicitly set
+    uint32 bridgeIllusionOverriddenMask = 0; // bitmask of weapon slots where bridge explicitly set an illusion
     uint32 bridgeClearedMask = 0;    // bitmask of equipment slots the bridge explicitly cleared
     bool bridgeClearedSecondary = false; // secondary shoulder explicitly cleared
     if (!_transmogBridgeOverrides.empty())
@@ -988,6 +995,7 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
                 {
                     pending.Outfit.Enchants[0] = ov.IllusionID;
                     pending.HasAnyAppearance = true;
+                    bridgeIllusionOverriddenMask |= (1u << equipSlot);
                     TC_LOG_DEBUG("network.opcode.transmog", "TransmogBridge [{}]: merged MH illusion enchantID={}",
                         GetPlayerInfo(), ov.IllusionID);
                 }
@@ -995,6 +1003,7 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
                 {
                     pending.Outfit.Enchants[1] = ov.IllusionID;
                     pending.HasAnyAppearance = true;
+                    bridgeIllusionOverriddenMask |= (1u << equipSlot);
                     TC_LOG_DEBUG("network.opcode.transmog", "TransmogBridge [{}]: merged OH illusion enchantID={}",
                         GetPlayerInfo(), ov.IllusionID);
                 }
@@ -1037,12 +1046,14 @@ void WorldSession::FinalizeTransmogBridgePendingOutfit()
                 pending.Outfit.SecondaryShoulderSlot = savedOutfit->SecondaryShoulderSlot;
             }
 
-            // Restore enchants (illusions) from savedOutfit for non-bridge weapon slots.
-            // Bridge illusions are applied in the merge loop above via HasIllusion flag.
+            // Restore enchants (illusions) from savedOutfit for weapon slots where the bridge
+            // did NOT explicitly provide an illusion. Uses bridgeIllusionOverriddenMask (not
+            // bridgeOverriddenMask) because a bridge can override weapon appearance without
+            // providing an illusion — in that case, the saved illusion should still be restored.
             for (uint8 e = 0; e < 2; ++e)
             {
                 uint8 weaponSlot = (e == 0) ? EQUIPMENT_SLOT_MAINHAND : EQUIPMENT_SLOT_OFFHAND;
-                if (!(bridgeOverriddenMask & (1u << weaponSlot)))
+                if (!(bridgeIllusionOverriddenMask & (1u << weaponSlot)))
                     pending.Outfit.Enchants[e] = savedOutfit->Enchants[e];
             }
 

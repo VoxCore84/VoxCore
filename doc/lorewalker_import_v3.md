@@ -317,7 +317,8 @@ SELECT
 FROM lorewalker_world.creature l
 WHERE l.id < 9100000
   AND NOT (l.position_x = 0 AND l.position_y = 0 AND l.position_z = 0)
-  AND EXISTS (SELECT 1 FROM world.creature_template ct WHERE ct.entry = l.id);
+  AND EXISTS (SELECT 1 FROM world.creature_template ct WHERE ct.entry = l.id)
+  AND NOT EXISTS (SELECT 1 FROM world.creature w WHERE w.guid = l.guid);
 
 -- gameobject (PK: guid)
 -- SCHEMA DIFF: world.gameobject has extra columns 'size' (default -1), 'visibility' (default 256)
@@ -334,7 +335,8 @@ FROM lorewalker_world.gameobject l
 WHERE l.id < 9100000
   AND l.guid < 1913720832000
   AND NOT (l.position_x = 0 AND l.position_y = 0 AND l.position_z = 0)
-  AND EXISTS (SELECT 1 FROM world.gameobject_template gt WHERE gt.entry = l.id);
+  AND EXISTS (SELECT 1 FROM world.gameobject_template gt WHERE gt.entry = l.id)
+  AND NOT EXISTS (SELECT 1 FROM world.gameobject w WHERE w.guid = l.guid);
 
 -- creature_addon (PK: guid | no VB | identical schema)
 -- Runs AFTER creature INSERT — EXISTS picks up newly imported creatures
@@ -399,10 +401,13 @@ SET autocommit=0;
 -- source_type filter: 0=creature, 1=gameobject, 2=areatrigger, 9=timed actionlist, 12=spell
 -- Excludes: type 5 (LW custom scene extension, 526K rows)
 INSERT IGNORE INTO world.smart_scripts
-SELECT * FROM lorewalker_world.smart_scripts
-WHERE source_type IN (0, 1, 2, 9, 12)
-  AND entryorguid < 9100000
-  AND entryorguid > -9100000;
+SELECT * FROM lorewalker_world.smart_scripts l
+WHERE l.source_type IN (0, 1, 2, 9, 12)
+  AND l.entryorguid < 9100000
+  AND l.entryorguid > -9100000
+  AND NOT EXISTS (SELECT 1 FROM world.smart_scripts w
+    WHERE w.entryorguid = l.entryorguid AND w.source_type = l.source_type
+    AND w.id = l.id AND w.link = l.link);
 
 -- waypoint_path_node (PK: PathId,NodeId | no VB | identical schema)
 -- MUST run BEFORE waypoint_path INSERT so NOT IN correctly identifies new paths
@@ -461,7 +466,16 @@ FROM lorewalker_world.scene_template l;
 
 -- conditions (PK: 11-column composite | no VB | identical schema)
 INSERT IGNORE INTO world.conditions
-SELECT * FROM lorewalker_world.conditions;
+SELECT l.* FROM lorewalker_world.conditions l
+WHERE NOT EXISTS (SELECT 1 FROM world.conditions w
+  WHERE w.SourceTypeOrReferenceId = l.SourceTypeOrReferenceId
+    AND w.SourceGroup = l.SourceGroup AND w.SourceEntry = l.SourceEntry
+    AND w.SourceId = l.SourceId AND w.ElseGroup = l.ElseGroup
+    AND w.ConditionTypeOrReference = l.ConditionTypeOrReference
+    AND w.ConditionTarget = l.ConditionTarget
+    AND w.ConditionValue1 = l.ConditionValue1
+    AND w.ConditionValue2 = l.ConditionValue2
+    AND w.ConditionValue3 = l.ConditionValue3);
 
 COMMIT;
 ```
