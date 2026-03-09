@@ -58,6 +58,19 @@ cache/
 __pycache__/
 .opcode_cache.json
 
+# -- Discord raw exports (30K+ messages, sensitive) --------------------------
+doc/discord_export_*.json
+
+# -- Transmog source export (copies of src/ files for external AI) -----------
+doc/transmog_source_export/
+
+# -- AI Studio runtime (junctions, inbox contents, archives) -----------------
+AI_Studio/Projects/*/Z_SourceCode/
+AI_Studio/1_Inbox/
+AI_Studio/4_Archive/
+AI_Studio/Z_VoxCore_Session_Logs/
+tools/ai_router_log.txt
+
 # -- SQL exports & generated reports (not source) -----------------------------
 sql/dumps/
 sql/exports/locale/

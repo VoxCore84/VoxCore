@@ -1,0 +1,26 @@
+# Antigravity Rules for VoxCore
+
+## Session Start Checklist
+Always perform these steps automatically at the start of a new chat session to initialize your working context:
+1. **Read Coordination Files**: Ingest `doc/session_state.md` and `doc/todo.md` using the `view_file` tool to extract goals.
+2. **Update Checklists**: Populate your active task checklist in `task.md` summarizing what needs to be done. Ensure no items from `doc/todo.md` are dropped.
+
+## Parallel Agent Execution
+Instead of mandating the user to open multiple terminal tabs (as previously done in VoxCore via `session_state.md` "Multi-Tab Delegation"), you **MUST** leverage your parallel sub-agent execution features:
+- If a task involves two independent domains (e.g. C++ compiler debugging and modifying SQL data), invoke parallel agent tool chains or Workflows to execute them simultaneously in the background.
+- Update `doc/session_state.md` with your status dynamically to simulate the locking procedure formally used by the human operator. Never write to a resource (like a database) that another process claims in `session_state.md`.
+
+## Proactive Verification (Anti-Theater Protocol)
+**Never claim completion of an action without showing the evidence that proves it.** 
+- Provide literal diffs, database query row counts, and compile log excerpts in the final Verification walkthrough.
+- **Do not blindly trust your query output**: E.g. Do not just `SELECT count(*)` after an `INSERT` without knowing what the count was beforehand.
+- Before executing SQL INSERTs or modifying schema, ALWAYS use `DESCRIBE` to fetch target table columns so you don't generate mismatched SQL tuples.
+- Failures happen *during* execution. Each step in a multi-step procedure is its own gate. Check `DBErrors.log` and verify query results *after* each individual file application, not all at the end.
+- If uncertainties exist, **STATE THEM EXPLICITLY**. "I believe this worked but I did not check the error logs for the final query." is better than "All tests passed cleanly!"
+
+## General Coding Rules
+- C++ 20 standard. Use `#pragma once`. Indent 4 spaces.
+- 160 max line width.
+- Headers are included sequentially (`#include "..."` for TC headers, `<...>` for system).
+- Do not add tables or ` broadcast_text` to the `world` DB. Use `hotfixes` when appropriate or CSV lookups.
+- Avoid modifying core `src/` modules when a Script solution in `src/server/scripts/Custom/` can hook the behavior natively.

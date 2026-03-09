@@ -85,11 +85,6 @@ start "VoxCore Auto-Parse v3" /D "%~dp0" auto_parse_watch.bat
 echo        Auto-Parse daemon launched.
 echo.
 
-:: 7. Start AI Studio Router
-echo [7/7] Starting AI Studio Router...
-call "%~dp0start_ai_router.bat"
-echo.
-
 echo ============================================
 echo   All servers started. You can close this.
 echo ============================================
