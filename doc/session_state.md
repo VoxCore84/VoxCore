@@ -3,7 +3,7 @@
 **Read this FIRST in any new Claude Code tab.**
 This is the single source of truth for what all tabs are doing, what's done, what's blocked, and what to pick up next. Updated by whichever tab finishes work.
 
-**Last updated**: March 9, 2026 — Session 125 (DevOps pipeline overhaul — memory sync)
+**Last updated**: March 9, 2026 — Session 128/Main (VoxTip v1.0 + Triad handoff + system pause)
 
 ---
 
@@ -27,6 +27,8 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Main (124) | Tongue & Quill Auto-Formatter (standalone project) | COMPLETE | `C:\Users\atayl\TongueAndQuill\`. v2.1 production release, 8 AFH templates, auto-detect, PyInstaller build, audit prompt. No VoxCore commits. |
 | Main (125) | DevOps pipeline overhaul — memory sync | COMPLETE | Synced memory with pipeline. Created `doc/claude_memory.md`. Updated 5 memory files |
 | Main (127) | AI Studio + full sync + commit | COMPLETE | `9ee8c2bb55`. AI Studio hub (junctions for 3 projects), .agentrules, gitignore hardening (discord exports, transmog export, session logs), discord analytics script, DevOps prompts. 21 files, 855 insertions |
+| Main (128) | VoxTip v1.0 + idTip rewrite + Triad handoff | COMPLETE | `97dd4ee6a2`. VoxTip debug toolkit (3 files), handoff to Antigravity, Central Brain + Triad workflow adopted. System pause acknowledged |
+| Transmog (130) | Transmog bridge fail-open + MINI-BRIDGE sender | PAUSED | C++ `4f2512f29d`. Lua MINI-BRIDGE in TransmogSpy (slots 0/2/12/13, option-aware). Awaiting acceptance test |
 | — | — | — | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.
@@ -35,7 +37,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 
 ## Current Server State
 
-- **Build**: `e90f4da5bc` (Mar 8 2026, RelWithDebInfo)
+- **Build**: `4f2512f29d` (Mar 9 2026, RelWithDebInfo) — includes transmog fail-open + bridge grace
 - **Server**: NOT RUNNING (last ran 12:47 today, clean shutdown)
 - **Client**: 12.0.1.66263
 - **DB**: world ~1,200 MB (712K creatures, +101K from LoreWalker) | hotfixes 811 MB (400K spells) | characters 4 MB
