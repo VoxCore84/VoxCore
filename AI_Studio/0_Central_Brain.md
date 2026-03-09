@@ -7,6 +7,10 @@
 - (Antigravity) Implemented Triad Orchestrator prototype script.
 
 ## Paused / Suspended Tasks (Awaiting API Migration)
+- **ChatGPT (Architect Tab):** VoxCore Command Center Overhaul spec
+  - **Resume point**: Spec is done, sitting in `1_Inbox\ChatGPT_Pause_Handoff_to_Antigravity.md`. Needs to be formatted into full Triad Architect document for Claude Code, or split the Task Tracker into a standalone spec.
+- **ChatGPT (Architect Tab):** idTIP Transmog Mini-Bridge
+  - **Resume point**: Spec/handoff safely stored in `1_Inbox\TongueAndQuill_Spec_Transmog_MiniBridge...md`. The current Lua sender is the active candidate. Awaiting a single acceptance test (Head + MH + MH illusion) to fetch logs before writing more code.
 - **Antigravity: VoxCore Architect (Main Tab)**: PAUSED.
   - **Resume point**: Entire Triad Pipeline and AI Router daemon have been successfully built and verified offline. I am currently idle, waiting for the user to drag the `CommandCenter_Context.txt` payload from their Desktop into ChatGPT to generate the first test Spec. Once the `.md` file drops in Excluded, the Router will teleport it to the Inbox for Claude to implement, and we can resume.
 - **Antigravity (Tab: idTIP)**: Standby for first spec/code handoff.
