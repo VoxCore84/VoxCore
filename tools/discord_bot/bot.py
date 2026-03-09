@@ -9,6 +9,7 @@ from emojis import load_app_emojis
 log = logging.getLogger(__name__)
 
 COGS = [
+    "cogs.help",
     "cogs.faq",
     "cogs.lookups",
     "cogs.triage",
@@ -16,6 +17,10 @@ COGS = [
     "cogs.watchdog",
     "cogs.onboarding",
     "cogs.wowhead_resolver",
+    "cogs.troubleshooter",
+    "cogs.changelog",
+    "cogs.automod",
+    "cogs.welcome_role",
 ]
 
 
@@ -57,7 +62,7 @@ class VoxCoreBot(commands.Bot):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name="/spell /item /server | FAQ active",
+                name="/help for commands",
             )
         )
 

@@ -32,6 +32,11 @@ echo shutdown > "%RUNTIME%\.stop_auto_parse"
 echo        Daemon will close its window dynamically after finishing the packet pipeline.
 echo.
 
+echo [6/6] Shutting down AI Studio Router...
+taskkill /FI "WINDOWTITLE eq AI Studio Router Daemon*" /F >nul 2>&1
+echo        Router offline.
+echo.
+
 echo ============================================
 echo   All servers stopped. Opening PacketLog...
 echo ============================================

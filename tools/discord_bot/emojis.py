@@ -66,16 +66,24 @@ FALLBACKS = {
     "diff_mythic": "\U0001f7e3", # 🟣
     "diff_lfr": "\U0001f7e0",   # 🟠
     "diff_tw": "\U0001f7e4",    # 🟤
+    # Explore
+    "cat_explore": "\U0001f5fa\ufe0f",  # 🗺️
     # Checkmarks
     "found": "\u2705",           # ✅
     "missing": "\u274c",         # ❌
 }
 
 
-def em(name: str) -> str:
+def em(name: str, fallback: str | None = None) -> str:
     """Get emoji with auto-fallback from FALLBACKS dict.
 
     Usage:
-        em("spell")  → "<:spell:123>" if loaded, else "⚡"
+        em("spell")            → "<:spell:123>" if loaded, else "⚡" (from FALLBACKS)
+        em("spell", "⚡")      → "<:spell:123>" if loaded, else "⚡" (explicit override)
     """
-    return _emoji_cache.get(name, FALLBACKS.get(name, ""))
+    cached = _emoji_cache.get(name)
+    if cached:
+        return cached
+    if fallback is not None:
+        return fallback
+    return FALLBACKS.get(name, "")
