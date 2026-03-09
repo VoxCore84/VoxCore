@@ -3,7 +3,7 @@
 **Read this FIRST in any new Claude Code tab.**
 This is the single source of truth for what all tabs are doing, what's done, what's blocked, and what to pick up next. Updated by whichever tab finishes work.
 
-**Last updated**: March 8, 2026 — Session 114 (LoreWalker Import v3 — QA-verified pre-baked SQL)
+**Last updated**: March 8, 2026 — Session 115b (Transmog Tooling Phase 1 — DT maps unified, enriched CSVs regenerated)
 
 ---
 
@@ -17,6 +17,10 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Transmog Tab | Bug fixes from `memory/transmog-bugtracker.md` | COMPLETE | Session 110. 8 bugs fixed (G,H1,M6,M9,M1,M5,M2,UNICODE), 3 QA passes done. Ready for build. |
 | Resource Tab (113) | Transmog resource audit — 3-pass QA of all tooling | COMPLETE | `7cef6952b0`. Bridge v3 IMPLEMENTED. lookup.py wrong DT labels. Enriched CSVs stale. Report: `doc/transmog_resource_audit.md` |
 | Main (114) | LoreWalker import v3 — 3-pass QA of import prompt | COMPLETE | `80917a2739`. Fixed VB-in-PK bug, verified all 53 row counts, pre-baked SQL. Prompt: `doc/lorewalker_import_v3.md` |
+| Tooling Tab (115b) | Phase 1 transmog tooling — DT maps, enriched CSVs, bridge annotation | COMPLETE | No commit (gitignored files). Created `transmog_common_maps.py`, fixed 3 tools, regenerated enriched CSVs for 66263 |
+| Main (116) | Sniffing pipeline + accumulated commit | COMPLETE | `7ecad9990d`, `1419293a01`, `0808414a7e` |
+| Commit Tab (117) | Commit coordination + transmog handoff | COMPLETE | No new commits. Recovered 3 reset commits from reflog. Generated transmog handoff prompt |
+| Import Tab (118) | LoreWalker TDB import — write & apply 7 SQL files + fix _00_ | COMPLETE | Wrote 01-07, applied all 8 files (00-07). Fixed _00_ gameobject_template column count bug (32→35 Data zeros). ~502K inserts + 7.7K updates landed. QA clean. |
 | — | — | — | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.
@@ -28,9 +32,10 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 - **Build**: `e90f4da5bc` (Mar 8 2026, RelWithDebInfo)
 - **Server**: NOT RUNNING (last ran 12:47 today, clean shutdown)
 - **Client**: 12.0.1.66263
-- **DB**: world 1,086 MB (611K creatures) | hotfixes 811 MB (400K spells) | characters 4 MB
+- **DB**: world ~1,200 MB (712K creatures, +101K from LoreWalker) | hotfixes 811 MB (400K spells) | characters 4 MB
 - **Logs**: Clean — zero crashes/fatals. SmartAI warnings + unhandled 12.x opcodes only.
 - **Needs build**: `.npc copy` command + voxplacer + **8 transmog bug fixes** (session 110). See `doc/transmog_next_steps.md` for test plan.
+- **LoreWalker TDB import**: APPLIED (session 118) — 7 files + _00_ Stormwind fix. Restart worldserver to load.
 
 ---
 
@@ -158,6 +163,7 @@ Each zone produces a SQL file in `sql/exports/` and findings for review.
 
 | Session | What | Key Output |
 |---------|------|-----------|
+| 115b | Transmog Tooling Phase 1 | Created `transmog_common_maps.py`, fixed DT maps in 3 tools (DT 12/14 added, lookup.py wrong numbering fixed), regenerated enriched CSVs for 66263, annotated bridge v3 spec |
 | 113 | Transmog Resource Audit | 3-pass QA of all transmog tools/CSVs/bridge. Key: bridge v3 implemented, lookup.py wrong DT numbering, enriched CSVs stale. `doc/transmog_resource_audit.md` |
 | 112 | Sniffing Guide Polish | Hub gist cleanup, generic branding, Heads Up section |
 | 111 | LoreWalker TDB Analysis | 6-agent sweep, import pipeline ready in `doc/lorewalker_import_prompt.md` |
