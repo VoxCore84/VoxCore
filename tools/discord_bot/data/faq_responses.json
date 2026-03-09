@@ -1,0 +1,68 @@
+[
+  {
+    "id": "cant_connect",
+    "title": "Can't Connect to Server",
+    "pattern": "(?:can.?t|cannot|unable)\\s+(?:connect|log\\s*in|login)|auth(?:entication)?\\s+fail|BLZ519\\d+|stuck\\s+(?:at|on)\\s+(?:connect|login|loading)",
+    "response": "**Common connection fixes:**\n\n1. **Check your realmlist table** in the `auth` database — make sure it points to the correct IP (127.0.0.1 for local, your public IP for remote)\n2. **Verify ports are open**: `1119` (bnet), `8085` (worldserver), `8086` (instance)\n3. **Check your bnet config** — make sure `LoginREST.ExternalAddress` and `LoginREST.LocalAddress` are correct\n4. **Certs**: If you regenerated SSL certs, restart both bnetserver and worldserver\n5. **Credentials**: Log in with your **bnet account**, not the game account\n\nIf you just updated your WoW client, you likely need the latest auth SQL update — use `/buildcheck`"
+  },
+  {
+    "id": "build_mismatch",
+    "title": "Client Build Version Mismatch",
+    "pattern": "(?:wrong|mismatch|missing|incompatible)\\s+(?:build|version|client)|build\\s+\\d{5}|Missing\\s+auth\\s+seed|client\\s+(?:updated|patched)|which\\s+(?:build|version)|what\\s+(?:build|version)",
+    "response": "**Your WoW client and server builds don't match.**\n\nWhen Blizzard pushes a retail update, your client auto-updates but your server still expects the old build.\n\n**Fix:**\n1. Find the latest auth SQL: use `/buildcheck` or check https://github.com/TrinityCore/TrinityCore/tree/master/sql/updates/auth/master\n2. Open the newest `YYYY_MM_DD_NN_auth.sql` file\n3. Run it against your `auth` database in HeidiSQL / MySQL CLI\n4. Restart your **bnetserver** and **worldserver**\n5. If Arctium complains, grab the latest Arctium build too\n\nThe SQL file updates `build_info`, `build_auth_key`, and `realmlist` to match the new client build."
+  },
+  {
+    "id": "arctium_issues",
+    "title": "Arctium Launcher Problems",
+    "pattern": "arctium\\s*(?:crash|error|not\\s*work|issue|problem|won.?t|can.?t|broken|fail|old|launch|doesn)",
+    "response": "**Arctium Launcher troubleshooting:**\n\n- **CPU requirement**: Arctium requires **AVX2** instructions — Intel mid-2013+ or AMD 2015+ CPUs. Older CPUs (like AMD FX series) are not supported\n- **Version mismatch**: After a WoW client update, you usually need a new Arctium build. Check the Arctium Discord for the latest release\n- **Stuck/crashing**: Try deleting the Arctium cache folder and restarting\n- **Auto-update**: Make sure Arctium isn't auto-updating your WoW client — disable \"auto update\" in Battle.net settings\n\nIf Arctium flat-out won't work on your hardware, the only alternative is building a custom launcher (advanced)."
+  },
+  {
+    "id": "extractor_issues",
+    "title": "Map/VMap/MMap Extraction Issues",
+    "pattern": "(?:vmap|mmap|vmaps|mmaps|mapextract|vmapextract|vmap4assembler|mmapgenerat)\\s*(?:error|fail|issue|problem|not|missing|how|extract)|(?:extract|extractor)\\s*(?:error|fail|issue|how)|(?:fall|falling)\\s+through\\s+(?:the\\s+)?(?:map|ground|floor|world)",
+    "response": "**Map extraction guide:**\n\nYou need to run **4 extractors** in this order:\n1. `mapextractor.exe` — extracts base maps\n2. `vmapextractor.exe` — extracts visual maps\n3. `vmap4assembler.exe` — assembles vmaps (run AFTER vmapextractor)\n4. `mmaps_generator.exe` — generates movement maps (takes 1-2+ hours)\n\n**Common issues:**\n- \"Can't open WDT\" / FILE_NOT_FOUND warnings during vmap extraction are **normal** for unused/test maps\n- Falling through the world = missing vmaps or mmaps — re-extract\n- After a client update, you **must re-extract** all maps\n- Make sure the output folders (`maps/`, `vmaps/`, `mmaps/`) are in the same directory as your worldserver\n- Check `DataDir` in `worldserver.conf` points to the right place"
+  },
+  {
+    "id": "config_issues",
+    "title": "worldserver.conf Configuration",
+    "pattern": "worldserver\\.conf|authserver\\.conf|config\\s+(?:file|option|setting)\\s+(?:error|issue|problem|not|missing|where|how)|MySQLExecutable|DataDir\\s*=",
+    "response": "**worldserver.conf tips:**\n\n- **MySQLExecutable**: Must be the full path to `mysql.exe`, e.g.:\n  `MySQLExecutable = \"C:/YourPath/UniServerZ/core/mysql/bin/mysql.exe\"`\n- **DataDir**: Must point to where your `maps/`, `vmaps/`, `mmaps/` folders are:\n  `DataDir = \".\"` (same folder as worldserver.exe)\n- **SOAP**: Set `SOAP.Enabled = 1` if you want remote commands\n- **TimeIsTime.Enable**: Add `TimeIsTime.Enable = 1` if you see thread hang crashes\n- **Source path errors**: If logs mention a source path like `C:/Trinity/RoleplayCore-Master/...`, update `SourceDirectory` to your actual source path, or set `Updates.EnableDatabases = 0` to skip auto-updates"
+  },
+  {
+    "id": "server_crash_login",
+    "title": "Server Crashes on Login / Character Load",
+    "pattern": "(?:server|worldserver)\\s*(?:crash|closes|exit|dies|stops?)\\s*(?:when|after|on|at|during)?\\s*(?:login|log\\s*in|character|loading|enter|connect)|crash.*(?:90|loading|character|login)|loading.*(?:crash|close|exit)",
+    "response": "**Server crashing on login is usually one of these:**\n\n1. **Missing/outdated maps**: Re-extract maps, vmaps, mmaps with the latest extractors matching your client build\n2. **Corrupted character data**: Try creating a brand new character to test. If that works, the old character's data may be incompatible (e.g., imported from a different core/build)\n3. **Incomplete client download**: If your WoW.exe is still \"downloading game data\" in the background, some zones will crash. Wait for the full download to finish\n4. **Check Server.log**: The crash log will have a stack trace telling you exactly what went wrong — post it in #troubleshooting\n\n*If the crash happens on ALL characters, it's almost certainly a map/data issue, not a character issue.*"
+  },
+  {
+    "id": "mysql_setup",
+    "title": "MySQL / Database Connection Errors",
+    "pattern": "(?:mysql|mariadb|database|db)\\s*(?:error|issue|problem|fail|can.?t|unable|connect|not\\s*(?:found|work|connect|start|run))|DatabasePool.*NOT\\s+opened|access\\s+denied.*(?:mysql|database)",
+    "response": "**MySQL connection troubleshooting:**\n\n1. **Is MySQL running?** Check UniServerZ — click the MySQL tab and make sure it says \"ready for connections\" at the bottom\n2. **Credentials**: In `worldserver.conf`, check:\n   - `LoginDatabaseInfo = \"127.0.0.1;3306;root;admin;auth\"`\n   - `WorldDatabaseInfo = \"127.0.0.1;3306;root;admin;world\"`\n   - (same pattern for characters, hotfixes)\n3. **Port conflict**: Another MySQL instance might be hogging port 3306 — check Task Manager for duplicate `mysqld.exe` processes\n4. **Access denied**: Double-check your MySQL username/password. Default for repack is usually `root` / `admin`\n5. **DatabasePool NOT opened**: Usually means the database doesn't exist yet — run the base SQL files first"
+  },
+  {
+    "id": "openssl_build",
+    "title": "OpenSSL Build/Compile Errors",
+    "pattern": "openssl\\s*(?:error|issue|problem|not\\s*found|missing|link|lib)|ssl\\s*(?:error|issue|link|lib)\\s*(?:not|missing|fail)",
+    "response": "**OpenSSL compile errors:**\n\n- **Use the right OpenSSL version**: TrinityCore currently needs OpenSSL 3.x. Download from https://slproweb.com/products/Win32OpenSSL.html (the full version, not \"Light\")\n- **CMake path**: In CMake, set `OPENSSL_ROOT_DIR` to your OpenSSL install path (e.g., `C:/OpenSSL-Win64`)\n- **Lib path**: Point to `lib/VC/x64/MD/` for the libraries, NOT just `lib/`\n- **After installing**: Delete your CMake cache (`CMakeCache.txt`) and reconfigure from scratch\n- **Matching architectures**: Make sure you're using 64-bit OpenSSL with a 64-bit build configuration"
+  },
+  {
+    "id": "sql_updates",
+    "title": "How to Apply SQL Updates",
+    "pattern": "(?:how\\s+(?:to|do\\s+I))\\s*(?:apply|run|import|execute)\\s*(?:sql|query|update|script)|sql\\s+(?:update|file|script)\\s+(?:how|where|apply|run|import)",
+    "response": "**Applying SQL updates:**\n\n1. Open **HeidiSQL** (included in most repacks) or MySQL CLI\n2. Connect to your MySQL server (default: `root` / `admin`)\n3. Select the correct database for the file:\n   - `_auth.sql` → `auth` database\n   - `_world.sql` → `world` database\n   - `_characters.sql` → `characters` database\n   - `_hotfixes.sql` → `hotfixes` database\n4. Open the `.sql` file and run it (in HeidiSQL: Load SQL file → Execute)\n5. **Check for errors** in the output — look for `ERROR` lines\n6. **Restart worldserver** after applying world/hotfix updates\n\n**Important:** Apply SQL files in order (by date in the filename). Don't skip files."
+  },
+  {
+    "id": "flying_mounts",
+    "title": "Flying / Dragonriding Not Working",
+    "pattern": "(?:can.?t|cannot|unable)\\s*(?:fly|mount|ride|dragonrid)|flying\\s*(?:not|doesn|won|broken)|dragonrid(?:e|ing)\\s*(?:not|broken|can.?t|won)|switch\\s*flight\\s*(?:spell|not|broken)",
+    "response": "**Flying / Dragonriding fix:**\n\n1. Make sure **flying is allowed in the zone** — some zones require pathfinder achievements or have flying disabled\n2. Try the `.learn` command for the Switch Flight spell if you don't have it: `.lo spell switch flight` to find the spell ID, then `.learn <id>`\n3. If you have a flight spell aura stuck, use `.unaura <spellid>` to remove it, then reapply\n4. Dragonriding (Skyriding) abilities may need to be learned separately from normal flying\n\n*Some flight mechanics are still being scripted — if nothing works, report it in #bugreport with your zone and mount name.*"
+  },
+  {
+    "id": "website_error",
+    "title": "Website / CMS Error 500",
+    "pattern": "(?:website|web\\s*page|cms|register|registr)\\s*(?:error|issue|problem|not\\s*work|broken|500|fail)|error\\s*500|(?:can.?t|cannot)\\s*(?:register|create\\s*account)\\s*(?:on|through|via)\\s*(?:the\\s*)?(?:website|page)",
+    "response": "**Website / CMS issues:**\n\n- **Error 500**: Usually a PHP or Apache config problem\n  - Check the Apache error log in `UniServerZ/core/apache2/logs/error.log`\n  - Common cause: wrong PHP paths or missing PHP extensions\n- **Can't register**: Make sure the CMS database connection settings match your MySQL credentials\n- **Pages not found (404)**: Apache mod_rewrite might not be enabled — check your `.htaccess` files\n\n*The bundled website is optional — you can always create accounts using the bnetserver console or SQL directly.*"
+  }
+]

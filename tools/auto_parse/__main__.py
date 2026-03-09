@@ -16,6 +16,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+log = logging.getLogger(__name__)
+
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -254,6 +256,7 @@ def run_watch(config: Config, console: Console) -> None:
 
                 writer.write_all(state)
                 writer.write_session_summary(state)
+                writer.write_session_brief(state)
 
                 if not state.pkt_pipeline_ran:
                     def cprint(msg):
@@ -262,6 +265,40 @@ def run_watch(config: Config, console: Console) -> None:
                     state.pkt_pipeline_ran = True
 
                 console.print(f"[{datetime.now():%H:%M:%S}] Shutdown pipeline complete.\n")
+
+                # Snapshot all .log files from runtime_dir into out_dir (PacketLog) 
+                # so they are safe from truncation on next startup and easy to access
+                logs_copied = 0
+                for f in config.paths.runtime_dir.iterdir():
+                    if f.is_file() and f.suffix == ".log":
+                        try:
+                            shutil.copy2(str(f), str(out_dir / f.name))
+                            logs_copied += 1
+                        except OSError as e:
+                            log.error(f"Failed to copy log {f.name}: {e}")
+
+                # Snapshot external client logs and caches
+                external_targets: list[Path] = []
+                if hasattr(config.paths, 'wtf_saved_vars_dir') and config.paths.wtf_saved_vars_dir.exists():
+                    for prefix in ("TransmogSpy", "TransmogBridge"):
+                        external_targets.extend(config.paths.wtf_saved_vars_dir.glob(f"{prefix}*.lua"))
+                
+                db_cache = config.paths.adb_cache_dir / "DBCache.bin"
+                if db_cache.exists():
+                    external_targets.append(db_cache)
+
+                if hasattr(config.paths, 'wow_errors_dir') and config.paths.wow_errors_dir.exists():
+                    external_targets.extend(config.paths.wow_errors_dir.glob("*.txt"))
+
+                for f in external_targets:
+                    try:
+                        shutil.copy2(str(f), str(out_dir / f.name))
+                        logs_copied += 1
+                    except OSError as e:
+                        log.error(f"Failed to copy external log {f.name}: {e}")
+
+                if logs_copied:
+                    console.print(f"  [dim]Snapshot {logs_copied} log files to PacketLog[/]")
 
                 if tray:
                     tray.update_status("error")
@@ -312,6 +349,16 @@ def run_watch(config: Config, console: Console) -> None:
 
             state.last_poll_ms = (time.monotonic() - poll_start) * 1000
 
+            # Check for remote shutdown signal from stop_all.bat
+            stop_signal = config.paths.runtime_dir / ".stop_auto_parse"
+            if stop_signal.exists():
+                console.print(f"\n[bold yellow][{datetime.now():%H:%M:%S}] Shutdown signal received. Exiting watcher.[/]")
+                try:
+                    stop_signal.unlink()
+                except OSError:
+                    pass
+                break
+
             if had_changes:
                 # Check for new alerts
                 new_alerts = alerter.check_new(state.all_entries[-new_count:])
@@ -359,15 +406,15 @@ def _archive_session(
         return
 
     ts = state.session_start.strftime("%Y-%m-%d_%H-%M-%S")
-    archive_dir = output_dir / ts
+    archive_dir = output_dir / "archives" / ts
     
     # Handle sub-second restart collisions
     idx = 1
     while archive_dir.exists():
-        archive_dir = output_dir / f"{ts}-{idx}"
+        archive_dir = output_dir / "archives" / f"{ts}-{idx}"
         idx += 1
 
-    archive_dir.mkdir(exist_ok=True)
+    archive_dir.mkdir(parents=True, exist_ok=True)
 
     moved = 0
     for f in files:
@@ -378,7 +425,7 @@ def _archive_session(
             pass
 
     if moved:
-        console.print(f"  [dim]Archived {moved} files to PacketLog/{ts}/[/]")
+        console.print(f"  [dim]Archived {moved} files to PacketLog/archives/{ts}/[/]")
 
 
 # -- CLI -----------------------------------------------------------------------

@@ -9,6 +9,11 @@ out/
 cmake-build-*/*
 tools/build/
 
+# -- Secrets / tokens ---------------------------------------------------------
+.env
+*.env
+VoxCore Reader Bot.txt
+
 # -- IDE / editor -------------------------------------------------------------
 .vs
 .vscode

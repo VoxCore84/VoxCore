@@ -23,6 +23,12 @@ class PathsConfig:
     adb_cache_dir: Path = field(
         default_factory=lambda: Path(r"C:\WoW\_retail_\Cache\ADB\enUS")
     )
+    wtf_saved_vars_dir: Path = field(
+        default_factory=lambda: Path(r"C:\WoW\_retail_\WTF\Account\1#1\SavedVariables")
+    )
+    wow_errors_dir: Path = field(
+        default_factory=lambda: Path(r"C:\WoW\_retail_\Errors")
+    )
     wago_dir: Path = field(
         default_factory=lambda: Path(r"C:\Users\atayl\VoxCore\wago")
     )

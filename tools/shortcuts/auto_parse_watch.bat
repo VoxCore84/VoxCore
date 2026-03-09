@@ -12,4 +12,5 @@ echo ============================================================
 echo.
 cd /d "%~dp0.."
 python -m auto_parse --watch --verbose
-pause
+if %ERRORLEVEL% NEQ 0 pause
+exit

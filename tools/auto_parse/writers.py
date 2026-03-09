@@ -301,6 +301,55 @@ class TextWriter:
         lines.append(f"{'=' * 100}\n")
         atomic_write(path, "\n".join(lines))
 
+    def write_session_brief(self, state: SessionState) -> None:
+        """Generate a Master Markdown Brief intended for Antigravity ingestion."""
+        path = self._out / "_Session_Brief.md"
+        now = _now()
+        fatals = sum(1 for e in state.all_entries if e.severity >= Severity.FATAL)
+        errors = sum(1 for e in state.all_entries if e.severity == Severity.ERROR)
+        gm_count = len(state.get_entries("GM"))
+        crash_count = len(state.get_entries("Crash"))
+
+        lines = [
+            f"![VoxCore Seal](C:/Users/atayl/VoxCore/wago/att_icons_export/Class_Race_Profession_Icons/ABILITY_SEAL.PNG)",
+            f"# VoxCore Session Brief",
+            f"**Session Start:** `{state.session_start.strftime('%Y-%m-%d %H:%M')}` | **Ended:** `{now}`",
+            f"**Uptime:** `{state.uptime_str}` | **Total Logs:** `{len(state.all_entries):,}`\n",
+            "## 1. Crash Telemetry",
+        ]
+
+        if crash_count:
+            crashes = state.get_entries("Crash")
+            for e in crashes:
+                m = e.metadata
+                txt = m.get("txt_file", "unknown")
+                lines.append(f"- **{e.timestamp}**: `{e.text}` *(Dump: {txt})*")
+        else:
+            lines.append("> No server crashes detected in this session.")
+        
+        lines.append("\n## 2. Error Volume")
+        lines.append(f"- **Server Fatals:** `{fatals}`")
+        lines.append(f"- **Server Errors:** `{errors}`")
+
+        db_counts = state.get_category_counts("DBError")
+        if db_counts:
+            lines.append("\n### Top DB Error Signatures")
+            for cat, count in db_counts.most_common(5):
+                lines.append(f"- `{cat}`: **{count}** occurrences")
+
+        lines.append("\n## 3. Operations & Anomalies")
+        lines.append(f"- **GM Commands Issued**: `{gm_count}`")
+        
+        lines.append("\n## 4. Packet Analysis")
+        # For pipeline data generated right before this brief
+        pkt_scope = self._out / "packetscope_report.txt"
+        if pkt_scope.exists():
+            lines.append("`packet_scope.py` report detected in PacketLog.")
+        else:
+            lines.append("> No specific packet anomalies extracted.")
+
+        atomic_write(path, "\n".join(lines))
+
 
 def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
