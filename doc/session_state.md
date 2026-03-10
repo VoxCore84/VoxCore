@@ -37,6 +37,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Antigravity (Architect) | API Architect Producer MVP | COMPLETE | Configured run_architect.py pipeline + prompts + schemas. |
 | Antigravity (Triad) | Triad Stream 1 & Stream 2 | COMPLETE | Built `build.py` orchestrator and `run_architect.py` live OpenAI pipeline. Specs saved heavily to doc/. |
 | Antigravity (Support) | DraconicBot Novice Overhaul | COMPLETE | `d1b9cf8b08`. NLP parser (25K msgs), `diagnose.bat` auto-fixer, SME knowledge base, DM guide wizard. |
+| Main (136) | DraconicBot v2.2 retool + Antigravity integration | COMPLETE | `e992e98c5e`. Lookups→Wowhead, troubleshooter retooled, 4 boot bugs fixed, bot deployed (17 cogs, 14 commands) |
 | — | — | — | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.
