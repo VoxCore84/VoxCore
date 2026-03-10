@@ -1,6 +1,7 @@
 # RoleplayCore To-Do List
 
 ## Completed (archive)
+- Expanded DraconicBot FAQ trigger phrases (1500+ text variations) + regex robustification (`688bef7b1b`)
 - Auth key bypass reverted (`8bbd610fc7`), 66220 keys applied
 - Hotfix redundancy audit: 10.8M → ~244K content rows, 226,984 hotfix_data entries (3 rounds + orphan sweep)
 - DBCD binary cross-ref audit: 363 redundant rows removed (13 tables), 393 missing broadcast_text filled. Commit `faec6435de`
@@ -460,6 +461,7 @@
 
 ## Next Session Immediate Goals
 1. Proceed with testing the completed Triad Pipeline (Command Center -> Orchestrator -> Claude Code).
-2. Consolidate and close out lingering Transmog Bug Fixes from Tier 2 (BUG-M3, M7, M8, M10).
-3. Initiate a fresh world database check-in to process the remaining 9 zone phase_area diffs (Tier 3).
-4. Perform the spell audit (13 RED spells, 84 YELLOW spells) using the Triad automation.
+2. Continue the "Arcane Codex" VoxCore Website visual overhaul (Phase 0 and Phase 4).
+3. Consolidate and close out lingering Transmog Bug Fixes from Tier 2 (BUG-M3, M7, M8, M10).
+4. Initiate a fresh world database check-in to process the remaining 9 zone phase_area diffs (Tier 3).
+5. Deploy and execute in-game testing for the completed DraconicBot NLP parser and newly expanded FAQ regex patterns.

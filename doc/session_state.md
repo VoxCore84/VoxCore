@@ -3,7 +3,7 @@
 **Read this FIRST in any new Claude Code tab.**
 This is the single source of truth for what all tabs are doing, what's done, what's blocked, and what to pick up next. Updated by whichever tab finishes work.
 
-**Last updated**: March 9, 2026 — Session 128/Main (VoxTip v1.0 + Triad handoff + system pause)
+**Last updated**: March 10, 2026 — Antigravity FAQ Phrase Banking Wrap-Up
 
 ---
 
@@ -39,6 +39,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Antigravity (Bridge) | Stream 3, 4, 5 (Triad Control Plane) | COMPLETE | `2d9a9c38a2`. Built UI Command Center, Orchestrator jobs/adapters, and Claude live-bridge. DB bridge sync failed. |
 | Antigravity (Support) | DraconicBot Novice Overhaul | COMPLETE | `d1b9cf8b08`. NLP parser (25K msgs), `diagnose.bat` auto-fixer, SME knowledge base, DM guide wizard. |
 | Main (136) | DraconicBot v2.2 retool + Antigravity integration | COMPLETE | `e992e98c5e`. Lookups→Wowhead, troubleshooter retooled, 4 boot bugs fixed, bot deployed (17 cogs, 14 commands) |
+| Antigravity | FAQ Phrase Banking & Regex Expansion | COMPLETE | `688bef7b1b`. 15 FAQ responses bulk expanded with 1500+ trigger phrases. |
 | — | — | — | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.
