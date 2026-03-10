@@ -1059,5 +1059,7 @@ All scripts version-controlled in private GitHub repositories.
 
 ---
 
-*Updated March 5, 2026 | RoleplayCore — VoxCore84/RoleplayCore*
+*Updated March 9, 2026 | RoleplayCore — VoxCore84/RoleplayCore*
+
+**Since last DB report update (sessions 108-134):** LoreWalker TDB import v3 applied (session 118: 7 SQL files, ~502K inserts + 7.7K updates, creature delta +101,018). Transmog QA fixes applied (6 bugs). Aegis Config Phase 2 complete (runtime path migration). DraconicBot v2.1 built. Auto-Parse v3 deployed. No new hotfix repair runs — database metrics above remain accurate.
 *Tools: VoxCore84/wago-tooling, VoxCore84/tc-packet-tools, VoxCore84/code-intel, VoxCore84/trinitycore-claude-skills*

@@ -30,6 +30,8 @@ Complete reference for every tool, pipeline, and command in the project. Organiz
 20. [GitHub Repos & Gists](#20-github-repos--gists)
 21. [One-Time Setup SQL](#21-one-time-setup-sql)
 22. [Quick Reference One-Liners](#22-quick-reference-one-liners)
+23. [DevOps Pipeline](#23-devops-pipeline)
+24. [Aegis Path Audit](#24-aegis-path-audit)
 
 ---
 
@@ -553,4 +555,48 @@ cd ~/VoxCore/out/build/x64-RelWithDebInfo && ninja -j20
 
 ---
 
-*Last updated: Mar 5, 2026. Source: `doc/gist_runbook.md` in RoleplayCore repo.*
+---
+
+## 23. DevOps Pipeline
+
+```bash
+# === Full server lifecycle ===
+tools/shortcuts/start_all.bat        # 6-step boot: MySQL → pending SQL → bnet → worldserver → Arctium → auto_parse
+tools/shortcuts/stop_all.bat         # Graceful shutdown → auto_parse signal → PacketLog capture → Claude Code handover
+
+# === SQL deployment pipeline ===
+# Drop SQL patches in sql/updates/pending/*.sql — boot-time apply via start_all.bat (step 1.5)
+tools/shortcuts/apply_pending_sql.bat  # Manual: prompts user, applies to MySQL, archives to sql/updates/applied/
+
+# === Auto-Parse log pipeline ===
+python -m auto_parse --watch         # Headless daemon (19 modules, 7 parsers, TOML config)
+# Config: tools/auto_parse.toml
+# Output: PacketLog/_Session_Brief.md (primary debugging data source)
+
+# === Claude Code handover ===
+# Spawned by stop_all.bat — ingests session brief, reviews diffs, syncs memory, commits, pushes
+tools/claude_code_handover.md        # Handover protocol prompt
+```
+
+## 24. Aegis Path Audit
+
+```bash
+# === Scan for hardcoded paths ===
+python scripts/audit/find_hardcoded_paths.py    # Regex scanner → logs/audit/hardcoded_path_inventory.csv
+
+# === Classify findings ===
+python scripts/audit/classify_findings.py       # Tags: runtime_defer, false_positive, archive_skip, intentional_example
+
+# === Root resolution (for Python scripts) ===
+from scripts.bootstrap.resolve_roots import find_project_root
+ROOT = find_project_root()  # Walks up from __file__ looking for AI_Studio/0_Central_Brain.md
+
+# === Path contract ===
+# config/Aegis_Path_Contract.md — frozen alias rules (VOXCORE_ROOT, INBOX_DIR, etc.)
+# config/paths.json — canonical alias registry
+# tests/aegis_smoke_pack.md — regression checklist for launchers
+```
+
+---
+
+*Last updated: Mar 9, 2026 (session 134). Source: `doc/gist_runbook.md` in RoleplayCore repo.*
