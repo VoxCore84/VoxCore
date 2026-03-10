@@ -4,14 +4,35 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ---
 
+## ACTIVE -- Triad Stabilization
+
+### Aegis Config (TRIAD-STAB-V1)
+- **Phase 2 COMPLETE**: Hardcoded `C:\Users\` paths removed from 8 runtime scripts. `resolve_roots.py` bootstrap, `Aegis_Path_Contract.md` (frozen), `paths.json` alias registry
+- **Phase 2E DEFERRED**: Secondary docs migration (intentional deferral by Architect)
+- **Phase 3 NEXT**: Scanner hardening -- smarter regex for the audit tool. `auto_parse` config.py defaults still absolute (fallback OK)
+- Artifacts: `config/Aegis_Path_Contract.md`, `logs/audit/hardcoded_path_inventory_classified.csv`, `tests/aegis_smoke_pack.md`
+
+### DraconicBot -- Antigravity Audit Findings
+- **PyMySQL synchronous blocking** in `cogs/lookups.py` -- needs async DB access
+- **Race condition** in `cogs/faq.py` -- concurrent FAQ trigger handling
+- Audit report: `AI_Studio/3_Audits/` (Antigravity marked FAIL)
+
+---
+
 ## HIGH Priority
 
-### VoxCore Website â€” "Arcane Codex" Asset Pipeline (NEW)
+### VoxCore Website â€” “Arcane Codex” Asset Pipeline
 - **Phase 0**: Extract WoW visuals via wow-export for website
   - 83 assets curated: 30 dungeon journal art, 21 boss portraits, 32 creature models (SL/DF/TWW/Midnight)
   - wow-export auto-configured (WebP, GLB, no bloat). Scripts at `~/VoxCore/ExtTools/website-assets\`
   - Priority: Enchanted Tome (mascot), Xal'atath, Alleria, Khadgar, Midnight raid journal art
 - **Phases 1â€“5**: Arcane visual refresh, animated pipeline, tool explorer, before/after slider, interactive timeline
+
+### Transmog: Fail-Open Bridge + Acceptance Test (sessions 59-130)
+**Status**: All server-side fixes committed. MINI-BRIDGE sender live. PAUSED in acceptance-test mode.
+- C++ `4f2512f29d`: fail-open finalize guard + one-update bridge grace
+- TransmogSpy MINI-BRIDGE sender (option-aware, slots 0/2/12/13)
+- **Awaiting**: in-game acceptance test per `doc/transmog_test_guide.md`
 
 ### Transmog: 5-Agent Audit Action Plan (sessions 62–73)
 **Status**: Phases 1–4 IMPLEMENTED + corrective pass (session 73). Behavioral model aligned to retail packets. Awaiting in-game testing.
@@ -173,6 +194,16 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ## Recently Completed
 
+### March 9, 2026 (sessions 120-134)
+- ~~**Aegis Phase 2** (session 134)~~: Hardcoded path migration -- 8 runtime scripts, 25 files, 2,293 insertions
+- ~~**Triad AI Workflow** (sessions 128-134)~~: 3-agent coordination (ChatGPT/Claude/Antigravity), Central Brain, guardrails
+- ~~**DraconicBot v2.1** (sessions 126-129)~~: 14 cogs, 16 slash commands, 2,700 lines, 68 custom emojis
+- ~~**Auto-Parse v3** (session 123)~~: 19-module pipeline, TOML config, HTML dashboard, tray icon, 3 QA passes
+- ~~**VoxPlacer Polish** (session 121)~~: Undo stack, face-toward, favorites, minimap button, ghost preview aura
+- ~~**LoreWalker TDB Import** (session 118)~~: 7 SQL files, ~502K inserts + 7.7K updates, zero orphans
+- ~~**Transmog QA Fixes** (sessions 110-116)~~: H1 + 5 medium bugs fixed, 3 QA passes, resource audit
+- ~~**TongueAndQuill v2.2** (session 131)~~: Page numbering, batch mode, 13 bug fixes (~1,530 lines)
+
 ### March 7, 2026 (sessions 88-99)
 - ~~**Code Quality Pass** (session 94)~~: 39 fixes across 19 files -- 7 critical crash fixes, 8 high, 12 medium, 12 low. Memory leaks, nullptr guards, O(n)-->O(1) optimizations
 - ~~**Spell Audit Pipeline** (session 88)~~: 1,842 C++ stubs generated, SQL applied (5,467 spell_script_names, 4,503 serverside_spells)
@@ -215,5 +246,5 @@ Prioritized list of known issues, planned work, and blocked items. Updated as it
 
 ---
 
-*Updated March 8, 2026 (session 106)*
+*Updated March 9, 2026 (session 134)*
 

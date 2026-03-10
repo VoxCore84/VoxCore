@@ -2,6 +2,64 @@ RoleplayCore â€” Session Changelog (WoW 12.x private server)
 
 
 
+## Mar 9 2026
+
+### Session 134 -- Triad Guardrails + Aegis Phase 2 Closeout
+- **Triad AI workflow codified**: Claude Code = Implementer, ChatGPT = Architect, Antigravity (Gemini) = Systems Architect / QA-QC. Mandatory preflight checks, refusal protocol for unspec'd features, Central Brain coordination file
+- **Aegis Config Phase 2 complete**: Hardcoded `C:\Users\` paths removed from 8 runtime scripts (batch + Python). New infrastructure: `resolve_roots.py` bootstrap, `Aegis_Path_Contract.md` (frozen alias rules), `paths.json` canonical registry, audit scanner + classifier (692 entries, 400+ false positives filtered), smoke test checklist
+- 25 files changed, 2,293 insertions across Phase 2. Commits: `43884ca85b`, `c0de05d950`
+
+### Session 133 -- Full Ecosystem Review
+- Read all operational docs, verified Triad roles, committed Nexus Report generator (`tools/log_tools/generate_nexus_report.py` -- Vertex AI/Gemini daily devlog), NotebookLM Enterprise planning docs
+- Commit: `13ff762a9a`
+
+### Session 132 -- Cowork VM Fix
+- Diagnosed missing Cowork in Claude Desktop -- session 84 gaming perf tuning had disabled Hyper-V/virtualization. Re-enabled `HypervisorPlatform`. Reboot pending
+
+### Session 131 -- TongueAndQuill v2.2
+- AFH 33-337 document formatter upgrade: page numbering (page 2+ flush right), batch mode (GUI + CLI), template cache, 13 bug fixes (temp file leaks, DPI awareness, double-click guard, dead code removal, keyboard shortcuts)
+- Standalone project at `C:\Users\atayl\TongueAndQuill\` (~1,530 lines). Awaiting Antigravity audit
+
+### Session 130 -- Transmog Bridge: Fail-Open + MINI-BRIDGE
+- **C++ server-side**: `hasUsableBridgeData` guard prevents savedOutfit baseline from wiping parsed CMSG data. `_transmogBridgeWaitOneUpdate` one-update grace period prevents safety-net from firing before bridge arrives
+- **TransmogSpy MINI-BRIDGE sender**: Moved bridge send from TransmogBridge into TransmogSpy's PreClick hook. Limited to slots 0/2/12/13, option-aware. TransmogBridge set to passive mode
+- Status: PAUSED in acceptance-test mode. Commit: `4f2512f29d`
+
+### Sessions 126-129 -- DraconicBot v2.1
+- Full Discord support bot for DraconicWoW (`tools/discord_bot/`). 14 cogs, 16 slash commands, ~2,700 lines across 19 Python modules
+- FAQ auto-responder (11 patterns from 30K message analysis), slash lookups (/spell /item /creature /area /faction), bug triage + auto-threading, SOAP server status, TrinityCore GitHub build watchdog, Wowhead resolver, onboarding, /help dropdown, /troubleshoot decision tree, changelog feed, automod, welcome roles
+- 68 custom WoW icon emojis. Awaiting server owner authorization to deploy
+- Commits: `593cb53ae6`, `64a786a312`, `375c1a0674`
+
+### Sessions 123-125 -- Auto-Parse v3 + DevOps Pipeline
+- **Auto-Parse v3**: `tools/auto_parse/` modular package (19 modules, 2,498 lines). 7 parsers, TOML config, HTML dashboard, tray icon, toast notifications, alert dedup, graceful shutdown, client data capture, session brief synthesis. 3 QA passes + Antigravity audit
+- **DevOps pipeline**: `start_all.bat` (6-step boot), `stop_all.bat` (graceful shutdown + handover), `apply_pending_sql.bat` (boot-time SQL deploy), Claude Code handover protocol
+- Commits: `98aa66149c`, `b36bbb5811`
+
+### Session 121 -- VoxPlacer Polish
+- 4 features: undo stack, face-toward, favorites list, minimap button. Ghost preview aura (37800). 6 QA fixes
+- 13 commands total, ~1,140 C++ / ~930 Lua. Commit: `4fc562e404`
+
+### Session 120 -- NotebookLM + Tooling Evaluation
+- Created `doc/notebooklm/` knowledge base (97 files) for AI-assisted analysis
+- Evaluated Antigravity IDE capabilities. Reviewed 12 claude-code GitHub issues
+- Commit: `b36bbb5811`
+
+### Sessions 116-118 -- LoreWalker TDB Import + Transmog QA
+- **LoreWalker import**: 7 SQL files applied (~502K inserts + 7.7K updates). Creature delta +101,018 exact, zero orphans
+- **Transmog QA audit fixes** (session 116): H1 ClearDynamicUpdateFieldValues, M1 zero invalid enchants, M2 decouple enchant restore, M5 parse weapon options, M6 hidden pants, M9 gate illusion bootstrap
+- **Sniffing pipeline**: parse_sniff gap auditor, parse_addon_data cross-ref tool
+- Commits: `7ecad9990d`, `1419293a01`, `0808414a7e`, `0997d17565`
+
+### Sessions 113-115 -- Transmog Resource Audit + Tooling
+- 3-pass QA of all transmog tooling, Bridge v3 implemented, enriched CSVs regenerated for build 66263
+- DT label bugs found and fixed in lookup.py. Report: `doc/transmog_resource_audit.md`
+- Commit: `7cef6952b0`
+
+### Sessions 108-110 -- Transmog Bug Fixes + Consolidation
+- 8 bugs fixed (G, H1, M6, M9, M1, M5, M2, UNICODE), 3 QA passes
+- Slot ordering fix, sniffing docs tracked, cheatsheet DisplayType corrections
+
 ## Mar 8 2026
 
 ### Session 106 -- Meta Infrastructure + Gist Updates
@@ -565,7 +623,7 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 
 ---
 
-## Database State (March 8, 2026)
+## Database State (March 9, 2026)
 
 | Database | Size | Key Metric |
 |----------|------|------------|
@@ -579,12 +637,23 @@ Chronological log of all database, code, and infrastructure changes. Each entry 
 
 | Repo | Latest Commit | Purpose |
 |------|--------------|---------|
-| VoxCore84/RoleplayCore | `e90f4da5bc` | Main server |
+| VoxCore84/RoleplayCore | `c0de05d950` | Main server |
 | VoxCore84/wago-tooling | `2351879` | Wago/LW/hotfix tools |
 | VoxCore84/tc-packet-tools | `821e74f` | WPP + packet analysis |
 | VoxCore84/code-intel | -- | C++ MCP server (416K symbols) |
 | VoxCore84/trinitycore-claude-skills | `25967f7` | Claude Code skills |
 | VoxCore84/roleplaycore-report | `9ead780` | GitHub Pages documentation site |
 
-*Updated March 8, 2026*
+## AI Infrastructure (NEW -- March 9, 2026)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Triad Workflow | ACTIVE | ChatGPT=Architect, Claude Code=Implementer, Antigravity=QA-QC |
+| Central Brain | `AI_Studio/0_Central_Brain.md` | Cross-agent coordination blackboard |
+| Aegis Config | Phase 2 COMPLETE | Hardcoded paths removed from runtime. Phase 3 (scanner hardening) next |
+| DraconicBot | v2.1 BUILT | 14 cogs, 16 commands. Awaiting deploy authorization |
+| Auto-Parse | v3+ DEPLOYED | 19-module pipeline, headless via `start_all.bat` |
+| DevOps Pipeline | DEPLOYED | 6-step boot, graceful shutdown, SQL pending queue, handover agent |
+
+*Updated March 9, 2026 (session 134)*
 
