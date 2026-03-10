@@ -1,6 +1,7 @@
 import discord
 import re
 from discord.ext import commands
+from config import SUPPORT_CHANNEL_IDS
 from emojis import em
 
 class LogParser(commands.Cog):
@@ -14,10 +15,9 @@ class LogParser(commands.Cog):
         if message.author.bot or not message.attachments:
             return
 
-        # Simple anti-spam: only trigger in specific channels
-        if "support" not in message.channel.name.lower() and "troubleshooting" not in message.channel.name.lower():
-            if message.channel.id not in [1305417861962305540]: # Allowed channels
-                return
+        # Only trigger in support channels
+        if SUPPORT_CHANNEL_IDS and message.channel.id not in SUPPORT_CHANNEL_IDS:
+            return
 
         for attachment in message.attachments:
             if attachment.filename.lower() == "worldserver.conf":

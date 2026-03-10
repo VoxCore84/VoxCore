@@ -1,6 +1,7 @@
 import discord
 import re
 from discord.ext import commands
+from config import SUPPORT_CHANNEL_IDS
 from emojis import em
 
 # Regex to catch frustrated users who might be lost
@@ -24,10 +25,9 @@ class Frustration(commands.Cog):
         if message.author.bot:
             return
 
-        # Simple anti-spam: only trigger in support channels
-        if "support" not in message.channel.name.lower() and "troubleshooting" not in message.channel.name.lower():
-            if message.channel.id not in [1305417861962305540]: # Allowed channels
-                return
+        # Only trigger in support channels
+        if SUPPORT_CHANNEL_IDS and message.channel.id not in SUPPORT_CHANNEL_IDS:
+            return
 
         # Check for frustration keywords
         if FRUSTRATION_PATTERN.search(message.content):

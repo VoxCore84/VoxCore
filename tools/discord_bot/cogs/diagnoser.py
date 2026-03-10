@@ -1,13 +1,15 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import os
+from pathlib import Path
+
+_DATA_DIR = Path(__file__).parent.parent / "data"
+
 
 class Diagnoser(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Path to the diagnose.bat file we created
-        self.diagnose_path = os.path.join("data", "diagnose.bat")
+        self.diagnose_path = _DATA_DIR / "diagnose.bat"
 
     @app_commands.command(name="diagnose", description="Download the auto-fixer tool to check your server folder for mistakes!")
     async def diagnose_command(self, interaction: discord.Interaction):
@@ -27,7 +29,7 @@ class Diagnoser(commands.Cog):
         
         embed.set_footer(text="This file is safe and can be opened in Notepad to see exactly what it does.")
         
-        if not os.path.exists(self.diagnose_path):
+        if not self.diagnose_path.exists():
             await interaction.response.send_message("The diagnostic tool is currently missing from my files!", ephemeral=True)
             return
             

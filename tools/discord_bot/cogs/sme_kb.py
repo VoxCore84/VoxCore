@@ -1,17 +1,21 @@
+import json
+from pathlib import Path
+
 import discord
 from discord.ext import commands
 from discord import app_commands
-import json
-import os
+
+_DATA_DIR = Path(__file__).parent.parent / "data"
+
 
 class SMEKnowledgeBase(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db_path = os.path.join("data", "gm_commands.json")
+        self.db_path = _DATA_DIR / "gm_commands.json"
         self.kb = self._load_kb()
 
     def _load_kb(self):
-        if not os.path.exists(self.db_path):
+        if not self.db_path.exists():
             return []
         with open(self.db_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
