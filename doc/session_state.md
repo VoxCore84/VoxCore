@@ -33,6 +33,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Main (133) | Full ecosystem review + wrap-up | COMPLETE | `13ff762a9a`. Reviewed all sessions 123-132, committed Nexus Report tool + NotebookLM Enterprise docs. Memory synced |
 | Main (134) | Triad guardrails + Antigravity briefing | COMPLETE | `43884ca85b`. Guardrails in MEMORY.md, coordination header in Central Brain, full capability dump for Antigravity |
 | Antigravity (Auditor) | Wago CSV vs SQL Auditor pipeline | PAUSED | Python environment set up (`Setup-VoxCoreEnv.ps1`), `scripts/AI_Auditor.py` scaffolded. Command permissions overhauled in `.agentrules`. Awaiting DB connection logic. |
+| Main (135) | Claude Code complaint taxonomy + support email | COMPLETE | `ef3c0f4c17`. 16 issues filed on anthropics/claude-code, meta-issue #32650 (anchor-first). Reviewed by 4 AIs. Support email sent, AI auto-denied, escalated to human. Public posts drafted, holding |
 | — | — | — | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.
