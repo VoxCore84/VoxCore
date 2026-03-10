@@ -79,7 +79,7 @@ class FAQResponder(commands.Cog):
             return
 
         content = message.content
-        if len(content) < 10:
+        if len(content) < 8:
             return
 
         import time

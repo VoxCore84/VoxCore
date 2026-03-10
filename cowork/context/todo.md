@@ -459,8 +459,7 @@
 - 2 orphan `hotfixes.item` entries (IDs 242643, 257928) — no matching item_sparse, cosmetic
 
 ## Next Session Immediate Goals
-1. [x] Implement Stream 5 (Agentic Memory) and Stream 6 (Triad Feedback Loop) to close out the Triad Architecture.
-2. Begin testing the Triad Pipeline with the API Architect MVP in an end-to-end sandbox.
-3. Consolidate and close out lingering Transmog Bug Fixes from Tier 2 (BUG-M3, M7, M8, M10).
-4. Initiate a fresh world database check-in to process the remaining 9 zone phase_area diffs (Tier 3).
-5. Build the `diagnose.bat` telemetry intake endpoint in DraconicBot (for future automated triage).
+1. Proceed with testing the completed Triad Pipeline (Command Center -> Orchestrator -> Claude Code).
+2. Consolidate and close out lingering Transmog Bug Fixes from Tier 2 (BUG-M3, M7, M8, M10).
+3. Initiate a fresh world database check-in to process the remaining 9 zone phase_area diffs (Tier 3).
+4. Perform the spell audit (13 RED spells, 84 YELLOW spells) using the Triad automation.
