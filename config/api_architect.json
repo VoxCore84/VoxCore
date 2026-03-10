@@ -1,0 +1,27 @@
+{
+  "contract_version": "1.0",
+  "api": {
+    "default_model": "gpt-4o",
+    "timeout_seconds": 120,
+    "max_retries": 1
+  },
+  "inputs": {
+    "max_input_chars": 64000,
+    "allowlisted_directories": [
+      "AI_Studio/0_Central_Brain.md",
+      "AI_Studio/1_Inbox",
+      "AI_Studio/3_Audits",
+      "doc",
+      "PacketLog"
+    ]
+  },
+  "outputs": {
+    "schema_file": "AI_Studio/schemas/architect_spec.schema.json",
+    "prompt_template": "AI_Studio/templates/architect_prompt.md",
+    "markdown_template": "AI_Studio/templates/inbox_markdown_template.md"
+  },
+  "deduplication": {
+    "enabled": true,
+    "history_manifest": "logs/api_architect/latest_request_manifest.json"
+  }
+}

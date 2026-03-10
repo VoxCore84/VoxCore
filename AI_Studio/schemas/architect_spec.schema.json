@@ -1,0 +1,109 @@
+{
+  "name": "architect_schema",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "spec_id": {
+        "type": "string",
+        "description": "Unique identifier for this spec, e.g. TRIAD-API-V2"
+      },
+      "title": {
+        "type": "string",
+        "description": "Human readable title of the spec"
+      },
+      "status": {
+        "type": "string",
+        "description": "Status of the spec, usually 'Approved for Implementation' or 'Draft'"
+      },
+      "priority": {
+        "type": "string",
+        "description": "Priority level, e.g. P0, P1"
+      },
+      "goal_scope": {
+        "type": "string",
+        "description": "The primary goal and what this stream must accomplish. Also explicitly define what is out of scope."
+      },
+      "problem_statement": {
+        "type": "string",
+        "description": "Why we are building this and what problem it solves."
+      },
+      "architectural_decisions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "reasoning": { "type": "string" },
+            "approved_behavior": { "type": "string" },
+            "disallowed_behavior": { "type": "string" }
+          },
+          "required": ["title", "reasoning", "approved_behavior", "disallowed_behavior"],
+          "additionalProperties": false
+        },
+        "description": "Major architectural decisions and guardrails."
+      },
+      "file_structure": {
+        "type": "string",
+        "description": "ASCII directory tree of the files changed/created in this stream."
+      },
+      "logic_data_flow": {
+        "type": "string",
+        "description": "Step-by-step description of how the system will operate end-to-end."
+      },
+      "constraints": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Mandatory rules the implementer must follow."
+      },
+      "acceptance_criteria": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of conditions that define when this spec is considered fully complete."
+      },
+      "implementation_order": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "phase_name": { "type": "string" },
+            "tasks": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["phase_name", "tasks"],
+          "additionalProperties": false
+        },
+        "description": "Chronological breakdown of implementation phases."
+      },
+      "immediate_next_actions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "What the implementing agent should do the second they read this spec."
+      }
+    },
+    "required": [
+      "spec_id",
+      "title",
+      "status",
+      "priority",
+      "goal_scope",
+      "problem_statement",
+      "architectural_decisions",
+      "file_structure",
+      "logic_data_flow",
+      "constraints",
+      "acceptance_criteria",
+      "implementation_order",
+      "immediate_next_actions"
+    ],
+    "additionalProperties": false
+  }
+}

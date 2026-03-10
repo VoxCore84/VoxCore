@@ -1,0 +1,35 @@
+{
+  "build_contract_version": "1.0",
+  "defaults": {
+    "configure_preset": "x64-RelWithDebInfo",
+    "build_preset": "x64-RelWithDebInfo"
+  },
+  "presets": {
+    "debug": {
+      "configure": "x64-Debug",
+      "build": "x64-Debug"
+    },
+    "debug-scripts": {
+      "configure": "x64-Debug",
+      "build": "x64-Debug-scripts"
+    },
+    "release": {
+      "configure": "x64-RelWithDebInfo",
+      "build": "x64-RelWithDebInfo"
+    },
+    "release-scripts": {
+      "configure": "x64-RelWithDebInfo",
+      "build": "x64-RelWithDebInfo-scripts"
+    }
+  },
+  "artifacts": {
+    "log_directory": "logs/build",
+    "latest_log": "logs/build/latest_build_log.txt",
+    "summary_json": "logs/build/latest_build_summary.json",
+    "audit_markdown": "AI_Studio/3_Audits/latest_compile_errors.md"
+  },
+  "orchestration": {
+    "max_consecutive_failures_without_progress": 5,
+    "max_exact_identical_failures": 2
+  }
+}
