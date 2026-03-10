@@ -259,3 +259,9 @@
 - Client-side rendering data coverage
 - 16 remaining missing broadcast_text: 9 TWW-era (awaiting Wago update) + 7 custom 912M (need manual creation)
 - 2 orphan `hotfixes.item` entries (IDs 242643, 257928) — no matching item_sparse, cosmetic
+
+## Next Session
+- **Triad Stream 3 (Control Plane):** Review the new Intake Packet (`Intake_Triad_Orchestrator_Control_Plane.md`), generate the Architect Spec, and build the unified job router.
+- **AI Tooling:** Connect the `AI_Auditor.py` pipeline to the local MySQL schema now that the base infrastructure is fully stabilized.
+- **Social Media Drop:** Publish the `@VoxCore84` X thread, the Reddit taxonomy, and the Medium long-form post.
+- **Anthropic Follow-up:** Monitor `support@anthropic.com` response for human manager escalation.

@@ -58,6 +58,7 @@ cache/
 .cache/
 __pycache__/
 .opcode_cache.json
+logs/
 
 # -- Discord raw exports (30K+ messages, sensitive) --------------------------
 doc/discord_export_*.json
