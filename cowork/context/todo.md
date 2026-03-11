@@ -457,8 +457,8 @@
 - 2 orphan `hotfixes.item` entries (IDs 242643, 257928) — no matching item_sparse, cosmetic
 
 ## Next Session Immediate Goals
-1. [ ] Continue the "Arcane Codex" VoxCore Website visual overhaul (Phase 0 and Phase 4).
-2. [ ] Consolidate and close out lingering Transmog Bug Fixes from Tier 2 (BUG-M3, M7, M8, M10).
-3. [ ] Initiate a fresh world database check-in to process the remaining 9 zone phase_area diffs (Tier 3).
-4. [ ] Deploy and execute in-game testing for the completed DraconicBot NLP parser and newly expanded FAQ regex patterns.
-5. [ ] **AI Tooling**: Connect the `AI_Auditor.py` pipeline to the local MySQL schema now that the base infrastructure is fully stabilized and restructured.
+1. [ ] Connect the `AI_Auditor.py` pipeline to the local MySQL schema for Wago CSV cross-referencing.
+2. [ ] Deploy and execute in-game testing for the completed DraconicBot NLP parser and expanded FAQ regex patterns.
+3. [ ] Verify lingering Transmog Bug Fixes in-game (BUG-M3, M7, M8, M10).
+4. [ ] Process world database phase_area diffs (9 zones remaining) for Tier 3 cleanup.
+5. [ ] Continue Arcane Codex VoxCore Website visual overhaul (Phases 0 and 4).
