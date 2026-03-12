@@ -1,0 +1,56 @@
+# DraconicBot — systemd unit file (non-Docker fallback)
+#
+# Install:
+#   sudo cp draconic.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now draconic
+#
+# Logs:
+#   journalctl -u draconic -f
+
+[Unit]
+Description=DraconicBot — DraconicWoW Discord Support Bot
+Documentation=https://github.com/VoxCore84/RoleplayCore
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Run as a dedicated unprivileged user
+User=draconic
+Group=draconic
+
+# Bot lives here after deploy.sh copies it
+WorkingDirectory=/opt/draconic-bot
+ExecStart=/opt/draconic-bot/venv/bin/python -m discord_bot
+
+# Restart policy — always restart on failure, 10s cooldown
+Restart=always
+RestartSec=10
+
+# If the bot crashes 5 times in 60 seconds, stop trying
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Environment — load secrets from the .env file
+EnvironmentFile=/opt/draconic-bot/.env
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/draconic-bot/logs /opt/draconic-bot/data
+
+# Resource limits
+MemoryMax=512M
+TasksMax=64
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=draconic-bot
+
+[Install]
+WantedBy=multi-user.target

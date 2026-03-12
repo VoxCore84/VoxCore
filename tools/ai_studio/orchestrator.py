@@ -29,7 +29,7 @@ class TriadOrchestrator:
 
         # Initialize Vertex AI
         vertexai.init(project=self.gcp_project, location=self.gcp_location)
-        self.gemini_model = GenerativeModel("gemini-2.5-pro")
+        self.gemini_model = GenerativeModel("gemini-3.1-pro")
         
         # Initialize Anthropic
         self.anthropic_client = anthropic.Anthropic(api_key=self.anthropic_api_key)
@@ -43,11 +43,18 @@ class TriadOrchestrator:
         """
         print(f"{Fore.YELLOW}[Architect]{Style.RESET_ALL} Designing specification via Gemini Ultra...")
         
-        chat = self.gemini_model.start_chat()
         prompt = f"SYSTEM: You are the Lead Architect in a Triad AI system. Output ONLY a Markdown specification containing the file names and the logic for the feature requested by the user. Do NOT write full code, just the architecture spec.\n\nUSER DEMAND: Design a spec for the following requirement: {user_prompt}"
         
-        response = chat.send_message(prompt)
-        spec_content = response.text
+        try:
+            chat = self.gemini_model.start_chat()
+            response = chat.send_message(prompt)
+            spec_content = response.text
+        except Exception as e:
+            print(f"{Fore.YELLOW}[Architect]{Style.RESET_ALL} API Error ({e}). Falling back to gemini-2.5-pro...")
+            fallback_model = GenerativeModel("gemini-2.5-pro")
+            chat = fallback_model.start_chat()
+            response = chat.send_message(prompt)
+            spec_content = response.text
         
         print(f"{Fore.YELLOW}[Architect]{Style.RESET_ALL} Specification drafted.")
         return spec_content
@@ -60,9 +67,9 @@ class TriadOrchestrator:
         print(f"{Fore.GREEN}[Executor]{Style.RESET_ALL} Implementing code from spec...")
         
         response = self.anthropic_client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-opus-4-6",
             max_tokens=4096,
-            system="You are the Frontline Executor in a Triad AI system. Your job is to read the markdown specification from the Architect and return a JSON list of file paths that you theoretically would have modified based on the spec.",
+            system="You are the Frontline Executor in a Triad AI system (Claude Code). Your job is to read the markdown specification from the Architect and return a JSON list of file paths that you theoretically would have modified based on the spec. You are explicitly authorized and encouraged to spawn Agents and Subagents for concurrent workload execution.",
             messages=[
                 {"role": "user", "content": f"Here is the Architect's specification:\n\n{spec_content}\n\nBased on this spec, which files would you edit? Return ONLY a valid JSON array of strings representing file paths (e.g., [\"src/main.py\"])."}
             ]
@@ -93,7 +100,7 @@ class TriadOrchestrator:
         
         file_list_str = ", ".join(modified_files)
         response = self.anthropic_client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-opus-4-6",
             max_tokens=4096,
             system="You are the Backend Auditor in a Triad AI system. Your job is to review the files modified by the Executor against the original specification written by the Architect. In this prototype, you just decide if the files modified match what the spec asked to modify. Reply with ONLY 'PASS' or 'FAIL'.",
             messages=[

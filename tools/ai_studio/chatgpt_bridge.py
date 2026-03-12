@@ -43,7 +43,7 @@ def get_client():
 
 
 def get_model():
-    return os.getenv("OPENAI_MODEL", "gpt-4.5-preview")
+    return os.getenv("OPENAI_MODEL", "gpt-5.4")
 
 
 SYSTEM_PROMPT = """\
@@ -93,7 +93,7 @@ def review_spec(client, spec_text: str, spec_name: str) -> str:
             },
         ],
         temperature=0.3,
-        max_tokens=8192,
+        max_completion_tokens=8192,
     )
 
     return response.choices[0].message.content
@@ -163,7 +163,7 @@ def test_connection(client):
             messages=[
                 {"role": "user", "content": "Reply with exactly: ARCHITECT ONLINE"}
             ],
-            max_tokens=10,
+            max_completion_tokens=10,
         )
         reply = response.choices[0].message.content.strip()
         print(f"Response: {reply}")

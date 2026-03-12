@@ -1,0 +1,12 @@
+# Docker build context exclusions for DraconicBot
+__pycache__/
+*.pyc
+*.pyo
+.env
+logs/
+deploy/
+run_bot.bat
+start_bot.bat
+stop_bot.bat
+test_faq.py
+.git/

@@ -1,0 +1,46 @@
+# DraconicBot — Docker Compose
+# Usage:
+#   cp .env.example .env   # fill in DISCORD_TOKEN + channel IDs
+#   docker compose up -d
+#   docker compose logs -f draconic-bot
+
+services:
+  draconic-bot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: draconic-bot
+    restart: unless-stopped
+
+    # Mount the .env file from the parent (bot root) directory
+    env_file:
+      - ../.env
+
+    # Persist logs and mutable data (faq_stats.json, .last_known_*)
+    # outside the container so they survive rebuilds
+    volumes:
+      - bot-logs:/app/logs
+      - bot-data:/app/data
+
+    # No ports needed — the bot connects outbound to Discord Gateway.
+    # If you add an HTTP health endpoint later, expose it here.
+
+    # Resource limits appropriate for Oracle Cloud Always Free
+    # (1 OCPU / 6 GB RAM — leave headroom for the OS)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+    # Log rotation so Docker's JSON log driver doesn't fill the disk
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  bot-logs:
+  bot-data:

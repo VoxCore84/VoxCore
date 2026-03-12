@@ -35,9 +35,8 @@ def generate_report():
         print("Warning: GCP_PROJECT_ID not found in environment. Generating a basic offline snapshot instead.")
         report = f"# The Nexus Report - {today_str}\n\n*Generated offline because GCP_PROJECT_ID was missing from .env.*\n\n## Daily Snapshot\n```\n{brain_content}\n```"
     else:
-        print("Connecting to Vertex AI (Gemini 1.5 Pro)...")
+        print("Connecting to Vertex AI (Gemini 3.1 Pro -> fallback to 2.5-pro)...")
         vertexai.init(project=gcp_project, location=gcp_location)
-        model = GenerativeModel("gemini-2.5-pro")
         prompt = f"""You are the internal technical writer and Chief Architect for VoxCore Enterprise.
 Read the following 'Central Brain' state and write a narrative, engaging daily engineering blog post summarizing the momentum, called 'The Nexus Report'.
 Focus on what was actually 'Completed Today', the momentum of the 'Active Tabs', and any interesting technical challenges sitting in the 'Paused' or 'Upcoming' backlog.
@@ -47,11 +46,18 @@ Central Brain State:
 {brain_content}
 """
         try:
+            model = GenerativeModel("gemini-3.1-pro")
             response = model.generate_content(prompt)
             report = response.text
         except Exception as e:
-            print(f"Error generating from Vertex AI: {e}")
-            return
+            print(f"Warning: Primary model generation failed ({e}). Attempting fallback to gemini-2.5-pro...")
+            try:
+                fallback_model = GenerativeModel("gemini-2.5-pro")
+                response = fallback_model.generate_content(prompt)
+                report = response.text
+            except Exception as e2:
+                print(f"Error generating from Vertex AI fallback: {e2}")
+                return
             
     # Save the report
     out_dir = Path(r"C:\Users\atayl\VoxCore\AI_Studio\NotebookLM_Enterprise\Nexus_Reports")

@@ -16,10 +16,10 @@ All 3 API pipelines are now LIVE with real keys:
 
 | Pipeline | Script | API | Model | Status |
 |----------|--------|-----|-------|--------|
-| ChatGPT Bridge | `tools/ai_studio/chatgpt_bridge.py` | OpenAI | gpt-4.1 | OPERATIONAL |
-| Triad Orchestrator | `tools/ai_studio/orchestrator.py` | Anthropic + Vertex AI | claude-sonnet-4-6 + gemini-2.5-pro | OPERATIONAL |
-| API Architect | `tools/api_architect/call_openai.py` | OpenAI | gpt-4o | OPERATIONAL |
-| Nexus Reports | `tools/log_tools/generate_nexus_report.py` | Vertex AI | gemini-2.5-pro | OPERATIONAL |
+| ChatGPT Bridge | `tools/ai_studio/chatgpt_bridge.py` | OpenAI | gpt-5.4 | OPERATIONAL |
+| Triad Orchestrator | `tools/ai_studio/orchestrator.py` | Anthropic + Vertex AI | claude-opus-4-6 + gemini-3.1-pro | OPERATIONAL |
+| API Architect | `tools/api_architect/call_openai.py` | OpenAI | gpt-5.4 | OPERATIONAL |
+| Nexus Reports | `tools/log_tools/generate_nexus_report.py` | Vertex AI | gemini-3.1-pro | OPERATIONAL |
 
 **Credential locations** (all gitignored):
 - `tools/ai_studio/.env` — OpenAI + Anthropic + GCP config
