@@ -37,7 +37,7 @@ def generate_report():
     else:
         print("Connecting to Vertex AI (Gemini 1.5 Pro)...")
         vertexai.init(project=gcp_project, location=gcp_location)
-        model = GenerativeModel("gemini-1.5-pro")
+        model = GenerativeModel("gemini-2.5-pro")
         prompt = f"""You are the internal technical writer and Chief Architect for VoxCore Enterprise.
 Read the following 'Central Brain' state and write a narrative, engaging daily engineering blog post summarizing the momentum, called 'The Nexus Report'.
 Focus on what was actually 'Completed Today', the momentum of the 'Active Tabs', and any interesting technical challenges sitting in the 'Paused' or 'Upcoming' backlog.

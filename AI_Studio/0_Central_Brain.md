@@ -2,13 +2,33 @@
 
 ## Triad Coordination — READ FIRST (all agents)
 
-**Last updated**: 2026-03-10, session 137 (Claude Code)
+**Last updated**: 2026-03-11, session 138 (Claude Code)
 
 ### Agent Reference Files
-- **Claude Code config**: `CLAUDE.md` (root) + `~/.claude/projects/.../memory/MEMORY.md` (26 topic files linked from index)
+- **Claude Code config**: `CLAUDE.md` (root) + `~/.claude/projects/.../memory/MEMORY.md` (27 topic files linked from index)
 - **Central Brain**: this file (`AI_Studio/0_Central_Brain.md`) — all agents read at session start
 - **Specs inbox**: `AI_Studio/1_Inbox/` — ChatGPT drops specs here, Claude reads before implementing
 - **Audit results**: `AI_Studio/3_Audits/` — Antigravity writes findings here, Claude reads on demand
+- **API Credentials**: `tools/ai_studio/.env` (central store) — see § AI Fleet below
+
+### AI Fleet — Communication & API Status (updated session 138)
+All 3 API pipelines are now LIVE with real keys:
+
+| Pipeline | Script | API | Model | Status |
+|----------|--------|-----|-------|--------|
+| ChatGPT Bridge | `tools/ai_studio/chatgpt_bridge.py` | OpenAI | gpt-4.1 | OPERATIONAL |
+| Triad Orchestrator | `tools/ai_studio/orchestrator.py` | Anthropic + Vertex AI | claude-sonnet-4-6 + gemini-2.5-pro | OPERATIONAL |
+| API Architect | `tools/api_architect/call_openai.py` | OpenAI | gpt-4o | OPERATIONAL |
+| Nexus Reports | `tools/log_tools/generate_nexus_report.py` | Vertex AI | gemini-2.5-pro | OPERATIONAL |
+
+**Credential locations** (all gitignored):
+- `tools/ai_studio/.env` — OpenAI + Anthropic + GCP config
+- `config/api_architect.local.env` — OpenAI key (api_architect pipeline)
+- `~/.config/gcloud/voxcore-489923-*.json` — GCP service account
+- `tools/discord_bot/.env` — Discord bot token
+
+**Budget**: OpenAI $50 credit, Anthropic $50 credit, GCP $300 free credit.
+**Any agent** (Claude Code or Antigravity) can invoke these scripts — same keys, same `.env`.
 
 ### Active Operations
 - **Antigravity (Master Tab)**: TRIAD-BUILD-66337 (Lane B) — Executing fully automated, rapid sequenced data acquisition drops using the Claude Code runtime.
