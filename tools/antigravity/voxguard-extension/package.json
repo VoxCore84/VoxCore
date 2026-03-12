@@ -1,0 +1,39 @@
+{
+  "name": "voxguard",
+  "displayName": "VoxGuard",
+  "description": "Optimization health monitor for Antigravity IDE",
+  "version": "1.0.0",
+  "publisher": "voxcore",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "voxguard.checkHealth",
+        "title": "VoxGuard: Check Optimization Health"
+      },
+      {
+        "command": "voxguard.fixAll",
+        "title": "VoxGuard: Fix All Regressions"
+      },
+      {
+        "command": "voxguard.showReport",
+        "title": "VoxGuard: Show Full Report"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node18",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=node18 --watch"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "created": "2026-03-11",
+  "settings_critical": {
+    "telemetry.telemetryLevel": "off",
+    "extensions.autoUpdate": false,
+    "extensions.autoCheckUpdates": false,
+    "editor.minimap.enabled": false,
+    "search.followSymlinks": false,
+    "workbench.startupEditor": "none",
+    "workbench.enableExperiments": false,
+    "antigravity.searchMaxWorkspaceFileCount": 15000,
+    "antigravity.persistentLanguageServer": true,
+    "git.autorefresh": false,
+    "timeline.enabled": false,
+    "extensions.ignoreRecommendations": true
+  },
+  "argv_critical": {
+    "disable-telemetry": true,
+    "enable-crash-reporter": false,
+    "disable-renderer-backgrounding": true,
+    "disable-background-timer-throttling": true
+  },
+  "argv_js_flags_required": ["--max-old-space-size=4096", "--optimize-for-size", "--lite-mode"],
+  "disabled_extensions": [
+    "clojure", "coffeescript", "csharp", "dart", "fsharp", "go",
+    "groovy", "grunt", "gulp", "handlebars", "hlsl", "jake",
+    "java", "javascript", "julia", "latex", "less",
+    "ms-vscode.js-debug", "ms-vscode.js-debug-companion",
+    "ms-vscode.vscode-js-profile-table", "npm", "objective-c",
+    "perl", "php", "php-language-features", "pug", "r", "razor",
+    "restructuredtext", "ruby", "rust", "scss", "shaderlab",
+    "swift", "typescript-basics", "typescript-language-features", "vb"
+  ],
+  "db_permissions": {
+    "agent_prefs_b64": "CjAKJnRlcm1pbmFsQXV0b0V4ZWN1dGlvblBvbGljeVNlbnRpbmVsS2V5EgYKBEVBTT0KKQofYXJ0aWZhY3RSZXZpZXdQb2xpY3lTZW50aW5lbEtleRIGCgRFQUk9CiEKF3BsYW5uaW5nTW9kZVNlbnRpbmVsS2V5EgYKBEVBRT0KNgosYWxsb3dBZ2VudEFjY2Vzc05vbldvcmtzcGFjZUZpbGVzU2VudGluZWxLZXkSBgoEQ0FFPQo1CithbGxvd0Nhc2NhZGVBY2Nlc3NHaXRpZ25vcmVGaWxlc1NlbnRpbmVsS2V5EgYKBENBRT0="
+  },
+  "db_journal_mode": "wal"
+}

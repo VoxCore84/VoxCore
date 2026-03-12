@@ -15,6 +15,9 @@ tools/build/
 config/*.local.env
 VoxCore Reader Bot.txt
 
+# -- Node / JS ----------------------------------------------------------------
+node_modules/
+
 # -- IDE / editor -------------------------------------------------------------
 .vs
 .vscode
