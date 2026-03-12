@@ -17,10 +17,15 @@ When you must use shell commands on this Windows system:
 - Git: `git` (on PATH, authenticated with GitHub)
 
 ## Parallelism
-This machine is a Ryzen 9 9950X3D with 16C/32T and 128GB RAM. Always:
-- Run independent tasks in parallel sub-agents
-- Never serialize work that can be parallelized
-- Use background execution for long-running operations
+This machine is a Ryzen 9 9950X3D with 16C/32T and 128GB RAM. The Triad Settings have been uncapped:
+- Run massive independent tasks in parallel sub-agents.
+- Never serialize work that can be parallelized.
+- Rip through 128GB of RAM context without hesitation.
+- Use background execution for all long-running operations.
+
+## THE TRIAD EVOLUTION DIRECTIVE & "DIG DEEPER" MANDATE
+- **Evolution**: Never accept a standard approach if you can think of a smarter, faster, cheaper way to leverage the swarm. Talk to other AIs, build custom scripts/extensions, and optimize everything you touch.
+- **Dig Deeper**: ALWAYS iterate your research at least 3 levels deep before reporting. Use multi-file artifacts (`AI_Studio/Reports/`) to bypass token limits. DO NOT truncate data.
 
 ## Conciseness
 - Lead with actions, not explanations

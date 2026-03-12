@@ -2,11 +2,11 @@
   "contract_version": "1.0",
   "api": {
     "default_model": "gpt-5.4",
-    "timeout_seconds": 120,
-    "max_retries": 1
+    "timeout_seconds": 300,
+    "max_retries": 3
   },
   "inputs": {
-    "max_input_chars": 64000,
+    "max_input_chars": 1280000,
     "allowlisted_directories": [
       "AI_Studio/0_Central_Brain.md",
       "AI_Studio/1_Inbox",

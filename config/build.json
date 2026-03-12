@@ -29,7 +29,7 @@
     "audit_markdown": "AI_Studio/3_Audits/latest_compile_errors.md"
   },
   "orchestration": {
-    "max_consecutive_failures_without_progress": 5,
-    "max_exact_identical_failures": 2
+    "max_consecutive_failures_without_progress": 15,
+    "max_exact_identical_failures": 5
   }
 }

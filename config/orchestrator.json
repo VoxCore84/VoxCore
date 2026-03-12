@@ -5,7 +5,7 @@
     "latest_manifest": "logs/orchestrator/latest_run_manifest.json",
     "latest_summary": "logs/orchestrator/latest_run_summary.md",
     "lock_file": "logs/orchestrator/locks/current.lock",
-    "default_timeout_sec": 1800,
+    "default_timeout_sec": 7200,
     "jobs": {
         "headless_build": {
             "adapter": "headless_build",
@@ -19,12 +19,12 @@
         },
         "claude_implement": {
             "adapter": "claude_code",
-            "timeout_sec": 3600,
+            "timeout_sec": 14400,
             "allowed_flags": ["spec_file", "dry_run"]
         },
         "auto_retry_loop": {
             "adapter": "auto_retry",
-            "timeout_sec": 7200,
+            "timeout_sec": 28800,
             "allowed_flags": ["spec_file", "preset", "dry_run"]
         }
     }

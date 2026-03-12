@@ -7,8 +7,8 @@
         "claude_implement",
         "auto_retry_loop"
     ],
-    "recent_runs_limit": 20,
-    "active_run_poll_ms": 3000,
+    "recent_runs_limit": 100,
+    "active_run_poll_ms": 1000,
     "jobs": {
         "headless_build": {
             "allowed_presets": ["debug", "debug-scripts", "release", "release-scripts"]
