@@ -827,6 +827,7 @@ enum RBACPermissions
     RBAC_PERM_COMMAND_MAXREP                                = 3009,
     RBAC_PERM_COMMAND_MAXTITLES                             = 3010,
     RBAC_PERM_COMMAND_MAXACHIEVE                            = 3011,
+    RBAC_PERM_COMMAND_BESTIARY                              = 3012,
     RBAC_PERM_MAX
 };
 

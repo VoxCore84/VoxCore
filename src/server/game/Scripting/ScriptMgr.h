@@ -30,6 +30,7 @@ class AreaTrigger;
 class AreaTriggerAI;
 class AuctionHouseObject;
 class Aura;
+class AuraApplication;
 class AuraScript;
 class Battlefield;
 class Battleground;
@@ -441,6 +442,18 @@ class TC_GAME_API UnitScript : public ScriptObject
 
         // Called when Spell Damage is being Dealt
         virtual void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo);
+
+        // Called when a creature finishes casting a spell (after SendSpellGo)
+        virtual void OnCreatureSpellCast(Creature* /*creature*/, SpellInfo const* /*spell*/) { }
+
+        // Called when a creature begins casting a spell
+        virtual void OnCreatureSpellStart(Creature* /*creature*/, SpellInfo const* /*spell*/) { }
+
+        // Called when a creature finishes channeling a spell
+        virtual void OnCreatureChannelFinished(Creature* /*creature*/, SpellInfo const* /*spell*/) { }
+
+        // Called when an aura is applied to a unit (after all stack/remove checks pass)
+        virtual void OnAuraApply(Unit* /*target*/, AuraApplication* /*aurApp*/) { }
 };
 
 class TC_GAME_API CreatureScript : public ScriptObject
@@ -1374,6 +1387,10 @@ class TC_GAME_API ScriptMgr
         void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage);
         void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage);
         void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* spellInfo);
+        void OnCreatureSpellCast(Creature* creature, SpellInfo const* spell);
+        void OnCreatureSpellStart(Creature* creature, SpellInfo const* spell);
+        void OnCreatureChannelFinished(Creature* creature, SpellInfo const* spell);
+        void OnAuraApply(Unit* target, AuraApplication* aurApp);
 
     public: /* AreaTriggerEntityScript */
 

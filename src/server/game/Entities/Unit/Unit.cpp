@@ -3687,6 +3687,8 @@ void Unit::_ApplyAura(AuraApplication* aurApp, uint32 effMask)
         player->StartCriteria(CriteriaStartEvent::GainAura, aura->GetId());
         player->UpdateCriteria(CriteriaType::GainAura, aura->GetId(), 0, 0, caster);
     }
+
+    sScriptMgr->OnAuraApply(this, aurApp);
 }
 
 // removes aura application from lists and unapplies effects

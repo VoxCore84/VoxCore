@@ -1,8 +1,8 @@
 ## Interface: 120001
 ## Title: |cff00ccffBestiaryForge|r
-## Notes: Passively records creature spell casts for emulator database generation.
+## Notes: Server-assisted creature spell/aura sniffer for emulator database generation.
 ## Author: VoxCore
-## Version: 1.1.0
+## Version: 3.0.0
 ## Category: Development Tools
 ## DefaultState: enabled
 ## X-License: MIT

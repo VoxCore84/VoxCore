@@ -2843,6 +2843,26 @@ void ScriptMgr::ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& dama
     FOREACH_SCRIPT(UnitScript)->ModifySpellDamageTaken(target, attacker, damage, spellInfo);
 }
 
+void ScriptMgr::OnCreatureSpellCast(Creature* creature, SpellInfo const* spell)
+{
+    FOREACH_SCRIPT(UnitScript)->OnCreatureSpellCast(creature, spell);
+}
+
+void ScriptMgr::OnCreatureSpellStart(Creature* creature, SpellInfo const* spell)
+{
+    FOREACH_SCRIPT(UnitScript)->OnCreatureSpellStart(creature, spell);
+}
+
+void ScriptMgr::OnCreatureChannelFinished(Creature* creature, SpellInfo const* spell)
+{
+    FOREACH_SCRIPT(UnitScript)->OnCreatureChannelFinished(creature, spell);
+}
+
+void ScriptMgr::OnAuraApply(Unit* target, AuraApplication* aurApp)
+{
+    FOREACH_SCRIPT(UnitScript)->OnAuraApply(target, aurApp);
+}
+
 // Scene
 void ScriptMgr::OnSceneStart(Player* player, uint32 sceneInstanceID, SceneTemplate const* sceneTemplate)
 {

@@ -98,6 +98,12 @@ local function RebuildSpellList()
             auraCount = spell.auraCount or 0,
             total = (spell.castCount or 0) + (spell.auraCount or 0),
             zones = spell.zones or {},
+            dbKnown = spell.dbKnown,
+            serverConfirmed = spell.serverConfirmed,
+            cooldownMin = spell.cooldownMin,
+            cooldownAvg = spell.cooldownAvg,
+            hpMin = spell.hpMin,
+            hpMax = spell.hpMax,
         }
     end
 
@@ -188,9 +194,9 @@ sessionText:SetTextColor(0.4, 1, 0.4)
 local function UpdateStats()
     local totalC, totalS = BestiaryForge_CountDB()
     statsText:SetText(totalC .. " creatures  |  " .. totalS .. " spells tracked")
-    local sc, ss = BestiaryForge_GetSessionStats()
-    if sc > 0 or ss > 0 then
-        sessionText:SetText("Session: +" .. sc .. " creatures, +" .. ss .. " spells")
+    local sc, ss, sa = BestiaryForge_GetSessionStats()
+    if sc > 0 or ss > 0 or (sa and sa > 0) then
+        sessionText:SetText("Session: +" .. sc .. " creatures, +" .. ss .. " spells, +" .. (sa or 0) .. " auras")
     else
         sessionText:SetText("")
     end
@@ -541,6 +547,28 @@ for i = 1, SPELL_VISIBLE do
             GameTooltip:AddDoubleLine("Auras:", BreakUpLargeNumbers(self.spellData.auraCount), 0.5, 0.5, 0.5, 0.5, 0.8, 1)
             GameTooltip:AddDoubleLine("Total:", BreakUpLargeNumbers(self.spellData.total), 0.5, 0.5, 0.5, 0, 1, 0)
 
+            -- Timing data
+            if self.spellData.cooldownMin and self.spellData.cooldownMin > 0 then
+                GameTooltip:AddLine(" ")
+                GameTooltip:AddDoubleLine("Cooldown (est):",
+                    string.format("%.1fs - %.1fs", self.spellData.cooldownMin, self.spellData.cooldownAvg or self.spellData.cooldownMin),
+                    0.5, 0.5, 0.5, 1, 0.5, 0)
+            end
+
+            -- HP phase data
+            if self.spellData.hpMin and self.spellData.hpMax then
+                GameTooltip:AddDoubleLine("HP range seen:",
+                    string.format("%d%% - %d%%", self.spellData.hpMin, self.spellData.hpMax),
+                    0.5, 0.5, 0.5, 1, 0.3, 0.3)
+            end
+
+            -- DB status
+            if self.spellData.dbKnown then
+                GameTooltip:AddLine("Status: In creature_template_spell", 0.5, 1, 0.5)
+            elseif self.spellData.total > 0 then
+                GameTooltip:AddLine("Status: NEW — not yet in database", 0.3, 1, 0.3)
+            end
+
             local zoneList = {}
             for zone in pairs(self.spellData.zones) do
                 zoneList[#zoneList + 1] = zone
@@ -622,7 +650,28 @@ function BestiaryForge_RefreshSpellList()
 
         if data then
             row.spellData = data
-            row.nameFs:SetText(data.name .. "  |cff666666[" .. data.id .. "]|r")
+
+            -- DB diff status indicator + name coloring
+            local statusIcon, nameR, nameG, nameB
+            if data.dbKnown and data.total > 0 then
+                -- White: confirmed (in DB and observed)
+                statusIcon = "|cffffffff\226\156\147|r "
+                nameR, nameG, nameB = 1, 1, 1
+            elseif data.dbKnown and data.total == 0 then
+                -- Gray: DB-only (in DB but not observed this session)
+                statusIcon = "|cff888888\226\128\148|r "
+                nameR, nameG, nameB = 0.5, 0.5, 0.5
+            elseif not data.dbKnown and data.total > 0 then
+                -- Green: new discovery (observed but NOT in DB)
+                statusIcon = "|cff00ff00+|r "
+                nameR, nameG, nameB = 0.3, 1, 0.3
+            else
+                statusIcon = ""
+                nameR, nameG, nameB = 0.8, 0.8, 0.8
+            end
+
+            row.nameFs:SetText(statusIcon .. data.name .. "  |cff666666[" .. data.id .. "]|r")
+            row.nameFs:SetTextColor(nameR, nameG, nameB)
             row.schoolFs:SetText(GetSchoolName(data.school))
             row.schoolFs:SetTextColor(GetSchoolColor(data.school))
             row.castFs:SetText(BreakUpLargeNumbers(data.castCount))
@@ -730,7 +779,7 @@ debugBtn:SetScript("OnClick", function()
     if on then
         debugBtn:SetBackdropColor(0.1, 0.6, 0.1, 0.9)
         debugBtn:SetBackdropBorderColor(0.1, 0.8, 0.1, 0.9)
-        print("|cff00ccff[BestiaryForge]|r Debug |cff00ff00ON|r — fight mobs to see CLEU output in chat")
+        print("|cff00ccff[BestiaryForge]|r Debug |cff00ff00ON|r — fight mobs to see scraper output in chat")
     else
         debugBtn:SetBackdropColor(0.4, 0.4, 0.4, 0.6)
         debugBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.9)
@@ -740,7 +789,7 @@ end)
 debugBtn:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
     GameTooltip:SetText("Toggle Debug", 1, 1, 1)
-    GameTooltip:AddLine("Shows raw combat log data in chat", 0.6, 0.6, 0.6)
+    GameTooltip:AddLine("Shows raw scraper data in chat", 0.6, 0.6, 0.6)
     GameTooltip:AddLine("Use when tracking isn't working", 0.6, 0.6, 0.6)
     GameTooltip:Show()
 end)

@@ -3593,8 +3593,11 @@ SpellCastResult Spell::prepare(SpellCastTargets const& targets, AuraEffect const
 
         // Call CreatureAI hook OnSpellStart
         if (Creature* caster = m_caster->ToCreature())
+        {
             if (caster->IsAIEnabled())
                 caster->AI()->OnSpellStart(GetSpellInfo());
+            sScriptMgr->OnCreatureSpellStart(caster, GetSpellInfo());
+        }
 
         if (willCastDirectly)
             cast(true);
@@ -3901,8 +3904,11 @@ void Spell::_cast(bool skipCheck)
 
         // Call CreatureAI hook OnSpellCast
         if (Creature* caster = m_originalCaster->ToCreature())
+        {
             if (caster->IsAIEnabled())
                 caster->AI()->OnSpellCast(GetSpellInfo());
+            sScriptMgr->OnCreatureSpellCast(caster, GetSpellInfo());
+        }
     }
 
     // Okay, everything is prepared. Now we need to distinguish between immediate and evented delayed spells
@@ -4331,8 +4337,11 @@ void Spell::update(uint32 difftime)
 
                 // We call the hook here instead of in Spell::finish because we only want to call it for completed channeling. Everything else is handled by interrupts
                 if (Creature* creatureCaster = m_caster->ToCreature())
+                {
                     if (creatureCaster->IsAIEnabled())
                         creatureCaster->AI()->OnChannelFinished(m_spellInfo);
+                    sScriptMgr->OnCreatureChannelFinished(creatureCaster, m_spellInfo);
+                }
             }
             break;
         }
