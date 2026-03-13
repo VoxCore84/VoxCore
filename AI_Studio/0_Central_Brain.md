@@ -8,7 +8,7 @@
 
 ## Triad Coordination — READ FIRST (all agents)
 
-**Last updated**: 2026-03-13 — Session 165: Release Gate System deployed + dual ChatGPT review cycle complete (4 iterative versions, vNext spec generated)
+**Last updated**: 2026-03-13 -- Session 168: VoxSniffer v1.0.0 (7-round dual ChatGPT review). Shipped to GitHub + AddOns + publishable/
 
 ### Architecture (as of session 160)
 
@@ -62,10 +62,12 @@ Update THIS file on `/wrap-up` with: what was completed, what's deployed, infras
 - Found a conflict → write `[CONFLICT]` tag here, don't proceed
 
 ## Current Focus
-- **Session 165**: Release Gate System — 4-layer pre-ship audit infrastructure. `/pre-ship` + `/release-gate-fix` skills, 2 enforcement hooks, 3 custom agents, gate state file. Dual ChatGPT review (API + browser) → vNext consolidated architecture spec (`TRIAD-RELEASE-GATE-VNEXT-V1`, 417 lines). 4 iterative zip versions, all progression audit issues resolved. Ready for MCP server implementation as `VoxCore84/release-gate-mcp`. Commits: `b3635d5`, `7dbc1c0`, `a4ae81c`, `4c5ea34`
-- **CreatureCodex**: READMEs COMPLETE, NEEDS BUILD + IN-GAME TEST (server C++ + addon deploy)
+- **VoxSniffer v1.0.0**: SHIPPED (session 168). 7-round dual ChatGPT review (API + Browser). 62 files, 8,881 lines. Deployed to GitHub + AddOns + publishable/. **NEEDS IN-GAME TEST**
+- **VoxGM v1.0.0**: SHIPPED (session 167). **NEEDS IN-GAME TEST**
+- **CreatureCodex v1.0.0**: SHIPPED (session 166). **NEEDS BUILD + IN-GAME TEST**
 - **DraconicBot v3**: Standalone repo, Gemini AI enabled, Oracle VM provisioned, not yet deployed
 - **VoxCore Daemon**: Phase 1 COMPLETE, Phase 2 next (LogMonitor, ReportWriter, InboxTriage)
+- **Release Gate MCP**: vNext spec ready (`TRIAD-RELEASE-GATE-VNEXT-V1`, 417 lines), awaiting implementation as `VoxCore84/release-gate-mcp`
 
 ## Inbox Status (12 files after triage — +1 release-gate-mcp spec)
 Potentially actionable specs remaining in `1_Inbox/`:

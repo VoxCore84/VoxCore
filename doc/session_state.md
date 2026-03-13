@@ -3,7 +3,7 @@
 **Read this FIRST in any new Claude Code tab.**
 This is the single source of truth for what all tabs are doing, what's done, what's blocked, and what to pick up next. Updated by whichever tab finishes work.
 
-**Last updated**: March 13, 2026 — Session 165: Release Gate System deployed + dual ChatGPT review cycle, vNext spec generated. Session 166: CreatureCodex v1.0.0 distribution
+**Last updated**: March 13, 2026 -- Session 168: VoxSniffer v1.0.0 shipped (7-round dual ChatGPT review, 62 files, deployed to GitHub + AddOns + publishable/)
 
 ---
 
@@ -51,7 +51,9 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Main (147) | Greedy Parser v2 + Relationship Web + 66337 Hotfix Applied | COMPLETE | wago/ gitignored. parsers.py rewritten (1,245 lines, 18 extractors, relationship web — 45 edges/page, ~32M projected). generate_id_lists.py build-delta mode. scraper_v4.py 38 targets + delta mode. 66337 hotfix SQL applied (237,530 rows). |
 | Main (148) | Claude Code Power Hooks + 7 Published Repos | COMPLETE | `206f2bb852`. BurntToast toasts, 3 new skills, hook test harness. Published 7 repos to VoxCore84 GitHub. |
 | Main (160) | Cowork cleanup, Triad P0, Antigravity deprecation, inbox triage | COMPLETE | `b6e75874e0`. Removed prompt injections, archived transmog (3 commands, 1 agent, rules), Antigravity→API, P0 Triad directive in all core files, 39 stale specs archived, 2 personal files relocated. 20 files, -533/+180 lines |
-| — | — | — | Add rows as tabs are opened |
+| Main (167) | VoxGM v1.0.0 iterative review pipeline (9 rounds) | COMPLETE | `769fc01` (VoxGM GitHub), `767091feb9` (audit reports). Release gate PASS. Deployed to AddOns + Desktop zip + publishable/ |
+| Main (168) | VoxSniffer v1.0.0 iterative review pipeline (7 rounds) | COMPLETE | `db077c0afc` (62 files, 8,881 lines). Dual ChatGPT review (API + Browser). Deployed to GitHub + AddOns + publishable/ + Desktop zip |
+| -- | -- | -- | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.
 
@@ -213,6 +215,9 @@ Each zone produces a SQL file in `sql/exports/` and findings for review.
 
 | Session | What | Key Output |
 |---------|------|-----------|
+| 168 | VoxSniffer v1.0.0 | 14-module server data sniffer (62 files, 8,881 lines). 7-round dual ChatGPT review. Source-bound callbacks, nameplate reseeding, dedup-after-envelope. GitHub + AddOns + publishable/ |
+| 167 | VoxGM v1.0.0 | 26-file GM control panel (2,700 lines). 9-round review. 6 tabs, minimap button, event parsers. GitHub + AddOns + publishable/ |
+| 166 | CreatureCodex v1.0.0 | Creature spell/aura sniffer. 7-round review. C++ hooks + addon + Eluna. install_hooks.py fix, session.py WoW root detection. GitHub + AddOns |
 | 123 | auto_parse v3 | 19-module package (2,498 lines). Plugin parser arch, session-aware watcher, alert dedup, HTML dashboard, TOML config, tray icon, crash scanner, packet pipeline. 3 QA + Antigravity audit |
 | 121 | VoxPlacer Polish | 4 features (undo 10-deep stack, face-toward, favorites list, minimap button), ghost preview aura (spell 37800), 6 QA fixes. ~1140 lines C++, ~930 lines Lua |
 | 120 | NotebookLM Knowledge Base | 97 files in `doc/notebooklm/` (docs, source as .txt, SQL, Lua addons). Evaluated Antigravity IDE, reviewed 12 claude-code issues |
