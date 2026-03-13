@@ -23,6 +23,9 @@ $ARGUMENTS — Path to the project directory (e.g., `tools/publishable/VoxGM`) a
 
 ## Phase 2: Automated Mechanical Checks
 
+Optionally, launch a `grep-auditor` agent and a `doc-auditor` agent in parallel to assist with these checks.
+If those agent types aren't available, perform the checks directly.
+
 Run ALL of the following checks. Report each as PASS/FAIL with evidence.
 
 ### 2A: Naming Consistency
@@ -76,7 +79,7 @@ Run ALL of the following checks. Report each as PASS/FAIL with evidence.
 After Phase 2 completes, launch THREE agents in PARALLEL:
 
 ### Agent 1: Noob Reviewer
-Spawn a general-purpose agent with this prompt:
+Spawn an app-reviewer agent (or general-purpose if app-reviewer type is not available) with this prompt:
 ```
 You are a WoW player who just found this addon/tool. You have never used TrinityCore.
 You've played retail WoW for 2 years. You know how to install addons from CurseForge
@@ -99,7 +102,7 @@ Be specific. Quote the exact text that confused you.
 ```
 
 ### Agent 2: TC Discord Bully
-Spawn a general-purpose agent with this prompt:
+Spawn an app-reviewer agent (or general-purpose if app-reviewer type is not available) with this prompt:
 ```
 You are a senior TrinityCore developer on the TC Discord who has seen hundreds of
 poorly-made custom scripts. You are technically excellent but socially abrasive.
@@ -129,7 +132,7 @@ Rate: Would this survive 5 minutes on the TC Discord custom-scripts channel?
 ```
 
 ### Agent 3: Security & Stability Auditor
-Spawn a general-purpose agent with this prompt:
+Spawn an app-reviewer agent (or general-purpose if app-reviewer type is not available) with this prompt:
 ```
 You are a server administrator who has been burned by bad addons crashing servers
 and bad scripts corrupting databases. You trust nothing.
