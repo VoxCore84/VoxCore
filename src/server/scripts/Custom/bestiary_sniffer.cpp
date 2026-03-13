@@ -15,7 +15,7 @@
  * BestiaryForge Server-Side Sniffer
  *
  * Broadcasts creature spell casts and aura applications to nearby players
- * who have the BestiaryForge addon installed (registered the "BFRG" addon
+ * who have the CreatureCodex addon installed (registered the "CCDX" addon
  * prefix). This lets the addon capture ALL spell casts including
  * instant/hidden ones the client API blocks.
  *
@@ -29,8 +29,8 @@
  *   OnCreatureSpellCast, OnCreatureSpellStart, OnCreatureChannelFinished, OnAuraApply
  */
 
-static constexpr char const* BFRG_PREFIX = "BFRG";
-static constexpr float BFRG_BROADCAST_RANGE = 100.0f;
+static constexpr char const* CCDX_PREFIX = "CCDX";
+static constexpr float CCDX_BROADCAST_RANGE = 100.0f;
 
 // Spells to never broadcast (noise reduction)
 static constexpr uint32 BLACKLISTED_SPELLS[] = {
@@ -131,7 +131,7 @@ static void BroadcastToNearbyPlayers(Creature* creature, SpellInfo const* spell,
 
     // Get nearby players
     std::list<Player*> players;
-    creature->GetPlayerListInGrid(players, BFRG_BROADCAST_RANGE, false);
+    creature->GetPlayerListInGrid(players, CCDX_BROADCAST_RANGE, false);
 
     for (Player* player : players)
     {
@@ -139,12 +139,12 @@ static void BroadcastToNearbyPlayers(Creature* creature, SpellInfo const* spell,
             continue;
 
         // Only send to players who have BestiaryForge installed
-        if (!player->GetSession()->IsAddonRegistered(BFRG_PREFIX))
+        if (!player->GetSession()->IsAddonRegistered(CCDX_PREFIX))
             continue;
 
         // Send as self-whisper addon message (standard VoxCore pattern)
         WorldPackets::Chat::Chat chat;
-        chat.Initialize(CHAT_MSG_WHISPER, LANG_ADDON, player, player, msg, 0, "", DEFAULT_LOCALE, BFRG_PREFIX);
+        chat.Initialize(CHAT_MSG_WHISPER, LANG_ADDON, player, player, msg, 0, "", DEFAULT_LOCALE, CCDX_PREFIX);
         player->GetSession()->SendPacket(chat.Write());
     }
 }

@@ -101,15 +101,15 @@ public:
                 continue;
 
             ++totalSessions;
-            if (session->IsAddonRegistered("BFRG"))
+            if (session->IsAddonRegistered("CCDX"))
                 ++listeningPlayers;
         }
 
         auto blacklist = BestiaryForge::GetBlacklistCopy();
 
-        handler->SendSysMessage("[BestiaryForge] Sniffer Statistics:");
+        handler->SendSysMessage("[CreatureCodex] Sniffer Statistics:");
         handler->PSendSysMessage("  Players online: %u", totalSessions);
-        handler->PSendSysMessage("  Players with BFRG addon: %u", listeningPlayers);
+        handler->PSendSysMessage("  Players with CCDX addon: %u", listeningPlayers);
         handler->PSendSysMessage("  Runtime blacklisted spells: %u", uint32(blacklist.size()));
 
         return true;
