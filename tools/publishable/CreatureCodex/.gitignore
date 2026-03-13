@@ -4,6 +4,25 @@ CreatureCodexDB.lua
 # Session config (user-specific WoW path)
 session_config.json
 
+# Dev-only files (not for distribution)
+CHATGPT_AUDIT_REQUEST*.md
+_build_artifact.py
+installer_review_artifact.md
+send_audit*.py
+launch_installer.py
+update_tools.py
+update_tools.sh
+
+# Installer build artifacts
+installer/build/
+installer/__pycache__/
+installer/dist/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+
 # OS files
 .DS_Store
 Thumbs.db

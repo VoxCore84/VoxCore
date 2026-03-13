@@ -1,28 +1,22 @@
 {
-  "status": "STALE",
-  "project": "VoxGM",
+  "status": "PASS",
+  "project": "claude-code-hooks",
   "version": "1.0.0",
-  "timestamp": "2026-03-13T12:30:00Z",
+  "timestamp": "2026-03-13T22:10:00Z",
   "blockers": [],
   "should_fix_count": 0,
-  "nice_to_have_count": 4,
+  "nice_to_have_count": 0,
   "agents_run": [
-    "noob",
-    "bully",
-    "security",
-    "chatgpt-api-r4-r7",
-    "chatgpt-browser-r4-r8"
+    "grep-auditor-x8",
+    "pre-ship-verify-x4"
   ],
   "automated_checks": {
-    "naming": "PASS",
     "non_ascii": "PASS",
-    "toc_integrity": "PASS",
-    "version_consistency": "PASS",
-    "doc_paths": "PASS",
-    "cross_doc": "PASS",
     "secrets": "PASS",
-    "dead_code": "PASS",
-    "distribution": "PASS"
+    "gitignore": "PASS",
+    "license": "PASS",
+    "readme": "PASS",
+    "pycache": "PASS"
   },
-  "stale_reason": "File edited after gate pass: C:\\Users\\atayl\\VoxCore\\tools\\publishable\\CreatureCodex\\installer\\__init__.py"
+  "notes": "Full 8-repo audit + fix cycle. 4 repos verified clean for v1.0.0 release."
 }
