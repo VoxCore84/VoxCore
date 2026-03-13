@@ -8,7 +8,7 @@
 
 ## Triad Coordination — READ FIRST (all agents)
 
-**Last updated**: 2026-03-13 -- Session 171c: 8 claude-code-* repos v1.0.0 released (full audit + fix cycle). Release gate enforce.py bug fixed. awesome-claude-code submission sent
+**Last updated**: 2026-03-13 -- Session 171c: Brand expansion analysis, 4 Deep Research reports ingested, 8 OSS repos v1.0.0 released, awesome-claude-code submission sent
 
 ### Architecture (as of session 160)
 
@@ -75,7 +75,8 @@ Update THIS file on `/wrap-up` with: what was completed, what's deployed, infras
 - **CreatureCodex v1.0.0**: RELEASED (session 171b). Build clean. GitHub release live. **NEEDS IN-GAME TEST**
 - **DraconicBot v3**: Standalone repo, Gemini AI enabled, Oracle VM provisioned, not yet deployed
 - **VoxCore Daemon**: Phase 1 COMPLETE, Phase 2 next (LogMonitor, ReportWriter, InboxTriage)
-- **Release Gate System**: DEPLOYED. enforce.py bug fixed (overbroad `gh release` match narrowed to `gh release create`/`upload`). All 8 claude-code-* repos v1.0.0 released. vNext MCP spec ready (`TRIAD-RELEASE-GATE-VNEXT-V1`, 417 lines)
+- **Release Gate System**: DEPLOYED. All 8 claude-code-* repos v1.0.0 released. vNext MCP spec ready
+- **Brand Expansion**: Strategy defined (session 171c). 3 offer families, revenue projections, learning velocity analysis. Website is #1 blocker. awesome-claude-code submission sent
 
 ## Inbox Status (12 files after triage — +1 release-gate-mcp spec)
 Potentially actionable specs remaining in `1_Inbox/`:
