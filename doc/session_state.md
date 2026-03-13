@@ -3,7 +3,7 @@
 **Read this FIRST in any new Claude Code tab.**
 This is the single source of truth for what all tabs are doing, what's done, what's blocked, and what to pick up next. Updated by whichever tab finishes work.
 
-**Last updated**: March 13, 2026 -- Session 170: Codex CLI integrated into review pipeline (device-auth, config.toml, call_codex_review.py, review_cycle.py updated)
+**Last updated**: March 13, 2026 -- Session 171: VoxGM v2.0 spec under autonomous review cycle
 
 ---
 
@@ -54,6 +54,7 @@ This is the single source of truth for what all tabs are doing, what's done, wha
 | Main (167) | VoxGM v1.0.0 iterative review pipeline (9 rounds) | COMPLETE | `769fc01` (VoxGM GitHub), `767091feb9` (audit reports). Release gate PASS. Deployed to AddOns + Desktop zip + publishable/ |
 | Main (168) | VoxSniffer v1.0.0 iterative review pipeline (7 rounds) | COMPLETE | `db077c0afc` (62 files, 8,881 lines). Dual ChatGPT review (API + Browser). Deployed to GitHub + AddOns + publishable/ + Desktop zip |
 | Main (170) | Codex CLI pipeline integration | COMPLETE | Device-auth, config.toml, call_codex_review.py, review_cycle.py updated. Codex replaces ChatGPT API in rounds 1 & 4 (flat rate, repo-aware) |
+| Main (171) | VoxGM v2.0 spec — autonomous review loop | IN PROGRESS | Owns: `AI_Studio/1_Inbox/` spec files, `AI_Studio/Reports/Audits/*VOXGM*`, `tools/ai_studio/review_cycle.py`. Pipeline: fix all findings → self-audit (noob/bully/diff) → re-run 5 rounds → repeat until PASS → present to user. **DO NOT implement from TRIAD-VOXGM-V2-ENHANCEMENTS-V1 until moved to 2_Active_Specs/** |
 | -- | -- | -- | Add rows as tabs are opened |
 
 **Rule**: Before starting work, check this file. If another tab owns a file or task, don't touch it. Update your row when you start and when you finish.

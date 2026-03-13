@@ -13,11 +13,11 @@ Run an iterative build-fix cycle on the VoxCore project.
 Parse the user's argument (if any) to pick the build directory:
 - `debug`, `d`, or no argument → `out/build/x64-Debug/`
 - `rel`, `r`, `relwithdebinfo` → `out/build/x64-RelWithDebInfo/`
-- `scripts`, `s` → same as debug but use `ninja -j20 scripts` (scripts-only)
+- `scripts`, `s` → same as debug but use `ninja -j32 scripts` (scripts-only)
 
 ### Loop procedure
 
-1. **Build**: Run `cd /c/Users/atayl/VoxCore/<build-dir> && ninja -j20 2>&1` (or `ninja -j20 scripts` for scripts-only)
+1. **Build**: Run `cd /c/Users/atayl/VoxCore/<build-dir> && ninja -j32 2>&1` (or `ninja -j32 scripts` for scripts-only)
 2. **Parse**: Extract compiler errors from the output. Ignore warnings unless the user asked to fix them.
 3. **Fix**: For each error:
    - Read the source file at the reported line
