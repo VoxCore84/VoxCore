@@ -8,7 +8,7 @@
 
 ## Triad Coordination — READ FIRST (all agents)
 
-**Last updated**: 2026-03-12 — Session 163: CreatureCodex README hardening (7 noob-proofing improvements across EN/RU/DE), shipped to GitHub + release asset updated
+**Last updated**: 2026-03-13 — Session 165: Release Gate System deployed (pre-ship audit infra, enforcement hooks, 3 custom agents, MCP server spec approved)
 
 ### Architecture (as of session 160)
 
@@ -62,14 +62,12 @@ Update THIS file on `/wrap-up` with: what was completed, what's deployed, infras
 - Found a conflict → write `[CONFLICT]` tag here, don't proceed
 
 ## Current Focus
-- **Session 160**: Triad P0 directive installed across all core files (CLAUDE.md, MEMORY.md, Central Brain, session-start.md). Antigravity deprecated as central terminal — Gemini accessed via API. Transmog fully archived (3 commands, 1 agent, rules file). Prompt injections removed from Central Brain + .agentrules. Inbox triaged (39→11 actionable specs). 20 files committed as `b6e75874e0`
-- **Monetization planning**: Brand positioning defined (high-trust systems brand), first offer identified (Codebase Inventory & Architecture Map)
-- **Session 163**: CreatureCodex README hardening — 7 noob-proofing improvements (jargon defs, download section, SQL apply guide, build commands, WPP sample, load-out-of-date tip, Eluna path) across all 3 langs. Shipped `78e3c8f` to `VoxCore84/CreatureCodex`, release v3.0.0 asset updated
+- **Session 165**: Release Gate System — 4-layer pre-ship audit infrastructure. `/pre-ship` + `/release-gate-fix` skills, 2 enforcement hooks, 3 custom agents, gate state file. MCP server spec approved by ChatGPT (`TRIAD-RELEASE-GATE-MCP-V1`), ready for implementation as `VoxCore84/release-gate-mcp`. Commits: `b3635d5`, `7dbc1c0`
 - **CreatureCodex**: READMEs COMPLETE, NEEDS BUILD + IN-GAME TEST (server C++ + addon deploy)
 - **DraconicBot v3**: Standalone repo, Gemini AI enabled, Oracle VM provisioned, not yet deployed
 - **VoxCore Daemon**: Phase 1 COMPLETE, Phase 2 next (LogMonitor, ReportWriter, InboxTriage)
 
-## Inbox Status (11 files after triage)
+## Inbox Status (12 files after triage — +1 release-gate-mcp spec)
 Potentially actionable specs remaining in `1_Inbox/`:
 - 3x build-66337 specs (CASC, EXTRACT, WAGO)
 - 2x catalog specs (enterprise catalog, pilot)
