@@ -8,7 +8,7 @@
 
 ## Triad Coordination — READ FIRST (all agents)
 
-**Last updated**: 2026-03-13 -- Session 169: 5-round AI review cycle pipeline built + all 3 APIs tested green
+**Last updated**: 2026-03-13 -- Session 170b: Codex CLI integrated as 4th reviewer, parallel pipeline rewrite, AI subscription audit (3 Deep Research reports), AWS closed
 
 ### Architecture (as of session 160)
 
@@ -21,7 +21,7 @@ Claude Code (Primary Terminal / Implementer / Coordinator)
   └── Claude Code tabs (parallel implementation via session_state.md)
 ```
 
-**5-Round Review Cycle** (standing preference): ChatGPT → Gemini → Claude API → ChatGPT → Gemini → User. All non-trivial work goes through this pipeline. Script: `tools/ai_studio/review_cycle.py`.
+**Review Cycle — Parallel Pipeline** (standing preference): Phase 1 (Codex + Gemini + Claude in parallel) → Phase 2 (Codex verify) → Phase 3 (Gemini final seal) → User. `--use-chatgpt-api` to swap Codex for ChatGPT API. Script: `tools/ai_studio/review_cycle.py`.
 
 **Antigravity (Windsurf IDE)**: DEPRECATED.
 
@@ -40,7 +40,8 @@ Claude Code (Primary Terminal / Implementer / Coordinator)
 | ChatGPT Reviewer | `tools/ai_studio/call_chatgpt_review.py` | OpenAI | gpt-5.4 | OPERATIONAL |
 | Gemini Reviewer | `tools/ai_studio/call_gemini.py` | Google AI | gemini-2.5-pro | OPERATIONAL |
 | Claude Reviewer | `tools/ai_studio/call_claude.py` | Anthropic | claude-sonnet-4-6 | OPERATIONAL |
-| 5-Round Cycle | `tools/ai_studio/review_cycle.py` | All 3 | All 3 | OPERATIONAL |
+| Codex Reviewer | `tools/ai_studio/call_codex_review.py` | OpenAI (Codex CLI) | gpt-5.4 | OPERATIONAL |
+| Parallel Cycle | `tools/ai_studio/review_cycle.py` | All 4 | All 4 | OPERATIONAL |
 | Triad Orchestrator | `tools/ai_studio/orchestrator.py` | Anthropic + Vertex AI | claude-opus-4-6 + gemini-3.1-pro | OPERATIONAL |
 | API Architect | `tools/api_architect/call_openai.py` | OpenAI | gpt-5.4 | OPERATIONAL |
 | Nexus Reports | `tools/log_tools/generate_nexus_report.py` | Vertex AI | gemini-3.1-pro | OPERATIONAL |
