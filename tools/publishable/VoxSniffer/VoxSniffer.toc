@@ -1,0 +1,43 @@
+## Interface: 120001
+## Title: |cff00ccffVoxSniffer|r
+## Notes: Universal client-side data vacuum for TrinityCore — captures units, combat, vendors, gossip, quests, loot, movement, and more.
+## Author: VoxCore
+## Version: 1.0.0
+## Category: Development Tools
+## DefaultState: enabled
+## X-License: MIT
+## X-Website: https://github.com/VoxCore84
+## SavedVariables: VoxSnifferDB
+## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
+## AddonCompartmentFunc: VoxSniffer_OnCompartmentClick
+## AddonCompartmentFuncOnEnter: VoxSniffer_OnCompartmentEnter
+## AddonCompartmentFuncOnLeave: VoxSniffer_OnCompartmentLeave
+
+Core\Constants.lua
+Core\Logging.lua
+Core\GuidUtils.lua
+Core\Fingerprint.lua
+Core\RingBuffer.lua
+Core\EventBus.lua
+Core\Config.lua
+Core\Scheduler.lua
+Core\SavedVariablesSchema.lua
+Core\SessionManager.lua
+Core\FlushManager.lua
+VoxSniffer.lua
+UI\ControlPanel.lua
+
+Modules\UnitScanner.lua
+Modules\EmoteCapture.lua
+Modules\VendorCapture.lua
+Modules\GossipCapture.lua
+Modules\CombatCapture.lua
+Modules\CoverageHeatmap.lua
+Modules\LootCapture.lua
+Modules\QuestCapture.lua
+Modules\AuraScanner.lua
+Modules\CombatEnricher.lua
+Modules\MovementTracker.lua
+Modules\ObjectTracker.lua
+Modules\PhaseTracker.lua
+Modules\DeltaHints.lua
