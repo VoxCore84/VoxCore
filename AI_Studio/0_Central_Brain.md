@@ -8,7 +8,7 @@
 
 ## Triad Coordination — READ FIRST (all agents)
 
-**Last updated**: 2026-03-13 -- Session 170b: Codex CLI integrated as 4th reviewer, parallel pipeline rewrite, AI subscription audit (3 Deep Research reports), AWS closed
+**Last updated**: 2026-03-13 -- Session 171b: CreatureCodex v1.0.0 GitHub release (clean ZIP + Setup.exe + demo video), bestiary→creature_codex rename complete, build verified clean
 
 ### Architecture (as of session 160)
 
@@ -72,7 +72,7 @@ Update THIS file on `/wrap-up` with: what was completed, what's deployed, infras
 ## Current Focus
 - **VoxSniffer v1.0.0**: SHIPPED (session 168). 7-round dual ChatGPT review (API + Browser). 62 files, 8,881 lines. Deployed to GitHub + AddOns + publishable/. **NEEDS IN-GAME TEST**
 - **VoxGM v1.0.0**: SHIPPED (session 167). **NEEDS IN-GAME TEST**
-- **CreatureCodex v1.0.0**: SHIPPED (session 166). **NEEDS BUILD + IN-GAME TEST**
+- **CreatureCodex v1.0.0**: RELEASED (session 171b). Build clean. GitHub release live. **NEEDS IN-GAME TEST**
 - **DraconicBot v3**: Standalone repo, Gemini AI enabled, Oracle VM provisioned, not yet deployed
 - **VoxCore Daemon**: Phase 1 COMPLETE, Phase 2 next (LogMonitor, ReportWriter, InboxTriage)
 - **Release Gate MCP**: vNext spec ready (`TRIAD-RELEASE-GATE-VNEXT-V1`, 417 lines), awaiting implementation as `VoxCore84/release-gate-mcp`
@@ -103,4 +103,4 @@ Potentially actionable specs remaining in `1_Inbox/`:
 - ~~Gemini API key setup~~ DONE (session 169 — all 3 API keys configured, review cycle operational)
 - VoxCore Daemon Phase 2
 - DraconicBot v3 Oracle Cloud deployment
-- BestiaryForge in-game testing
+- CreatureCodex in-game testing (build done, release live)

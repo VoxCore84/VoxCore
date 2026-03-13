@@ -3,7 +3,7 @@
 **Read this FIRST in any new Claude Code tab.**
 This is the single source of truth for what all tabs are doing, what's done, what's blocked, and what to pick up next. Updated by whichever tab finishes work.
 
-**Last updated**: March 13, 2026 -- Session 171: VoxGM v2.0 spec under autonomous review cycle
+**Last updated**: March 13, 2026 -- Session 171b: CreatureCodex v1.0.0 released, bestiary rename complete
 
 ---
 
@@ -125,7 +125,7 @@ Build is done. These need a server restart and in-game testing.
   - Stormwind phase fixes (7 phase_area, Genn/Velen/Anduin visibility)
   - Valdrakken portal, embassy NPCs, Hero's Call Boards
   - Apply `_08_00` SQL before restarting
-- [ ] **BestiaryForge in-game test** — C++ hooks + addon deployed but never tested
+- [ ] **CreatureCodex in-game test** — C++ build clean (866/866), `.codex` command, addon deployed. GitHub v1.0.0 released
 - [ ] **Enable crash dumps** — Windows crash dump generation for worldserver
 
 > **Note**: Transmog Outfits UI work is ARCHIVED — reimplemented externally. All transmog bugs, slash commands, and agents have been removed. Historical docs preserved in `.claude/rules/archive/transmog.md` and `doc/transmog_*`.
